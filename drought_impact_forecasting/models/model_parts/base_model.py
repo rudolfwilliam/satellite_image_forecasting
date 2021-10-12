@@ -6,12 +6,8 @@ from tqdm import tqdm
 import math
 import matplotlib.pyplot as plt
 
-epochs = 30  # 300000 in real SAVP
-startLearnRate = 0.05
-decayPoint = 10 # 100000 in real SAVP
-batchSize = 32
 
-# The encoder uses LeakyReLU!
+# The encoder will use LeakyReLU!
 class Encoder(torch.nn.Module):
     def __init__(self):
         pass
@@ -38,7 +34,9 @@ class Discriminator_VAE(torch.nn.Module):
 class Discriminator_GAN(torch.nn.Module):
     def __init__(self, classes):
         super().__init__()
+
         # 1st shot at net architecture
+        # Once we agree on shape & dimensions of the net these can be made into constants too
         conv_layer1 = self._conv_layer_set(3, 32)
         conv_layer2 = self._conv_layer_set(32, 64)
 
@@ -60,71 +58,3 @@ class Discriminator_GAN(torch.nn.Module):
     def forward(self, x):
         return F.softmax(self.net(x))
 
-# Linearly decay the learning rate for the last set of training epochs
-def getLearningRate(epoch):
-    decayPoint = 2*epochs/3
-    if epoch < decayPoint:
-        return startLearnRate
-    else: startLearnRate * ((epoch-decayPoint)/(epochs-decayPoint))
-
-# Linearly anneal the LK loss weight for certain epochs
-def getKLWeight(epoch, finalWeight):
-    annealStart = 5 # 50000 in SAVP
-    annealEnd = 10 # 100000 in SAVP
-
-    if epoch <= annealStart:
-        return 0
-    elif epoch >= annealEnd:
-        return finalWeight
-    else:
-        return finalWeight * (epoch - annealStart)/(annealEnd - annealStart)
-
-# TODO: Not yet sure how to implement this one (not in Pytorch losses)
-def getVAEGANLoss(pred, target):
-    return 0
-
-def train_network(model, optimizer, train_loader, noEpochs, pbar_update_interval=100):
-
-    L1Criterion = nn.L1Loss() 
-    KLCriterion = nn.KLDivLoss()
-    GANCriterion = nn.CrossEntropyLoss()
-
-    lambda1 = 100
-    # Note: In the paper they use 2 diferent ways to set lambdaKL
-    lambdaKLFinal = lambda1 * 0.001
-    L1Loss = nn.L1Loss()
-
-    for i in noEpochs:
-        print("Iteration: " + str(i))
-        curlambdaKL = getKLWeight(i, lambdaKLFinal)
-        curLearningRate = getLearningRate()
-
-        for k, (batch_x, batch_y) in enumerate(train_loader):
-            model.zero_grad()
-            y_preds = model(batch_x)
-            
-            L1 = L1Criterion(y_preds, batch_y).mul(lambda1)
-            L_KL = KLCriterion(y_preds, batch_y).mul(curlambdaKL)
-            L_GAN = GANCriterion(y_preds, batch_y)
-            L_VAE_GAN = getVAEGANLoss(y_preds, batch_y)
-
-            LossTotal = L1.add(L_KL).add(L_GAN).add(L_VAE_GAN)
-            
-            # TODO: Add variants (GAN only, VAE only)
-
-            LossTotal.backward()
-            optimizer.step()
-
-
-
-def main():
-    
-
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=startLearnRate)
-
-    train_network()
-
-
-if __name__=="__main__":
-    main()
