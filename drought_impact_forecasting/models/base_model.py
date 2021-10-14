@@ -28,7 +28,11 @@ class Base_model(pl.LightningModule):
             optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
             
             # Decay learning rate according for last (epochs - decay_point) iterations
-            lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] if epoch <= self.cfg["training"]["decay_point"] else ((self.cfg["training"]["epochs"]-epoch)/(30-self.cfg["training"]["decay_point"]) * self.cfg["training"]["start_learn_rate"])
+            lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
+                          if epoch <= self.cfg["training"]["decay_point"] \
+                          else ((self.cfg["training"]["epochs"]-epoch) / (30-self.cfg["training"]["decay_point"])
+                                * self.cfg["training"]["start_learn_rate"])
+
             scheduler = LambdaLR(optimizer, lambda_all)
         else:
             raise ValueError("You have specified an invalid optimizer.")

@@ -37,7 +37,7 @@ class Discriminator_GAN(torch.nn.Module):
 
         self.classes = cfg["model"]["classes"]
         self.network = cfg["model"]
-        # TODO: Parametrize everything using config/base_model.json. No numbers must be here!
+
         conv_layer1 = self.__conv_layer_set(self.network[0][0], self.network[0][1])
         conv_layer2 = self.__conv_layer_set(self.network[1][0], self.network[1][1])
 
