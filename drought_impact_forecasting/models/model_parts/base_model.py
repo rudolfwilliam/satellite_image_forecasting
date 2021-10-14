@@ -36,12 +36,13 @@ class Discriminator_GAN(torch.nn.Module):
         super().__init__()
 
         self.classes = cfg["model"]["classes"]
+        self.network = cfg["model"]
         # TODO: Parametrize everything using config/base_model.json. No numbers must be here!
-        conv_layer1 = self.__conv_layer_set(3, 32)
-        conv_layer2 = self.__conv_layer_set(32, 64)
+        conv_layer1 = self.__conv_layer_set(self.network[0][0], self.network[0][1])
+        conv_layer2 = self.__conv_layer_set(self.network[1][0], self.network[1][1])
 
-        fc1 = nn.Linear(64*28*28*28, 2) 
-        fc2 = nn.Linear(1404928, self.classes)
+        fc1 = nn.Linear(self.network[2][0], self.network[2][1]) 
+        fc2 = nn.Linear(self.network[3][0], self.network[3][1])
         relu = nn.LeakyReLU()
         
         self.layers = [conv_layer1, conv_layer2, fc1, fc2, relu]

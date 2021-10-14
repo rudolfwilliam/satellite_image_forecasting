@@ -1,15 +1,22 @@
 {
     "model":
     {
-            "decay_point": 10,
-            "classes": 10,
-            "anneal_start": 5,
-            "anneal_end": 10
+        "decay_point": 10,
+        "classes": 10,
+        "anneal_start": 5,
+        "anneal_end": 10
     },
+    "network": 
+    [
+        [3, 32],
+        [32, 64],
+        [1404928, 2],
+        [1404928, 10]
+    ],
     "loss":
     {
-            "lambda_KL_factor": 0.001,
-            "lambda1": 100
+        "lambda_KL_factor": 0.001,
+        "lambda1": 100
     },
     "data":
     {
