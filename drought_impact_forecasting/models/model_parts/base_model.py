@@ -36,7 +36,9 @@ class Discriminator_GAN(torch.nn.Module):
         super().__init__()
 
         self.classes = cfg["model"]["classes"]
-        self.network = cfg["model"]
+        self.network = cfg["network"]
+        print(self.network)
+        print(type(self.network))
 
         conv_layer1 = self.__conv_layer_set(self.network[0][0], self.network[0][1])
         conv_layer2 = self.__conv_layer_set(self.network[1][0], self.network[1][1])

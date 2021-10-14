@@ -1,9 +1,11 @@
 import earthnet as en
 import numpy as np
 import torch
+import os
 
 def prepare_data():
-    data = np.load('../Data/29SND_2017-06-10_2017-11-06_2105_2233_2873_3001_32_112_44_124.npz')
+    # data = np.load('../Data/29SND_2017-06-10_2017-11-06_2105_2233_2873_3001_32_112_44_124.npz')
+    data = np.load(os.getcwd() + '/Data/29SND_2017-06-10_2017-11-06_2105_2233_2873_3001_32_112_44_124.npz')
     dataset = Earthnet_Dataset(data)
     return dataset
 

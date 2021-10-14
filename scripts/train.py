@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.getcwd())
+
 import torch
 from torch.utils.data import DataLoader
 from pytorch_lightning import Trainer
@@ -24,7 +28,7 @@ def main():
     else:
         raise ValueError("The specified model name is invalid.")
 
-    trainer.fit(model)
+    trainer.fit(model, train_dataloader)
     #trainer.test(model)
 
 if __name__ == "__main__":
