@@ -37,5 +37,23 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return self.highres_dynamic_context[index], self.highres_static[index], self.meso_dynamic[index], \
                self.meso_static[index], self.highres_dynamic_target[index]
+'''
+class Simplified_Dataset(torch.utils.data.Dataset):
+    def __init__(self, data):
+            # Only works for a single training instance
+            #self.data = 
+            self.highres_dynamic_context = np.expand_dims(data['highresdynamic'][:, :, :, :10], axis=0)
+            self.highres_static = np.expand_dims(data['highresstatic'], axis=0)
+            self.meso_dynamic = np.expand_dims(data['mesodynamic'], axis=0)
+            self.meso_static = np.expand_dims(data['mesostatic'], axis=0)
 
+            # 'Label' only consists of the future satellite images
+            self.highres_dynamic_target = np.expand_dims(data['highresdynamic'][:, :, :, 10:], axis=0)
 
+        def __len__(self):
+            return self.highres_dynamic_context.shape[0]
+
+        def __getitem__(self, index):
+            return self.highres_dynamic_context[index], self.highres_static[index], self.meso_dynamic[index], \
+                self.meso_static[index], self.highres_dynamic_target[index]
+'''

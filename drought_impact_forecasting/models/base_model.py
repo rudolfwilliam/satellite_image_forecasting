@@ -4,7 +4,8 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
 from .model_parts.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
-
+from .model_parts.Conv_LSTM import ConvLSTM
+ 
 class Base_model(pl.LightningModule):
     def __init__(self, cfg):
         """
@@ -17,11 +18,20 @@ class Base_model(pl.LightningModule):
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
 
-        self.Discriminator_GAN = Discriminator_GAN(self.cfg)
+        #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
+        channels = 7
+        n_cells = 10
+        self.model = ConvLSTM(input_dim = channels, 
+                              hidden_dim = [3]*n_cells, 
+                              kernel_size = (3,3), 
+                              num_layers = n_cells,
+                              batch_first=False, 
+                              bias=True, 
+                              return_all_layers=False)
 
     # For now just use the GAN
     def forward(self, x):
-        self.Discriminator_GAN.forward(x)
+        return self.model(x)
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -42,10 +52,12 @@ class Base_model(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         highres_dynamic_context, highres_static, meso_dynamic, meso_static, highres_dynamic_target = batch
-
+        print(highres_dynamic_context.shape)
         # Only satellite images as input
-        y_preds = self(highres_dynamic_context)
-        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch)
+        y_preds, _ = self(highres_dynamic_context)
+        print("Target shape: {}".format(highres_dynamic_target.shape))
+        print("Predicted shape: {}".format(type(y_preds[0])))
+        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch, lambda1 = 1, lambda_kl_factor = 1)
 
         return loss_total
 
