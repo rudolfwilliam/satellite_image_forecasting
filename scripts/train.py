@@ -16,9 +16,11 @@ from Data.data_preparation import prepare_data
 def main():
     args, cfg = command_line_parser()
     # Start just with a GAN, once it works we can make a VAE-GAN
-    training_data = prepare_data()
+    training_data = prepare_data(True)
+    test_data = prepare_data(False)
     #train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=True)
     train_dataloader = DataLoader(training_data)
+    test_dataloader = DataLoader(test_data)
 
     # test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
     trainer = Trainer()
@@ -29,7 +31,7 @@ def main():
         raise ValueError("The specified model name is invalid.")
 
     trainer.fit(model, train_dataloader)
-    #trainer.test(model)
+    trainer.test(model, test_dataloader)
 
 if __name__ == "__main__":
     main()
