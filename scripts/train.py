@@ -18,10 +18,10 @@ def main():
     # Start just with a GAN, once it works we can make a VAE-GAN
     training_data = prepare_data()
     #train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=True)
-    train_dataloader = torch.utils.data.DataLoader(training_data)
+    train_dataloader = DataLoader(training_data)
 
     # test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
-    trainer = Trainer(train_dataloader)
+    trainer = Trainer()
 
     if args.model_name == "base_model":
         model = Base_model(cfg)

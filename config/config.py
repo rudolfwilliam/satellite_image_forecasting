@@ -17,8 +17,7 @@ def command_line_parser():
     parser.add_argument('--model_name', type=str, default='base_model', choices=['base_model'], help='CNN architecture')
     args = parser.parse_args()
     if args.model_name == "base_model":
-        # cfg = json.load(open("../config/base_model.json", 'r')) # This doesn't work, maybe only on Mac?
-        cfg = json.load(open(os.getcwd() + "/config/base_model.json", 'r'))
+        cfg = json.load(open(os.getcwd() + "/../config/base_model.json", 'r'))
     else:
         raise ValueError("The specified model name is invalid.")
 

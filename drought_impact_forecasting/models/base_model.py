@@ -41,12 +41,13 @@ class Base_model(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
-        batch_x, batch_y = batch
+        highres_dynamic_context, highres_static, meso_dynamic, meso_static, highres_dynamic_target = batch
 
-        y_preds = self(batch_x)
-        loss_total = base_line_total_loss(y_preds, batch_y, self.current_epoch)
+        # Only satellite images as input
+        y_preds = self(highres_dynamic_context)
+        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch)
 
         return loss_total
 
-    def validation_step(self):
-        pass
+    """def validation_step(self):
+        pass"""
