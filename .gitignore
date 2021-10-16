@@ -210,3 +210,6 @@ ENV/
 
 # mkdocs documentation
 /site
+
+# lightning logs directory
+/lightning_logs
