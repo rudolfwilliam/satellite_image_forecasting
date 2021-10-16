@@ -28,7 +28,7 @@ class LSTM_model(pl.LightningModule):
                               num_layers = n_cells,
                               batch_first=False, 
                               bias=True, 
-                              return_all_layers=False)
+                              prediction_count=1)
 
     # For now just use the GAN
     def forward(self, x):

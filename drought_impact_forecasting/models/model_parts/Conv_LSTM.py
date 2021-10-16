@@ -1,9 +1,9 @@
+import numpy as np
 import torch.nn as nn
 import torch
 
 
 class Conv_LSTM_Cell(nn.Module):
-
     def __init__(self, input_dim, hidden_dim, kernel_size, bias):
         """
         Initialize ConvLSTM cell.
@@ -28,8 +28,8 @@ class Conv_LSTM_Cell(nn.Module):
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias = bias
 
-        self.conv = nn.Conv2d(in_channels = self.input_dim + self.hidden_dim,
-                              out_channels= 4 * self.hidden_dim,
+        self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
+                              out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
                               bias=self.bias)
@@ -84,7 +84,7 @@ class Conv_LSTM(nn.Module):
     """
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
-                 batch_first=False, bias=True, return_all_layers=False):
+                 batch_first=False, bias=True, prediction_count=1):
         super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -95,13 +95,13 @@ class Conv_LSTM(nn.Module):
         if not len(kernel_size) == len(hidden_dim) == num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim = input_dim                  #n of channels in input pics
-        self.hidden_dim = hidden_dim                #n of channels that go through hidden layers
-        self.kernel_size = kernel_size              #n kernel size (no magic here)
-        self.num_layers = num_layers                #n of cells in time 
-        self.batch_first = batch_first              #true if you have c_0, h_0 (I think)
+        self.input_dim = input_dim                  # n of channels in input pics
+        self.hidden_dim = hidden_dim                # n of channels that go through hidden layers
+        self.kernel_size = kernel_size              # n kernel size (no magic here)
+        self.num_layers = num_layers                # n of cells in time
+        self.batch_first = batch_first              # true if you have c_0, h_0
         self.bias = bias
-        self.return_all_layers = return_all_layers  #
+        self.prediction_count = prediction_count  #
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -114,59 +114,53 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
+    # TODO: Implement an inference mode of forward, so the model can take it's own predictions as input
     def forward(self, input_tensor, hidden_state=None):
         """
         Parameters
         ----------
-        input_tensor: todo
-            5-D Tensor either of shape (t, b, c, h, w) or (b, t, c, h, w)
-            5-D Tensor either of shape (b, h, w, c, t) or (b, t, c, h, w)
+        input_tensor:
+            (b - batch_size, h - height, w - width, c - channel, t - time)
+            5-D Tensor either of shape (b, c, w, h, t)
         hidden_state: todo
             None. todo implement stateful
         Returns
         -------
         last_state_list, layer_output
         """
-        if not self.batch_first:
-            # (t, b, c, h, w) -> (b, t, c, h, w)
-            input_tensor = input_tensor.permute(0, 4, 3, 1, 2)
 
-        b, _, _, h, w = input_tensor.size()
+        b, _, w, h, _ = input_tensor.size()
 
         # Implement stateful ConvLSTM
         if hidden_state is not None:
             raise NotImplementedError()
         else:
             # Since the init is done in forward. Can send image size here
-            hidden_state = self._init_hidden(batch_size=b,
-                                             image_size=(h, w))
+            hidden_state = self._init_hidden(batch_size=b, image_size=(h, w))
 
         layer_output_list = []
         last_state_list = []
 
-        seq_len = input_tensor.size(1)
+        seq_len = input_tensor.size(-1)
         cur_layer_input = input_tensor
 
         for layer_idx in range(self.num_layers):
-
             h, c = hidden_state[layer_idx]
             output_inner = []
             for t in range(seq_len):
-                h, c = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, t, :, :, :],
-                                                 cur_state=[h, c])
+                h, c = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, :, :, :, t], cur_state=[h, c])
                 output_inner.append(h)
 
-            layer_output = torch.stack(output_inner, dim=1)
+            layer_output = torch.stack(output_inner, dim=-1)
             cur_layer_input = layer_output
 
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
 
-        if not self.return_all_layers:
-            layer_output_list = layer_output_list[-1:]
-            last_state_list = last_state_list[-1:]
+        prediction = layer_output_list[-1:][0][:, :, :, :, -1]
+        last_state_list = last_state_list[-1:]
 
-        return layer_output_list, last_state_list
+        return prediction, last_state_list
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []
