@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import Trainer
 
 from config.config import command_line_parser
-from drought_impact_forecasting.models.base_model import Base_model
+from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import prepare_data
 
 # Here I would start simply with 1 datacube (see Data folder) just rgb values
@@ -25,8 +25,8 @@ def main():
     # test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
     trainer = Trainer()
 
-    if args.model_name == "base_model":
-        model = Base_model(cfg)
+    if args.model_name == "LSTM_model":
+        model = LSTM_model(cfg)
     else:
         raise ValueError("The specified model name is invalid.")
 

@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 
-class ConvLSTMCell(nn.Module):
+class Conv_LSTM_Cell(nn.Module):
 
     def __init__(self, input_dim, hidden_dim, kernel_size, bias):
         """
@@ -19,7 +19,7 @@ class ConvLSTMCell(nn.Module):
             Whether or not to add the bias.
         """
 
-        super(ConvLSTMCell, self).__init__()
+        super(Conv_LSTM_Cell, self).__init__()
 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -57,7 +57,7 @@ class ConvLSTMCell(nn.Module):
                 torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device))
 
 
-class ConvLSTM(nn.Module):
+class Conv_LSTM(nn.Module):
 
     """
     Parameters:
@@ -85,7 +85,7 @@ class ConvLSTM(nn.Module):
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
                  batch_first=False, bias=True, return_all_layers=False):
-        super(ConvLSTM, self).__init__()
+        super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
 
@@ -95,11 +95,11 @@ class ConvLSTM(nn.Module):
         if not len(kernel_size) == len(hidden_dim) == num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim = input_dim          #n of channels in input pics
-        self.hidden_dim = hidden_dim        #n of channels that go through hidden layers
-        self.kernel_size = kernel_size      #n kernel size (no magic here)
-        self.num_layers = num_layers        #n of cells in time 
-        self.batch_first = batch_first      #true if you have c_0, h_0 (I think)
+        self.input_dim = input_dim                  #n of channels in input pics
+        self.hidden_dim = hidden_dim                #n of channels that go through hidden layers
+        self.kernel_size = kernel_size              #n kernel size (no magic here)
+        self.num_layers = num_layers                #n of cells in time 
+        self.batch_first = batch_first              #true if you have c_0, h_0 (I think)
         self.bias = bias
         self.return_all_layers = return_all_layers  #
 
@@ -107,7 +107,7 @@ class ConvLSTM(nn.Module):
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.hidden_dim[i - 1]
 
-            cell_list.append(ConvLSTMCell(input_dim=cur_input_dim,
+            cell_list.append(Conv_LSTM_Cell(input_dim=cur_input_dim,
                                           hidden_dim=self.hidden_dim[i],
                                           kernel_size=self.kernel_size[i],
                                           bias=self.bias))

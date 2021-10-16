@@ -14,10 +14,10 @@ def command_line_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument('--model_name', type=str, default='base_model', choices=['base_model'], help='CNN architecture')
+    parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model'], help='CNN architecture')
     args = parser.parse_args()
-    if args.model_name == "base_model":
-        cfg = json.load(open(os.getcwd() + "/config/base_model.json", 'r'))
+    if args.model_name == "LSTM_model":
+        cfg = json.load(open(os.getcwd() + "/config/LSTM_model.json", 'r'))
     else:
         raise ValueError("The specified model name is invalid.")
 

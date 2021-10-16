@@ -3,10 +3,10 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
-from .model_parts.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
-from .model_parts.Conv_LSTM import ConvLSTM
+from .model_parts.SAVP_model.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
+from .model_parts.Conv_LSTM import Conv_LSTM
  
-class Base_model(pl.LightningModule):
+class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
         """
         Base prediction model. It is an adaptation of SAVP (Stochastic Adversarial Video Prediction) by Alex Lee presented in https://arxiv.org/pdf/1804.01523.pdf
@@ -21,7 +21,7 @@ class Base_model(pl.LightningModule):
         #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = 7
         n_cells = 10
-        self.model = ConvLSTM(input_dim = channels, 
+        self.model = Conv_LSTM(input_dim = channels, 
                               hidden_dim = [3]*n_cells, 
                               kernel_size = (3,3), 
                               num_layers = n_cells,
