@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
@@ -51,15 +52,31 @@ class LSTM_model(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
-        highres_dynamic_context, highres_static, meso_dynamic, meso_static, highres_dynamic_target = batch
-        print(highres_dynamic_context.shape)
-        # Only satellite images as input
-        y_preds, _ = self(highres_dynamic_context)
-        print("Target shape: {}".format(highres_dynamic_target.shape))
-        print("Predicted shape: {}".format(type(y_preds[0])))
-        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch, lambda1 = 1, lambda_kl_factor = 1)
+        '''
+            This is not trivial: let's say we have T time steps in the cube for training. We start by taking the first t0 time samples and we try to predict the next one. We then measure the loss against the ground truth.
+            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict tbe t0 + 2. On and on untill we use all but one samples to predict the last one. 
+        '''
+        highres_dynamic, highres_static, meso_dynamic, meso_static = batch
+        '''
+        highres_dynamic_context and highres_dynamic_target of size (b, w, h, c, t)
+            b = batch_size)
+            w = width
+            h = height
+            c = channels
+            t = time
+        '''
+        
+        T = highres_dynamic.size()[4]
+        t0 = 2 #n of time iteration we are doing
+        l2_crit = nn.MSELoss()
+        loss = torch.tensor([0.0], requires_grad = True)
+        for t_end in range(t0, T): # this iterate with t_end = t0, ..., T-1
+            y_pred = self(highres_dynamic[:, :, :, :, :t_end])
+            loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
 
-        return loss_total
+        
+        return loss
+    
 
     """def validation_step(self):
         pass"""
