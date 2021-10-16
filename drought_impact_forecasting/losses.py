@@ -14,14 +14,14 @@ def kl_weight(epoch, finalWeight, annealStart, annealEnd):
         return finalWeight * (epoch - annealStart)/(annealEnd - annealStart)
 
 # Add up (and weight) the different loss components
-def base_line_total_loss(y_preds, batch_y, epoch, lambda1, lambda_kl_factor):
+def base_line_total_loss(y_preds, batch_y, epoch, lambda1, lambda_kl_factor, annealStart, annealEnd):
     l1_criterion = nn.L1Loss() 
     kl_criterion = nn.KLDivLoss()
     GAN_criterion = nn.CrossEntropyLoss()
     VAE_GAN_Criterion = nn.CrossEntropyLoss()
 
     lambda_kl_final = lambda1 * lambda_kl_factor
-    curlambda_kl = kl_weight(epoch, lambda_kl_final)
+    curlambda_kl = kl_weight(epoch, lambda_kl_final, annealStart, annealEnd)
 
     L1 = l1_criterion(y_preds, batch_y).mul(lambda1)
     L_KL = kl_criterion(y_preds, batch_y).mul(curlambda_kl)
