@@ -41,7 +41,8 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        self.highres_dynamic = self.highres_dynamic.permute(2, 0, 1, 3)
+        print(torch.Tensor(self.highres_dynamic).size())
+        self.highres_dynamic = torch.Tensor(self.highres_dynamic).permute(0, 3, 1, 2, 4)
         # 'Label' only consists of the future satellite images
         #self.highres_dynamic_target = np.expand_dims(data['highresdynamic'][:, :, :, 10:], axis=0)
 
