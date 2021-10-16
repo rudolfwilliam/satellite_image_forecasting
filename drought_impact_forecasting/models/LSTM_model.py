@@ -57,7 +57,9 @@ class LSTM_model(pl.LightningModule):
         y_preds, _ = self(highres_dynamic_context)
         print("Target shape: {}".format(highres_dynamic_target.shape))
         print("Predicted shape: {}".format(type(y_preds[0])))
-        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch, lambda1 = 1, lambda_kl_factor = 1)
+        loss_total = base_line_total_loss(y_preds, highres_dynamic_target, self.current_epoch,
+                self.cfg["loss"]["lambda1"], self.cfg["loss"]["lambda_KL_factor"],
+                self.cfg["model"]["anneal_start"], self.cfg["model"]["anneal_end"])
 
         return loss_total
 
