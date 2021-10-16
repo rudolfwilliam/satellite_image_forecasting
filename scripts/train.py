@@ -16,8 +16,7 @@ from Data.data_preparation import prepare_data
 def main():
     args, cfg = command_line_parser()
     # Start just with a GAN, once it works we can make a VAE-GAN
-    training_data = prepare_data(True)
-    test_data = prepare_data(False)
+    training_data, test_data = prepare_data()
     #train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=True)
     train_dataloader = DataLoader(training_data)
     test_dataloader = DataLoader(test_data)
