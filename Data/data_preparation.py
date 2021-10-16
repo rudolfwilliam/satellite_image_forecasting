@@ -35,6 +35,13 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         self.meso_dynamic = np.expand_dims(data['mesodynamic'], axis=0)
         self.meso_static = np.expand_dims(data['mesostatic'], axis=0)
 
+        ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
+            w = width
+            h = height
+            c = channel
+            t = time
+        '''
+        self.highres_dynamic = self.highres_dynamic.permute(2, 0, 1, 3)
         # 'Label' only consists of the future satellite images
         #self.highres_dynamic_target = np.expand_dims(data['highresdynamic'][:, :, :, 10:], axis=0)
 
