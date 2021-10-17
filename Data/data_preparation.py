@@ -3,52 +3,82 @@ import numpy as np
 import torch
 import os
 from os.path import isfile, join
-
+ 
 def prepare_data(train_dir = '/Data/train/', test_dir = '/Data/test'):
-
-    '''train_files = []
+   
+    train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
         for name in files:
-            train_files.append(os.path.join(path, name))
-    print("train")
-    print(train_files)
- 
-    test_files = []
+            train_files.append(join(path, name))
+   
+    test_context_files = []
+    test_target_files = []
     for path, subdirs, files in os.walk(os.getcwd() + test_dir):
         for name in files:
-            test_files.append(os.path.join(path, name))
-    print("test")
-    print(test_files)'''
+            full_name = join(path, name)
+            if 'context' in full_name:
+                test_context_files.append(full_name)
+            else:
+                test_target_files.append(full_name)
 
-    # Load all datacubes from data folder
-    #data = [np.load(data_dir + f) for f in os.listdir(data_dir) if isfile(join(data_dir, f))]
-    data = np.load(os.getcwd() + '/Data/29SND_2017-06-10_2017-11-06_2105_2233_2873_3001_32_112_44_124.npz')
-    dataset = Earthnet_Dataset(data)
-    return dataset, dataset
-
-
+    # Sort file names just in case (so we glue together the right context & target)
+    test_context_files.sort()
+    test_target_files.sort()
+ 
+    train_data = []
+    test_context_data = []
+    test_target_data = []
+    
+    for i in range(len(train_files)):
+        train_data.append(np.load(train_files[i]))
+ 
+    for i in range(len(test_context_files)):
+        test_context_data.append(np.load(test_context_files[i]))
+        test_target_data.append(np.load(test_context_files[i]))
+    
+    train = Earthnet_Dataset(train_data)
+    test = Earthnet_Dataset(test_context_data, test_target_data)
+    return train, test
+ 
+ 
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, data):
-        # Only works for a single training instance
-        self.highres_dynamic = np.expand_dims(data['highresdynamic'], axis=0)
-        self.highres_static = np.expand_dims(data['highresstatic'], axis=0)
-        self.meso_dynamic = np.expand_dims(data['mesodynamic'], axis=0)
-        self.meso_static = np.expand_dims(data['mesostatic'], axis=0)
+    def __init__(self, context, target = None):
+        
+        samples = len(context)
 
+        # If target data is given separately add context + target dimensions
+        if target is not None:
+            hrs_shape = list(context[0]['highresdynamic'].shape)
+            hrs_shape[-1] += target[0]['highresdynamic'].shape[-1]
+            self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
+        else:
+            self.highres_dynamic = np.empty((tuple([samples] + list(context[0]['highresdynamic'].shape))))
+        self.highres_static = np.empty((tuple([samples] + list(context[0]['highresstatic'].shape))))
+        self.meso_dynamic = np.empty((tuple([samples] + list(context[0]['mesodynamic'].shape))))
+        self.meso_static = np.empty((tuple([samples] + list(context[0]['mesostatic'].shape))))
+
+        for i in range(samples):
+            # For test samples glue together context & target
+            if target is not None:
+                self.highres_dynamic[i] = np.append(context[i]['highresdynamic'], target[i]['highresdynamic'],axis=-1)
+            else:
+                self.highres_dynamic[i] = context[i]['highresdynamic']
+            self.highres_static[i] = context[i]['highresstatic']
+            self.meso_dynamic[i] = context[i]['mesodynamic']
+            self.meso_static[i] = context[i]['mesostatic']
+
+ 
         ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
             w = width
             h = height
             c = channel
             t = time
         '''
-        print(torch.Tensor(self.highres_dynamic).size())
         self.highres_dynamic = torch.Tensor(self.highres_dynamic).permute(0, 3, 1, 2, 4)
-        # 'Label' only consists of the future satellite images
-        #self.highres_dynamic_target = np.expand_dims(data['highresdynamic'][:, :, :, 10:], axis=0)
-
+ 
     def __len__(self):
         return self.highres_dynamic.shape[0]
-
+ 
     def __getitem__(self, index):
         return self.highres_dynamic[index], self.highres_static[index], self.meso_dynamic[index], \
                self.meso_static[index]
