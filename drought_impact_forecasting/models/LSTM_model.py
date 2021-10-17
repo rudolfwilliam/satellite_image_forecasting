@@ -72,6 +72,8 @@ class LSTM_model(pl.LightningModule):
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0, T): # this iterate with t_end = t0, ..., T-1
             y_pred = self(highres_dynamic[:, :, :, :, :t_end])
+            print(y_pred)
+            print(highres_dynamic[:, :, :, :, t_end + 1].shape)
             loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
 
         

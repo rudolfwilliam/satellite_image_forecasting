@@ -67,6 +67,11 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             self.meso_dynamic[i] = context[i]['mesodynamic']
             self.meso_static[i] = context[i]['mesostatic']
 
+        # Change all nan's to 0            REMOVE!
+        self.highres_dynamic = np.nan_to_num(self.highres_dynamic, nan = 0.0)
+        self.highres_static = np.nan_to_num(self.highres_static, nan = 0.0)
+        self.meso_dynamic = np.nan_to_num(self.meso_dynamic, nan = 0.0)
+        self.meso_static = np.nan_to_num(self.meso_static, nan = 0.0)
  
         ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
             w = width
