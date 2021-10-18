@@ -67,16 +67,12 @@ class LSTM_model(pl.LightningModule):
         '''
         
         T = highres_dynamic.size()[4]
-        t0 = 2 #n of time iteration we are doing
+        t0 = T-1 #n of pics wi e start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
-        for t_end in range(t0, T): # this iterate with t_end = t0, ..., T-1
-            y_pred = self(highres_dynamic[:, :, :, :, :t_end])
-            print(y_pred)
-            print(highres_dynamic[:, :, :, :, t_end + 1].shape)
-            loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
-
-        
+        for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
+            y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
+            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
         return loss
     
 
