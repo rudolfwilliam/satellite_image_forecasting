@@ -23,10 +23,13 @@
     },
     "training":
     {
-        "epochs": 30,
+        "epochs": 3,
         "start_learn_rate": 0.05,
         "batch_size": 2,
-        "optimizer": "adam"
+        "optimizer": "adam",
+        "seed": 1,
+        "training_samples": 10,
+        "num_workers": 4
     }
 }
 

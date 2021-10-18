@@ -78,3 +78,10 @@ class LSTM_model(pl.LightningModule):
 
     """def validation_step(self):
         pass"""
+
+    def test_step(self, batch, batch_idx):
+        '''
+            TBD: Here we could directly incorporate the EarthNet Score from the model demo.
+        '''
+        # highres_dynamic, highres_static, meso_dynamic, meso_static = batch
+        pass

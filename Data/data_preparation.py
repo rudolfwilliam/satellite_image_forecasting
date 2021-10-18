@@ -4,13 +4,13 @@ import torch
 import os
 from os.path import isfile, join
  
-def prepare_data(train_dir = '/Data/train/', test_dir = '/Data/test'):
+def prepare_data(training_samples, train_dir = '/Data/train/', test_dir = '/Data/test'):
    
     train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
         for name in files:
             train_files.append(join(path, name))
-   
+    
     test_context_files = []
     test_target_files = []
     for path, subdirs, files in os.walk(os.getcwd() + test_dir):
@@ -29,7 +29,8 @@ def prepare_data(train_dir = '/Data/train/', test_dir = '/Data/test'):
     test_context_data = []
     test_target_data = []
     
-    for i in range(len(train_files)):
+    # limit number of training samples
+    for i in range(min(len(train_files), training_samples)):
         train_data.append(np.load(train_files[i]))
  
     for i in range(len(test_context_files)):
