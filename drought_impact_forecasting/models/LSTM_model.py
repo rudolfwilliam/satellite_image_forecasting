@@ -22,10 +22,10 @@ class LSTM_model(pl.LightningModule):
         #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = 7
         n_cells = 10
-        self.model = Conv_LSTM(input_dim = channels, 
-                              hidden_dim = [3]*n_cells, 
-                              kernel_size = (3,3), 
-                              num_layers = n_cells,
+        self.model = Conv_LSTM(input_dim=channels,
+                              hidden_dim=[7] * n_cells,
+                              kernel_size=(3,3),
+                              num_layers=n_cells,
                               batch_first=False, 
                               bias=True, 
                               prediction_count=1)
