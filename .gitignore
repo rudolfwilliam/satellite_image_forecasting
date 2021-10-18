@@ -210,3 +210,6 @@ ENV/
 
 # lightning logs directory
 /lightning_logs
+
+# VS code debugger
+/.vscode
