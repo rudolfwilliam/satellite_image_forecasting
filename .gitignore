@@ -213,3 +213,7 @@ ENV/
 
 # VS code debugger
 /.vscode
+
+# wandb
+/wandb
+/DS_Lab

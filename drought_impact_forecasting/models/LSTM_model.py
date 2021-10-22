@@ -20,11 +20,11 @@ class LSTM_model(pl.LightningModule):
         self.num_epochs = self.cfg["training"]["epochs"]
 
         #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
-        channels = 7
-        n_cells = 10
+        channels = self.cfg["model"]["channels"]
+        n_cells = self.cfg["model"]["n_cells"]
         self.model = Conv_LSTM(input_dim=channels,
-                              hidden_dim=[7] * n_cells,
-                              kernel_size=(3,3),
+                              hidden_dim=[channels] * n_cells,
+                              kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
                               num_layers=n_cells,
                               batch_first=False, 
                               bias=True, 
@@ -36,7 +36,7 @@ class LSTM_model(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
-            optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
+            self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
             
             # Decay learning rate according for last (epochs - decay_point) iterations
             lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
@@ -44,12 +44,12 @@ class LSTM_model(pl.LightningModule):
                           else ((self.cfg["training"]["epochs"]-epoch) / (30-self.cfg["model"]["decay_point"])
                                 * self.cfg["training"]["start_learn_rate"])
 
-            scheduler = LambdaLR(optimizer, lambda_all)
+            self.scheduler = LambdaLR(self.optimizer, lambda_all)
         else:
             raise ValueError("You have specified an invalid optimizer.")
 
         # Pls check this works correctly with pytorch lightning
-        return [optimizer], [scheduler]
+        return [self.optimizer], [self.scheduler]
 
     def training_step(self, batch, batch_idx):
         '''
@@ -67,15 +67,22 @@ class LSTM_model(pl.LightningModule):
         '''
         
         T = highres_dynamic.size()[4]
-        t0 = T-1 #n of pics wi e start with
+        t0 = T-1 #n of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
             y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
             loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
+        
+        logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
+        self.log_dict(
+            logs,
+            on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
+
         return loss
     
-
+    # We could try early stopping here later on
     """def validation_step(self):
         pass"""
 
@@ -83,5 +90,17 @@ class LSTM_model(pl.LightningModule):
         '''
             TBD: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
-        # highres_dynamic, highres_static, meso_dynamic, meso_static = batch
+        highres_dynamic, highres_static, meso_dynamic, meso_static = batch
         pass
+        '''
+        T = highres_dynamic.size()[4]
+        t0 = T-1 #n of pics we start with
+        l2_crit = nn.MSELoss()
+        loss = torch.tensor([0.0], requires_grad = True)
+        for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
+            y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
+            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
+        
+        wandb.log({"test_loss": loss})
+        return loss
+        '''
