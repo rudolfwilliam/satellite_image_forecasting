@@ -22,12 +22,13 @@ def main():
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train')
     pl.seed_everything(cfg["training"]["seed"])
 
-    training_data, test_data = prepare_data(cfg["training"]["training_samples"])
+    training_data, test_data = prepare_data(cfg["training"]["training_samples"], cfg["data"]["mesoscale_cut"])
     train_dataloader = DataLoader(training_data, num_workers = cfg["training"]["num_workers"], batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=False)
     test_dataloader = DataLoader(test_data, num_workers = cfg["training"]["num_workers"], drop_last=False)
 
     # We might want to configure GPU, TPU, etc. usage here
     trainer = Trainer(max_epochs = cfg["training"]["epochs"], logger = wandb_logger,
+                        log_every_n_steps = min(cfg["training"]["log_steps"], cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
                         devices = cfg["training"]["devices"], accelerator = cfg["training"]["accelerator"])
 
     if args.model_name == "LSTM_model":

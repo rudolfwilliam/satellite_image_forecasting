@@ -4,7 +4,7 @@ import torch
 import os
 from os.path import isfile, join
  
-def prepare_data(training_samples, train_dir = '/Data/train/', test_dir = '/Data/test'):
+def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir = '/Data/test'):
    
     train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
@@ -37,13 +37,13 @@ def prepare_data(training_samples, train_dir = '/Data/train/', test_dir = '/Data
         test_context_data.append(np.load(test_context_files[i]))
         test_target_data.append(np.load(test_context_files[i]))
     
-    train = Earthnet_Dataset(train_data)
-    test = Earthnet_Dataset(test_context_data, test_target_data)
+    train = Earthnet_Dataset(train_data, ms_cut)
+    test = Earthnet_Dataset(test_context_data, ms_cut, test_target_data)
     return train, test
  
  
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context, target = None):
+    def __init__(self, context, ms_cut, target = None):
         
         samples = len(context)
 
@@ -55,8 +55,9 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         else:
             self.highres_dynamic = np.empty((tuple([samples] + list(context[0]['highresdynamic'].shape))))
         self.highres_static = np.empty((tuple([samples] + list(context[0]['highresstatic'].shape))))
-        self.meso_dynamic = np.empty((tuple([samples] + list(context[0]['mesodynamic'].shape))))
-        self.meso_static = np.empty((tuple([samples] + list(context[0]['mesostatic'].shape))))
+        # For mesoscale data we only use the area overlapping the datacube
+        self.meso_dynamic = np.empty((tuple([samples] + [ms_cut[1] - ms_cut[0], ms_cut[1] - ms_cut[0]] + list(context[0]['mesodynamic'].shape[2:]))))
+        self.meso_static = np.empty((tuple([samples] + [ms_cut[1] - ms_cut[0], ms_cut[1] - ms_cut[0]] + list(context[0]['mesostatic'].shape[2:]))))
 
         for i in range(samples):
             # For test samples glue together context & target
@@ -65,8 +66,9 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             else:
                 self.highres_dynamic[i] = context[i]['highresdynamic']
             self.highres_static[i] = context[i]['highresstatic']
-            self.meso_dynamic[i] = context[i]['mesodynamic']
-            self.meso_static[i] = context[i]['mesostatic']
+            # For mesoscale data cut out overlapping section of interest
+            self.meso_dynamic[i] = context[i]['mesodynamic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:,:]
+            self.meso_static[i] = context[i]['mesostatic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:]
 
         # Change all nan's to 0            REMOVE!
         self.highres_dynamic = np.nan_to_num(self.highres_dynamic, nan = 0.0)
