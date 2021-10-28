@@ -42,7 +42,7 @@ class LSTM_model(pl.LightningModule):
             # Decay learning rate according for last (epochs - decay_point) iterations
             lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
                           if epoch <= self.cfg["model"]["decay_point"] \
-                          else ((self.cfg["training"]["epochs"]-epoch) / (30-self.cfg["model"]["decay_point"])
+                          else ((self.cfg["training"]["epochs"]-epoch) / (self.cfg["training"]["epochs"]-self.cfg["model"]["decay_point"])
                                 * self.cfg["training"]["start_learn_rate"])
 
             self.scheduler = LambdaLR(self.optimizer, lambda_all)
