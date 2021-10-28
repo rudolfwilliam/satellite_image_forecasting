@@ -1,4 +1,4 @@
-import earthnet as en
+#import earthnet as en
 import numpy as np
 import torch
 import os

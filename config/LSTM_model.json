@@ -6,7 +6,8 @@
         "anneal_start": 5,
         "anneal_end": 10,
         "channels": 7,
-        "n_cells": 10,
+        "hidden_channels": 4,
+        "n_cells": 1,
         "kernel": [3, 3]
     },
     "network": 
@@ -27,12 +28,12 @@
     },
     "training":
     {
-        "epochs": 5,
+        "epochs": 50,
         "start_learn_rate": 0.1,
         "batch_size": 2,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 10,
+        "training_samples": 30,
         "num_workers": 4,
         "accelerator": "auto",
         "devices": 1,

@@ -21,9 +21,10 @@ class LSTM_model(pl.LightningModule):
 
         #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = self.cfg["model"]["channels"]
+        hidden_channels = self.cfg["model"]["hidden_channels"]
         n_cells = self.cfg["model"]["n_cells"]
         self.model = Conv_LSTM(input_dim=channels,
-                              hidden_dim=[channels] * n_cells,
+                              hidden_dim=[hidden_channels] * n_cells,
                               kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
                               num_layers=n_cells,
                               batch_first=False, 
@@ -72,14 +73,14 @@ class LSTM_model(pl.LightningModule):
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
             y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
-            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
+            # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
+            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :4, :, :, t_end + 1]))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
             logs,
             on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
-
         return loss
     
     # We could try early stopping here later on
