@@ -33,7 +33,7 @@
         "batch_size": 2,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 30,
+        "training_samples": 4,
         "num_workers": 4,
         "accelerator": "auto",
         "devices": 1,

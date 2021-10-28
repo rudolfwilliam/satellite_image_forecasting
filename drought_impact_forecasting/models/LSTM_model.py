@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
 from .model_parts.SAVP_model.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
 from .model_parts.Conv_LSTM import Conv_LSTM
+from .model_parts.shared import mean_cube
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -34,6 +35,8 @@ class LSTM_model(pl.LightningModule):
     # For now just use the GAN
     def forward(self, x):
         return self.model(x)
+        # TODO: we need to add the average since the model, for now, only predicts the delta from the average
+
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -74,7 +77,8 @@ class LSTM_model(pl.LightningModule):
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
             y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
             # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
-            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :4, :, :, t_end + 1]))
+            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean_cube(highres_dynamic[:, :4, :, :, :])
+            loss = loss.add(l2_crit(y_pred, delta))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
