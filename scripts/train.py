@@ -37,6 +37,9 @@ def main():
         raise ValueError("The specified model name is invalid.")
 
     trainer.fit(model, train_dataloader)
+
+    torch.save(model.state_dict(), "Models/model.torch")
+
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
