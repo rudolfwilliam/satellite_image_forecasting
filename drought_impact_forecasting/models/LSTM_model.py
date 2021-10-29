@@ -3,6 +3,8 @@ from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
+import numpy as np
+
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
 from .model_parts.SAVP_model.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
 from .model_parts.Conv_LSTM import Conv_LSTM
@@ -77,7 +79,7 @@ class LSTM_model(pl.LightningModule):
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
             y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
             # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
-            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean_cube(highres_dynamic[:, :4, :, :, :])
+            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean_cube(highres_dynamic[:, np.r_[0:4, -1:0], :, :, :], True)
             loss = loss.add(l2_crit(y_pred, delta))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
