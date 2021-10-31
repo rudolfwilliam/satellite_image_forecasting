@@ -13,7 +13,7 @@ from .model_parts.shared import mean_cube
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
         """
-        Base prediction model. It is an adaptation of SAVP (Stochastic Adversarial Video Prediction) by Alex Lee presented in https://arxiv.org/pdf/1804.01523.pdf
+        Base prediction model. It is based on the convolutional LSTM architecture.
 
         Parameters:
             cfg (dict) -- model configuration parameters
@@ -25,11 +25,11 @@ class LSTM_model(pl.LightningModule):
         #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
-        n_cells = self.cfg["model"]["n_cells"]
+        n_layers = self.cfg["model"]["n_layers"]
         self.model = Conv_LSTM(input_dim=channels,
-                              hidden_dim=[hidden_channels] * n_cells,
+                              hidden_dim=[hidden_channels] * n_layers,
                               kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
-                              num_layers=n_cells,
+                              num_layers=n_layers,
                               batch_first=False, 
                               bias=True, 
                               prediction_count=1)
@@ -60,7 +60,7 @@ class LSTM_model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         '''
             This is not trivial: let's say we have T time steps in the cube for training. We start by taking the first t0 time samples and we try to predict the next one. We then measure the loss against the ground truth.
-            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict tbe t0 + 2. On and on untill we use all but one samples to predict the last one. 
+            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict tbe t0 + 2. On and on until we use all but one samples to predict the last one.
         '''
         highres_dynamic, highres_static, meso_dynamic, meso_static = batch
         '''
@@ -111,3 +111,6 @@ class LSTM_model(pl.LightningModule):
         wandb.log({"test_loss": loss})
         return loss
         '''
+
+    def training_epoch_end(self, outputs):
+        self.model()
