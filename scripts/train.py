@@ -16,10 +16,11 @@ from Data.data_preparation import prepare_data
 
 import wandb
 
-def main():   
-    wandb.login()
+def main():
     args, cfg = command_line_parser()
-    wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train')
+    if not cfg["training"]["offline"]:
+        wandb.login()
+    wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
     pl.seed_everything(cfg["training"]["seed"])
 
     training_data, test_data = prepare_data(cfg["training"]["training_samples"], cfg["data"]["mesoscale_cut"])
@@ -46,7 +47,8 @@ def main():
     # sometimes we get out of bound values!
     # trainer.predict(model, test_dataloader)
 
-    wandb.finish()
+    if not cfg["training"]["offline"]:
+        wandb.finish()
 
 if __name__ == "__main__":
     main()

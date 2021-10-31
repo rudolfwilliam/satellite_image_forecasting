@@ -28,6 +28,7 @@
     },
     "training":
     {
+        "offline": true,
         "epochs": 5,
         "start_learn_rate": 0.1,
         "batch_size": 2,

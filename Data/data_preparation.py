@@ -10,7 +10,7 @@ def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir 
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
         for name in files:
             train_files.append(join(path, name))
-    
+
     test_context_files = []
     test_target_files = []
     for path, subdirs, files in os.walk(os.getcwd() + test_dir):
@@ -28,7 +28,7 @@ def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir 
     train_data = []
     test_context_data = []
     test_target_data = []
-    
+
     # limit number of training samples
     for i in range(min(len(train_files), training_samples)):
         train_data.append(np.load(train_files[i]))
@@ -40,11 +40,10 @@ def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir 
     train = Earthnet_Dataset(train_data, ms_cut)
     test = Earthnet_Dataset(test_context_data, ms_cut, test_target_data)
     return train, test
- 
- 
+
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, context, ms_cut, target = None):
-        
+
         samples = len(context)
 
         # If target data is given separately add context + target dimensions
