@@ -71,7 +71,7 @@ class Conv_LSTM(nn.Module):
     Input:
         A tensor of shape (b, c, w, h, t)
     Output:
-        A tuple of two lists prediction and last_state_list
+        The residual from the mean cube
     """
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
@@ -142,9 +142,8 @@ class Conv_LSTM(nn.Module):
             last_state_list.append([h, c])
 
         prediction = layer_output_list[-1:][0][:, :, :, :, -1]
-        last_state_list = last_state_list[-1:]
 
-        return prediction, last_state_list
+        return prediction
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []

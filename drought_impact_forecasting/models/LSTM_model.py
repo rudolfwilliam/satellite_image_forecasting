@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import numpy as np
 
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
-from .model_parts.SAVP_model.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import mean_cube
  
@@ -22,7 +21,6 @@ class LSTM_model(pl.LightningModule):
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
 
-        #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
         n_layers = self.cfg["model"]["n_layers"]
@@ -34,11 +32,13 @@ class LSTM_model(pl.LightningModule):
                               bias=True, 
                               prediction_count=1)
 
-    # For now just use the GAN
     def forward(self, x):
-        return self.model(x)
-        # TODO: we need to add the average since the model, for now, only predicts the delta from the average
-
+        # Compute mean cube
+        mean = mean_cube(x[:, np.r_[0:4, -1:0], :, :, :], True)
+        pred_delta = self.model(x)
+        # Prediction is mean + residual
+        pred = pred_delta + mean
+        return pred, pred_delta, mean
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -77,10 +77,10 @@ class LSTM_model(pl.LightningModule):
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
-            y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
+            x_pred, x_delta, mean = self(highres_dynamic[:, :, :, :, :t_end])
             # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
-            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean_cube(highres_dynamic[:, np.r_[0:4, -1:0], :, :, :], True)
-            loss = loss.add(l2_crit(y_pred, delta))
+            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean
+            loss = loss.add(l2_crit(x_delta, delta))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
@@ -111,6 +111,3 @@ class LSTM_model(pl.LightningModule):
         wandb.log({"test_loss": loss})
         return loss
         '''
-
-    def training_epoch_end(self, outputs):
-        self.model()
