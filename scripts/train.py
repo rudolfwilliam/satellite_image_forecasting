@@ -29,7 +29,7 @@ def main():
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
     training_data, test_data = prepare_data(cfg["training"]["training_samples"], cfg["data"]["mesoscale_cut"],
-                        cfg["data"]["train_dir"], cfg["data"]["tets_dir"])
+                        cfg["data"]["train_dir"], cfg["data"]["test_dir"])
     train_dataloader = DataLoader(training_data, num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=False)
     test_dataloader = DataLoader(test_data, num_workers=cfg["training"]["num_workers"], drop_last=False)
@@ -39,7 +39,7 @@ def main():
                       log_every_n_steps=min(cfg["training"]["log_steps"],
                                             cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
                       devices=cfg["training"]["devices"], accelerator=cfg["training"]["accelerator"],
-                      callbacks=[Prediction_Callback(cfg["data"]["mesoscale_cut"])])
+                      callbacks=[Prediction_Callback(cfg["data"]["mesoscale_cut"], cfg["data"]["train_dir"], cfg["data"]["test_dir"])])
 
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
@@ -61,8 +61,8 @@ def main():
 
 
 class Prediction_Callback(pl.Callback):
-    def __init__(self, ms_cut):
-        self.sample = prepare_data(1, ms_cut)[0][0][0]
+    def __init__(self, ms_cut, train_dir, test_dir):
+        self.sample = prepare_data(1, ms_cut, train_dir, test_dir)[0][0][0]
         self.epoch = 0
 
     def on_train_epoch_end(
