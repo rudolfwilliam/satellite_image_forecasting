@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import numpy as np
 
 from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
-from .model_parts.SAVP_model.base_model import Encoder, Discriminator_GAN, Discriminator_VAE
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import mean_cube
  
@@ -22,7 +21,6 @@ class LSTM_model(pl.LightningModule):
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
 
-        #self.Discriminator_GAN = Discriminator_GAN(self.cfg)
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
         n_layers = self.cfg["model"]["n_layers"]
@@ -34,7 +32,6 @@ class LSTM_model(pl.LightningModule):
                               bias=True, 
                               prediction_count=1)
 
-    # For now just use the GAN
     def forward(self, x):
         # Compute mean cube
         mean = mean_cube(x[:, np.r_[0:4, -1:0], :, :, :], True)
