@@ -24,6 +24,8 @@
     },
     "data":
     {
+        "train_dir": "/Data/train/",
+        "test_dir": "/Data/test/",
         "mesoscale_cut": [39, 41]
     },
     "training":
@@ -38,6 +40,7 @@
         "num_workers": 0,
         "accelerator": "auto",
         "devices": 1,
-        "log_steps": 50
+        "log_steps": 50,
+        "patience": 5
     }
 }

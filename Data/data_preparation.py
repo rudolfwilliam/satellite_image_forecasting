@@ -1,10 +1,10 @@
-#import earthnet as en
+import earthnet as en
 import numpy as np
 import torch
 import os
 from os.path import isfile, join
  
-def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir = '/Data/test'):
+def prepare_data(training_samples, ms_cut, train_dir, test_dir):
    
     train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
@@ -43,6 +43,22 @@ def prepare_data(training_samples, ms_cut, train_dir = '/Data/train/', test_dir 
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, context, ms_cut, target = None):
+        
+        '''
+            The EarthNet dataset combines the different components of a earchnet data cube.
+
+            highres dynamic (hrs) - leave as is as is (for test samples we glue together the contex & target data)
+            highres static        - replicate accross all 30 timepoints & add to hrs as an extra channel
+            mesoscale dynamic     - cut out the 2x2 center section which overlaps with the actual data cube
+                                  - replicate the 4 values to 128 x 128 hrs dimensions & add to hrs as further channels
+                                  - Note: ms dynamic data is daily, but we need just 1 value for every 5 day interval
+                                       | Precipitation: take the mean
+                                       | Sea pressure: take the mean
+                                       | Mean temp: take the mean
+                                       | Min temp: take the min
+                                       | Max temp: take the max
+            mesoscale static      - we don't use this data, the relationships are too complex for the model to learn
+        '''
 
         samples = len(context)
 
@@ -51,8 +67,13 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             hrs_shape = list(context[0]['highresdynamic'].shape)
             hrs_shape[-1] += target[0]['highresdynamic'].shape[-1]
             self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
+
+            #self.all = 
         else:
             self.highres_dynamic = np.empty((tuple([samples] + list(context[0]['highresdynamic'].shape))))
+        
+        
+
         self.highres_static = np.empty((tuple([samples] + list(context[0]['highresstatic'].shape))))
         # For mesoscale data we only use the area overlapping the datacube
         self.meso_dynamic = np.empty((tuple([samples] + [ms_cut[1] - ms_cut[0], ms_cut[1] - ms_cut[0]] + list(context[0]['mesodynamic'].shape[2:]))))

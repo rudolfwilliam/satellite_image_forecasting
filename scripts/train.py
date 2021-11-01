@@ -3,6 +3,7 @@ import sys
 import os
 import numpy as np
 from pytorch_lightning.accelerators import accelerator
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
@@ -25,9 +26,10 @@ def main():
     if not cfg["training"]["offline"]:
         wandb.login()
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
-    pl.seed_everything(cfg["training"]["seed"])
+    pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    training_data, test_data = prepare_data(cfg["training"]["training_samples"], cfg["data"]["mesoscale_cut"])
+    training_data, test_data = prepare_data(cfg["training"]["training_samples"], cfg["data"]["mesoscale_cut"],
+                        cfg["data"]["train_dir"], cfg["data"]["tets_dir"])
     train_dataloader = DataLoader(training_data, num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["batch_size"], shuffle=True, drop_last=False)
     test_dataloader = DataLoader(test_data, num_workers=cfg["training"]["num_workers"], drop_last=False)
