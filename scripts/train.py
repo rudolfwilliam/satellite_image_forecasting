@@ -37,7 +37,7 @@ def main():
                       log_every_n_steps=min(cfg["training"]["log_steps"],
                                             cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
                       devices=cfg["training"]["devices"], accelerator=cfg["training"]["accelerator"],
-                      callbacks=[Prediction_Callback(cfg["data"]["mesoscale_cut"])])
+                      callbacks=[Prediction_Callback(cfg["data"]["mesoscale_cut"], cfg["training"]["print_predictions"])])
 
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
@@ -57,20 +57,28 @@ def main():
     if not cfg["training"]["offline"]:
         wandb.finish()
 
-
 class Prediction_Callback(pl.Callback):
-    def __init__(self, ms_cut):
+    def __init__(self, ms_cut, print_predictions):
         self.sample = prepare_data(1, ms_cut)[0][0][0]
+        self.print_predictions = print_predictions
         self.epoch = 0
 
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
-        # take 10 context and predict 1
-        pred, _, _ = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
-        # store rgb channels
-        # plt.imsave(str(self.epoch) + "_pred", pred[0][:3, :, :].detach().numpy().transpose(1, 2, 0).astype(float))
-        self.epoch += 1
+        if self.print_predictions:
+            # take 10 context and predict 1
+            pred, delta, _ = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
+            # store rgb channels
+            pre = np.flip(pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
+            cor = np.clip(pre, 0, 1)
+            plt.imsave(str(self.epoch) + "_pred.png", cor)
+            plt.imsave(str(self.epoch) + "_delta_pred.png", delta)
+
+            if self.epoch == 0:
+                plt.imsave(str(self.epoch) + "_gt.png", np.flip(self.sample[:3, :, :, 10].detach().numpy().transpose(1, 2, 0).astype(float), -1))
+
+            self.epoch += 1
 
 
 if __name__ == "__main__":
