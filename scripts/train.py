@@ -17,6 +17,7 @@ from pytorch_lightning.loggers import WandbLogger
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import prepare_data
+from scripts.callbacks import Prediction_Callback
 
 import wandb
 
@@ -59,30 +60,6 @@ def main():
 
     if not cfg["training"]["offline"]:
         wandb.finish()
-
-class Prediction_Callback(pl.Callback):
-    def __init__(self, ms_cut, train_dir, test_dir, print_predictions):
-        self.sample = prepare_data(1, ms_cut, train_dir, test_dir)[0][0][0]
-        self.print_predictions = print_predictions
-        self.epoch = 0
-
-    def on_train_epoch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
-    ) -> None:
-        if self.print_predictions:
-            # take 10 context and predict 1
-            pred, delta, _ = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
-            # store rgb channels
-            pre = np.flip(pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
-            cor = np.clip(pre, 0, 1)
-            plt.imsave(str(self.epoch) + "_pred.png", cor)
-            plt.imsave(str(self.epoch) + "_delta_pred.png", delta)
-
-            if self.epoch == 0:
-                plt.imsave(str(self.epoch) + "_gt.png", np.flip(self.sample[:3, :, :, 10].detach().numpy().transpose(1, 2, 0).astype(float), -1))
-
-            self.epoch += 1
-
 
 if __name__ == "__main__":
     main()
