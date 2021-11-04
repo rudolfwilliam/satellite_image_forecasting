@@ -37,17 +37,22 @@ class Prediction_Callback(pl.Callback):
             plt.imsave(self.top_dir + self.pred_dir + self.imgs_dir + str(self.epoch) + "_pred.png", cor_pred)
             # store different rgb values of delta separately
             for c, i in enumerate(["r", "g", "b"]):
-                plt.imsave(self.top_dir + self.pred_dir + self.delta_dir + str(self.epoch) + "_delta_pred_" + i + ".png", delta[:, :, c])
-
+                plt.imshow(delta[:, :, c])
+                plt.colorbar()
+                plt.savefig(self.top_dir + self.pred_dir + self.delta_dir + str(self.epoch) + "_delta_pred_" + i + ".png")
+                plt.close()
             # in the very first epoch, store ground truth
             if self.epoch == 0:
                 plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.flip(self.sample[:3, :, :, 10].detach().numpy().
                                                                 transpose(1, 2, 0).astype(float), -1))
+                
                 # ground truth delta
                 delta_gt = self.sample[:4, :, :, 10] - mean
                 for c, i in enumerate(["r", "g", "b"]):
-                    plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_delta_gt_" + i + ".png", np.flip(delta_gt[0].
-                                                                                detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, c])
+                    plt.imshow(np.flip(delta_gt[0].detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, c])
+                    plt.colorbar()
+                    plt.savefig(self.top_dir + self.gt_dir + str(self.epoch) + "_delta_gt_" + i + ".png")
+                    plt.close()
 
             self.epoch += 1
 
