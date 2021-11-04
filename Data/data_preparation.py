@@ -5,21 +5,24 @@ import os
 from os.path import isfile, join
  
 def prepare_data(training_samples, ms_cut, train_dir, test_dir):
-   
+    
     train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
         for name in files:
-            train_files.append(join(path, name))
+            # Ignore any licence, progress, etc. files
+            if '.npz' in name:
+                train_files.append(join(path, name))
 
     test_context_files = []
     test_target_files = []
     for path, subdirs, files in os.walk(os.getcwd() + test_dir):
         for name in files:
-            full_name = join(path, name)
-            if 'context' in full_name:
-                test_context_files.append(full_name)
-            else:
-                test_target_files.append(full_name)
+            if '.npz' in name:
+                full_name = join(path, name)
+                if 'context' in full_name:
+                    test_context_files.append(full_name)
+                else:
+                    test_target_files.append(full_name)
 
     # Sort file names just in case (so we glue together the right context & target)
     test_context_files.sort()
@@ -31,11 +34,11 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
 
     # limit number of training samples
     for i in range(min(len(train_files), training_samples)):
-        train_data.append(np.load(train_files[i]))
+        train_data.append(np.load(train_files[i], allow_pickle=True))
  
     for i in range(len(test_context_files)):
-        test_context_data.append(np.load(test_context_files[i]))
-        test_target_data.append(np.load(test_context_files[i]))
+        test_context_data.append(np.load(test_context_files[i], allow_pickle=True))
+        test_target_data.append(np.load(test_context_files[i], allow_pickle=True))
     
     train = Earthnet_Dataset(train_data, ms_cut)
     test = Earthnet_Dataset(test_context_data, ms_cut, test_target_data)
@@ -61,18 +64,16 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         '''
 
         samples = len(context)
+        # Add up the total number of channels
+        channels = context[0]['highresdynamic'].shape[2] + context[0]['highresstatic'].shape[2] + context[0]['mesodynamic'].shape[2]
 
+        hrs_shape = list(context[0]['highresdynamic'].shape)
         # If target data is given separately add context + target dimensions
         if target is not None:
-            hrs_shape = list(context[0]['highresdynamic'].shape)
             hrs_shape[-1] += target[0]['highresdynamic'].shape[-1]
-            self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
-
-            #self.all = 
-        else:
-            self.highres_dynamic = np.empty((tuple([samples] + list(context[0]['highresdynamic'].shape))))
+        self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
         
-        
+        self.all = np.empty((tuple([samples] + hrs_shape[0:2] + [channels] + [hrs_shape[3]])))
 
         self.highres_static = np.empty((tuple([samples] + list(context[0]['highresstatic'].shape))))
         # For mesoscale data we only use the area overlapping the datacube
@@ -89,6 +90,9 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             # For mesoscale data cut out overlapping section of interest
             self.meso_dynamic[i] = context[i]['mesodynamic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:,:]
             self.meso_static[i] = context[i]['mesostatic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:]
+
+
+            # self.all[i] = np.append(context[i]['highresdynamic'], context[i]['highresstatic'],axis=-1)
 
         # Change all nan's to 0            REMOVE!
         self.highres_dynamic = np.nan_to_num(self.highres_dynamic, nan = 0.0)
