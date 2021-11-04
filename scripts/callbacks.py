@@ -32,7 +32,7 @@ class Prediction_Callback(pl.Callback):
             delta = np.flip(delta_pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
 
             # values need to be between 0 and 1
-            cor_pred = np.clip(pre_pred, 0, 1)
+            cor_pred = np.clip(pre_pred/2, 0, 1)
 
             plt.imsave(self.top_dir + self.pred_dir + self.imgs_dir + str(self.epoch) + "_pred.png", cor_pred)
             # store different rgb values of delta separately
@@ -44,7 +44,7 @@ class Prediction_Callback(pl.Callback):
             # in the very first epoch, store ground truth
             if self.epoch == 0:
                 plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.flip(self.sample[:3, :, :, 10].detach().numpy().
-                                                                transpose(1, 2, 0).astype(float), -1))
+                                                                transpose(1, 2, 0).astype(float), -1)/2)
                 
                 # ground truth delta
                 delta_gt = self.sample[:4, :, :, 10] - mean
