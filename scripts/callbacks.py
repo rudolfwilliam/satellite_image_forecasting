@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import matplotlib.pyplot as plt
 import torch
 import os
+from os import path
 import numpy as np
 from pathlib import Path
 from Data.data_preparation import prepare_data
@@ -19,6 +20,18 @@ class Prediction_Callback(pl.Callback):
         self.delta_dir = "deltas/"
         self.imgs_dir = "imgs/"
 
+        # Set up Prediction directory structure if necessary
+        if not path.isdir(self.top_dir):
+            os.mkdir(self.top_dir)
+        if not path.isdir(path.join(self.top_dir, self.pred_dir)):
+            os.mkdir(path.join(self.top_dir, self.pred_dir))
+        if not path.isdir(path.join(self.top_dir, self.gt_dir)):
+            os.mkdir(path.join(self.top_dir, self.gt_dir))
+        if not path.isdir(path.join(self.top_dir, self.pred_dir, self.delta_dir)):
+            os.mkdir(path.join(self.top_dir, self.pred_dir, self.delta_dir))
+        if not path.isdir(path.join(self.top_dir, self.pred_dir, self.imgs_dir)):
+            os.mkdir(path.join(self.top_dir, self.pred_dir, self.imgs_dir))
+
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
@@ -32,7 +45,7 @@ class Prediction_Callback(pl.Callback):
             delta = np.flip(delta_pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
 
             # values need to be between 0 and 1
-            cor_pred = np.clip(pre_pred/2, 0, 1)
+            cor_pred = np.clip(pre_pred, 0, 1)
 
             plt.imsave(self.top_dir + self.pred_dir + self.imgs_dir + str(self.epoch) + "_pred.png", cor_pred)
             # store different rgb values of delta separately
@@ -43,8 +56,8 @@ class Prediction_Callback(pl.Callback):
                 plt.close()
             # in the very first epoch, store ground truth
             if self.epoch == 0:
-                plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.flip(self.sample[:3, :, :, 10].detach().numpy().
-                                                                transpose(1, 2, 0).astype(float), -1)/2)
+                plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.clip(np.flip(self.sample[:3, :, :, 10].detach().numpy().
+                                                                transpose(1, 2, 0).astype(float), -1),0,1))
                 
                 # ground truth delta
                 delta_gt = self.sample[:4, :, :, 10] - mean
