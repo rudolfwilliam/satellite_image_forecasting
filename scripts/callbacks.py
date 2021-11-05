@@ -11,8 +11,8 @@ import json
 
 
 class Prediction_Callback(pl.Callback):
-    def __init__(self, ms_cut, train_dir, test_dir, print_predictions):
-        self.sample = prepare_data(1, ms_cut, train_dir, test_dir)[0][0][0]
+    def __init__(self, ms_cut, train_dir, test_dir, dataset, print_predictions):
+        self.sample = dataset.__getitem__(0)
         self.print_predictions = print_predictions
         self.epoch = 0
         self.path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -52,7 +52,7 @@ class Prediction_Callback(pl.Callback):
             # values need to be between 0 and 1
             cor_pred = np.clip(pre_pred, 0, 1)
             if self.epoch == 0:
-                with open(self.top_dir + self.pred_dir + "metrics.json", 'a') as fp:
+                with open(self.top_dir + self.pred_dir + "metrics.json", 'w') as fp:
                     json.dump(metrics, fp)
             else:
                 with open(self.top_dir + self.pred_dir + "metrics.json", "r+") as fp:

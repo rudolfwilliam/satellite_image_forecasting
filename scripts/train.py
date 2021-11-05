@@ -54,6 +54,7 @@ def main():
                         callbacks=[ Prediction_Callback(cfg["data"]["mesoscale_cut"], 
                                                         cfg["data"]["train_dir"],
                                                         cfg["data"]["test_dir"], 
+                                                        training_data,
                                                         cfg["training"]["print_predictions"])])
 
     if args.model_name == "LSTM_model":

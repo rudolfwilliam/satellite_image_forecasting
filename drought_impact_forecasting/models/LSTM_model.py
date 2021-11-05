@@ -62,7 +62,7 @@ class LSTM_model(pl.LightningModule):
             This is not trivial: let's say we have T time steps in the cube for training. We start by taking the first t0 time samples and we try to predict the next one. We then measure the loss against the ground truth.
             Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict tbe t0 + 2. On and on until we use all but one samples to predict the last one.
         '''
-        highres_dynamic, highres_static, meso_dynamic, meso_static, all_data = batch
+        all_data = batch
         '''
         highres_dynamic_context and highres_dynamic_target of size (b, w, h, c, t)
             b = batch_size)
@@ -98,7 +98,7 @@ class LSTM_model(pl.LightningModule):
         '''
             TBD: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
-        highres_dynamic, highres_static, meso_dynamic, meso_static, all_data = batch
+        all_data = batch
         pass
         '''
         T = highres_dynamic.size()[4]

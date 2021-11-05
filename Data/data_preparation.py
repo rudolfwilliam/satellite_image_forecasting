@@ -105,10 +105,9 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=30, axis=-1)
         # For mesoscale data cut out overlapping section of interest
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
-        meso_static = np.nan_to_num(context['mesostatic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:]
+        #meso_static = np.nan_to_num(context['mesostatic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:]
 
         # Add up the total number of channels
-        channels = highres_dynamic.shape[2] + highres_static.shape[2] + meso_dynamic.shape[2]
 
         all_data = np.append(highres_dynamic, highres_static,axis=-2)
 
@@ -122,57 +121,9 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
-        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
+        #highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
+        #all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
 
-        return highres_dynamic, highres_static, meso_dynamic, meso_static, all_data
-
-        hrs_shape = list(context['highresdynamic'].shape)
-        # If target data is given separately add context + target dimensions
-        '''
-        if target is not None:
-            hrs_shape[-1] += target[0]['highresdynamic'].shape[-1]
-        '''
-        self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
-        
-        self.all = np.empty((tuple([samples] + hrs_shape[0:2] + [channels] + [hrs_shape[3]])))
-
-        self.highres_static = np.empty((tuple([samples] + list(context[0]['highresstatic'].shape))))
-        # For mesoscale data we only use the area overlapping the datacube
-        self.meso_dynamic = np.empty((tuple([samples] + [ms_cut[1] - ms_cut[0], ms_cut[1] - ms_cut[0]] + list(context[0]['mesodynamic'].shape[2:]))))
-        self.meso_static = np.empty((tuple([samples] + [ms_cut[1] - ms_cut[0], ms_cut[1] - ms_cut[0]] + list(context[0]['mesostatic'].shape[2:]))))
-
-        for i in range(samples):
-            # For test samples glue together context & target
-            if target is not None:
-                self.highres_dynamic[i] = np.append(context[i]['highresdynamic'], target[i]['highresdynamic'],axis=-1)
-            else:
-                self.highres_dynamic[i] = context[i]['highresdynamic']
-            self.highres_static[i] = context[i]['highresstatic']
-            # For mesoscale data cut out overlapping section of interest
-            self.meso_dynamic[i] = context[i]['mesodynamic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:,:]
-            self.meso_static[i] = context[i]['mesostatic'][ms_cut[0]:ms_cut[1],ms_cut[0]:ms_cut[1],:]
-
-
-            # self.all[i] = np.append(context[i]['highresdynamic'], context[i]['highresstatic'],axis=-1)
-
-        # Change all nan's to 0            REMOVE!
-        self.highres_dynamic = np.nan_to_num(self.highres_dynamic, nan = 0.0)
-        self.highres_static = np.nan_to_num(self.highres_static, nan = 0.0)
-        self.meso_dynamic = np.nan_to_num(self.meso_dynamic, nan = 0.0)
-        self.meso_static = np.nan_to_num(self.meso_static, nan = 0.0)
- 
-        ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
-            w = width
-            h = height
-            c = channel
-            t = time
-        '''
-        self.highres_dynamic = torch.Tensor(self.highres_dynamic).permute(0, 3, 1, 2, 4)
-
-        return self.highres_dynamic[index], self.highres_static[index], self.meso_dynamic[index], \
-               self.meso_static[index]
-
-
+        return all_data
 
