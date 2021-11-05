@@ -123,7 +123,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             t = time
         '''
         highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
-        all_data = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
 
         return highres_dynamic, highres_static, meso_dynamic, meso_static, all_data
