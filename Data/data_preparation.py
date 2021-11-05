@@ -27,6 +27,10 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
     # Sort file names just in case (so we glue together the right context & target)
     test_context_files.sort()
     test_target_files.sort()
+
+    train = Earthnet_Dataset(train_files, ms_cut)
+    test = Earthnet_Dataset(test_context_files, ms_cut, test_target_files)
+    return train, test
  
     train_data = []
     test_context_data = []
@@ -45,8 +49,12 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
     return train, test
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context, ms_cut, target = None):
-        
+    def __init__(self, context_file_paths, ms_cut, target_file_paths = None):
+        '''
+            context_file_paths: list of paths of all the context files
+            ms_cut: indxs for relevant mesoscale data
+            target_file_paths: list of paths of all the context files
+        '''
         '''
             The EarthNet dataset combines the different components of a earchnet data cube.
 
@@ -63,14 +71,43 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             mesoscale static      - we don't use this data, the relationships are too complex for the model to learn
         '''
 
-        samples = len(context)
-        # Add up the total number of channels
-        channels = context[0]['highresdynamic'].shape[2] + context[0]['highresstatic'].shape[2] + context[0]['mesodynamic'].shape[2]
+        self.context_paths = context_file_paths
 
-        hrs_shape = list(context[0]['highresdynamic'].shape)
+        
+ 
+    def __len__(self):
+        return len(self.context_paths)
+ 
+    def __getitem__(self, index):
+        # load the item from data
+        item = np.load(self.context_paths[index], allow_pickle=True)
+
+
+        # Add up the total number of channels
+        channels = item['highresdynamic'].shape[2] + item['highresstatic'].shape[2] + item['mesodynamic'].shape[2]
+
+
+        highres_dynamic = np.nan_to_num(item['highresdynamic'], nan = 0.0)
+        highres_static = np.nan_to_num(item['highresstatic'], nan = 0.0)
+        meso_dynamic = np.nan_to_num(item['mesodynamic'], nan = 0.0)
+        meso_static = np.nan_to_num(item['mesostatic'], nan = 0.0)
+ 
+        ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
+            w = width
+            h = height
+            c = channel
+            t = time
+        '''
+        highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
+
+        return highres_dynamic, highres_static, meso_dynamic, meso_static
+
+        hrs_shape = list(item['highresdynamic'].shape)
         # If target data is given separately add context + target dimensions
+        '''
         if target is not None:
             hrs_shape[-1] += target[0]['highresdynamic'].shape[-1]
+        '''
         self.highres_dynamic = np.empty((tuple([samples] + hrs_shape)))
         
         self.all = np.empty((tuple([samples] + hrs_shape[0:2] + [channels] + [hrs_shape[3]])))
@@ -107,10 +144,6 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             t = time
         '''
         self.highres_dynamic = torch.Tensor(self.highres_dynamic).permute(0, 3, 1, 2, 4)
- 
-    def __len__(self):
-        return self.highres_dynamic.shape[0]
- 
-    def __getitem__(self, index):
+
         return self.highres_dynamic[index], self.highres_static[index], self.meso_dynamic[index], \
                self.meso_static[index]
