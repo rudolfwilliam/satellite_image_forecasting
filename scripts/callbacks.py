@@ -6,6 +6,8 @@ from os import path
 import numpy as np
 from pathlib import Path
 from Data.data_preparation import prepare_data
+import json
+
 
 
 class Prediction_Callback(pl.Callback):
@@ -40,16 +42,31 @@ class Prediction_Callback(pl.Callback):
                 self.__create_dir_structure()
             # take 10 context and predict 1
             pred, delta_pred, mean = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
+            metrics = trainer.callback_metrics
+            metrics['train_loss'] = [float(metrics['train_loss'])]
+            metrics['lr'] = [float(metrics['lr'])]
 
             pre_pred = np.flip(pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
-            delta = np.flip(delta_pred[0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
+            delta = np.flip(delta_pred[0, :4, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
 
             # values need to be between 0 and 1
             cor_pred = np.clip(pre_pred, 0, 1)
+            if self.epoch == 0:
+                with open(self.top_dir + self.pred_dir + "metrics.json", 'a') as fp:
+                    json.dump(metrics, fp)
+            else:
+                with open(self.top_dir + self.pred_dir + "metrics.json", "r+") as fp:
+                    data = json.load(fp)
+                    data['train_loss'] = data['train_loss'] + metrics['train_loss'] 
+                    data['lr'] = data['lr'] + metrics['lr'] 
+                    fp.seek(0)
+                    json.dump(data, fp)            
+
+
 
             plt.imsave(self.top_dir + self.pred_dir + self.imgs_dir + str(self.epoch) + "_pred.png", cor_pred)
             # store different rgb values of delta separately
-            for c, i in enumerate(["r", "g", "b"]):
+            for c, i in enumerate(["r", "g", "b", "i"]):
                 plt.imshow(delta[:, :, c])
                 plt.colorbar()
                 plt.savefig(self.top_dir + self.pred_dir + self.delta_dir + str(self.epoch) + "_delta_pred_" + i + ".png")
@@ -61,7 +78,7 @@ class Prediction_Callback(pl.Callback):
                 
                 # ground truth delta
                 delta_gt = self.sample[:4, :, :, 10] - mean
-                for c, i in enumerate(["r", "g", "b"]):
+                for c, i in enumerate(["r", "g", "b", "i"]):
                     plt.imshow(np.flip(delta_gt[0].detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, c])
                     plt.colorbar()
                     plt.savefig(self.top_dir + self.gt_dir + str(self.epoch) + "_delta_gt_" + i + ".png")
