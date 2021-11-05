@@ -75,6 +75,10 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         '''
 
         self.context_paths = context_file_paths
+        self.target_paths = None
+        if target_file_paths is not None:
+            self.traget_paths = target_file_paths
+
 
         
  
@@ -83,18 +87,17 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
  
     def __getitem__(self, index):
         # load the item from data
-        print(index)
-        item = np.load(self.context_paths[index], allow_pickle=True)
+        context = np.load(self.context_paths[index], allow_pickle=True)
 
+        if self.target_paths is not None:
+            target = np.load(self.target_paths[index], allow_pickle=True)
+            highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
+        else:
+            highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0) 
 
-        # Add up the total number of channels
-        channels = item['highresdynamic'].shape[2] + item['highresstatic'].shape[2] + item['mesodynamic'].shape[2]
-
-
-        highres_dynamic = np.nan_to_num(item['highresdynamic'], nan = 0.0)
-        highres_static = np.nan_to_num(item['highresstatic'], nan = 0.0)
-        meso_dynamic = np.nan_to_num(item['mesodynamic'], nan = 0.0)
-        meso_static = np.nan_to_num(item['mesostatic'], nan = 0.0)
+        highres_static = np.nan_to_num(context['highresstatic'], nan = 0.0)
+        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)
+        meso_static = np.nan_to_num(context['mesostatic'], nan = 0.0)
  
         ''' Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
             w = width
@@ -104,9 +107,13 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         '''
         highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
 
+        # Add up the total number of channels
+        channels = context['highresdynamic'].shape[2] + context['highresstatic'].shape[2] + context['mesodynamic'].shape[2]
+
+
         return highres_dynamic, highres_static, meso_dynamic, meso_static
 
-        hrs_shape = list(item['highresdynamic'].shape)
+        hrs_shape = list(context['highresdynamic'].shape)
         # If target data is given separately add context + target dimensions
         '''
         if target is not None:
