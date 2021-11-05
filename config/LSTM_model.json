@@ -5,7 +5,7 @@
         "classes": 10,
         "anneal_start": 5,
         "anneal_end": 10,
-        "channels": 7,
+        "channels": 13,
         "hidden_channels": 4,
         "n_layers": 2,
         "kernel": [3, 3]

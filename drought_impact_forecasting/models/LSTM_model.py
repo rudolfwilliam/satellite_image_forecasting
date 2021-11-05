@@ -72,14 +72,15 @@ class LSTM_model(pl.LightningModule):
             t = time
         '''
         
-        T = highres_dynamic.size()[4]
+
+        T = all_data.size()[4]
         t0 = T-1 #n of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
-            x_pred, x_delta, mean = self(highres_dynamic[:, :, :, :, :t_end])
+            x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
             # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
-            delta = highres_dynamic[:, :4, :, :, t_end + 1] - mean
+            delta = all_data[:, :4, :, :, t_end + 1] - mean
             loss = loss.add(l2_crit(x_delta, delta))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
