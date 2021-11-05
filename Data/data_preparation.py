@@ -28,6 +28,9 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
     test_context_files.sort()
     test_target_files.sort()
 
+    train_files = train_files[:min([training_samples, len(train_files)])]
+
+
     train = Earthnet_Dataset(train_files, ms_cut)
     test = Earthnet_Dataset(test_context_files, ms_cut, test_target_files)
     return train, test
@@ -80,6 +83,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
  
     def __getitem__(self, index):
         # load the item from data
+        print(index)
         item = np.load(self.context_paths[index], allow_pickle=True)
 
 
