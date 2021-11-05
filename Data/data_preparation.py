@@ -101,14 +101,15 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             target = np.load(self.target_paths[index], allow_pickle=True)
             highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
         else:
-            highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0) 
+            highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
+            # Make data quality mask the 5th channel
+            highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
+
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=30, axis=-1)
         # For mesoscale data cut out overlapping section of interest
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
-        #meso_static = np.nan_to_num(context['mesostatic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:]
 
-        # Add up the total number of channels
-
+        # Stick all data together
         all_data = np.append(highres_dynamic, highres_static,axis=-2)
 
         meso_dynamic = self.process_md(meso_dynamic, tuple([all_data.shape[0]] + [all_data.shape[1]] + 
@@ -121,8 +122,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        #highres_dynamic = torch.Tensor(highres_dynamic).permute(2, 0, 1, 3)
-        #all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
 
         return all_data

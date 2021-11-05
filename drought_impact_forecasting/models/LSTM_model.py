@@ -34,7 +34,7 @@ class LSTM_model(pl.LightningModule):
 
     def forward(self, x):
         # Compute mean cube
-        mean = mean_cube(x[:, np.r_[0:4, -1:0], :, :, :], True)
+        mean = mean_cube(x[:, np.r_[0:5], :, :, :], True)
         pred_delta = self.model(x)
         # Prediction is mean + residual
         pred = pred_delta + mean
