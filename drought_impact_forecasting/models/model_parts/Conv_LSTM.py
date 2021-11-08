@@ -104,17 +104,18 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    # TODO: Implement an inference mode of forward, so the model can take it's own predictions as input
-    def forward(self, input_tensor, mean, hidden_state=None, prediction_count=1):
+    def forward(self, input_tensor, mean=None, hidden_state=None, prediction_count=1):
         """
         Parameters
         ----------
         input_tensor:
             (b - batch_size, h - height, w - width, c - channel, t - time)
             5-D Tensor either of shape (b, c, w, h, t)
+        mean:
+            mean of the input variables. Only needed for prediction_count > 1.
         Returns
         -------
-        prediction, last_state_list
+        predictions
         """
 
         b, _, w, h, _ = input_tensor.size()
@@ -144,6 +145,8 @@ class Conv_LSTM(nn.Module):
 
         # allow for multiple predictions in a self feedback manner
         if prediction_count > 1:
+            if mean is None:
+                raise ValueError('If prediction_count > 1, you need to provide the mean of the input images!')
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = predictions[0]
             # convert to numpy array that allows for this kind of slicing
