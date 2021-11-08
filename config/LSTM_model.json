@@ -32,7 +32,7 @@
     {
         "offline": true,
         "print_predictions": true,
-        "epochs": 100,
+        "epochs": 1,
         "start_learn_rate": 0.1,
         "batch_size": 1,
         "optimizer": "adam",
