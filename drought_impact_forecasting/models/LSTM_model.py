@@ -5,7 +5,6 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 import numpy as np
 
-from drought_impact_forecasting.losses import kl_weight, base_line_total_loss
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import mean_cube
  
@@ -54,7 +53,6 @@ class LSTM_model(pl.LightningModule):
         else:
             raise ValueError("You have specified an invalid optimizer.")
 
-        # Pls check this works correctly with pytorch lightning
         return [self.optimizer], [self.scheduler]
 
     def training_step(self, batch, batch_idx):
@@ -68,10 +66,10 @@ class LSTM_model(pl.LightningModule):
         all_data = batch
         '''
         all_data of size (b, w, h, c, t)
-            b = batch_size)
+            b = batch_size
+            c = channels
             w = width
             h = height
-            c = channels
             t = time
         '''
 
@@ -81,7 +79,6 @@ class LSTM_model(pl.LightningModule):
         loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
         for t_end in range(t0, T-1): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
-            # TODO: for some reason the order in all_data seems to be b, c, w, h, t!! Not what's written in the title
             delta = all_data[:, :4, :, :, t_end + 1] - mean
             loss = loss.add(l2_crit(x_delta, delta))
         
@@ -110,7 +107,6 @@ class LSTM_model(pl.LightningModule):
         for t_end in range(t0 - 1, T - 1): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(context[:, :, :, :, :t_end]) # why x_pred, not y_pred
             context[:,:,:,:,t_end] = x_pred
-            # TODO: for some reason the order in all_data seems to be b, c, w, h, t!! Not what's written in the title
             delta = all_data[:, :4, :, :, t_end + 1] - mean
             loss = loss.add(l2_crit(x_delta, delta))
         
