@@ -104,7 +104,7 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, mean=None, hidden_state=None, prediction_count=1):
+    def forward(self, input_tensor, mean=None, non_pred_feat=None, hidden_state=None, prediction_count=1):
         """
         Parameters
         ----------
@@ -115,9 +115,8 @@ class Conv_LSTM(nn.Module):
             mean of the input variables. Only needed for prediction_count > 1.
         Returns
         -------
-        predictions
+        pred_deltas
         """
-
         b, _, w, h, _ = input_tensor.size()
 
         hidden_state = self._init_hidden(batch_size=b, image_size=(h, w))
@@ -141,14 +140,18 @@ class Conv_LSTM(nn.Module):
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
 
-        predictions = [layer_output_list[-1:][0][:, :, :, :, -1]]
-
-        # allow for multiple predictions in a self feedback manner
+        pred_deltas = [layer_output_list[-1:][0][:, :, :, :, -1]]
+        means = [mean]
+        predictions = [torch.add(mean, layer_output_list[-1:][0][:, :, :, :, -1])]
+        # allow for multiple pred_deltas in a self feedback manner
         if prediction_count > 1:
             if mean is None:
                 raise ValueError('If prediction_count > 1, you need to provide the mean of the input images!')
+            if non_pred_feat is None:
+                raise ValueError('If prediction_count > 1, you need to provide non-prediction features for the '
+                                 'future time steps!')
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
-            prev = predictions[0]
+            prev = pred_deltas[0]
             # convert to numpy array that allows for this kind of slicing
             last_state_list = np.array(last_state_list)
             last_states = last_state_list[:, 0]
@@ -156,18 +159,23 @@ class Conv_LSTM(nn.Module):
 
             for counter in range(prediction_count - 1):
                 for layer_idx in range(self.num_layers):
-                    h, c = self.cell_list[layer_idx](input_tensor=prev, cur_state=[last_states[layer_idx], last_memories[layer_idx]])
+                    h, c = self.cell_list[layer_idx](input_tensor=prev, cur_state=[last_states[layer_idx],
+                                                                                   last_memories[layer_idx]])
                     prev = h
                     last_states[layer_idx] = h
                     last_memories[layer_idx] = c
                     # in the last layer, make prediction
                     if layer_idx == (range(self.num_layers) - 1):
-                        predictions.append(h)
-                        prev = mean + h
+                        pred_deltas.append(h)
+                        means.append(mean)
+                        # next predicted entire image
+                        prediction = np.sum([mean, h], axis=0)
+                        predictions.append(prediction)
+                        prev = np.concatenate((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
                         # update mean
-                        mean = 1/(seq_len + counter + 2) * ((seq_len + counter + 1) * mean + prev)
+                        mean = 1/(seq_len + counter + 2) * np.sum([(seq_len + counter + 1) * mean, prev], axis=0)
 
-        return predictions
+        return predictions, pred_deltas, means
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []

@@ -12,6 +12,7 @@ class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
         """
         Base prediction model. It is based on the convolutional LSTM architecture.
+        (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
 
         Parameters:
             cfg (dict) -- model configuration parameters
@@ -30,13 +31,22 @@ class LSTM_model(pl.LightningModule):
                               batch_first=False, 
                               bias=True)
 
-    def forward(self, x):
-        # Compute mean cube
+    def forward(self, x, prediction_count=1, non_pred_feat=None):
+        """
+        :param x: All features of the input time steps.
+        :param prediction_count: The amount of time steps that should be predicted all at once.
+        :param non_pred_feat: Only need if prediction_count > 1. All features that are not predicted
+        by the model for all the future to be predicted time steps.
+        :return: preds: Full predicted images.
+        :return: predicted deltas: Predicted deltas with respect to means.
+        :return: means: All future means as computed by the predicted deltas. Note: These are NOT the ground truth means.
+        Do not use these for computing a loss!
+        """
+        # compute mean cube
         mean = mean_cube(x[:, np.r_[0:5], :, :, :], True)
-        pred_delta = self.model(x)[0]
-        # Prediction is mean + residual
-        pred = pred_delta + mean
-        return pred, pred_delta, mean
+        preds, pred_deltas, means = self.model(x, prediction_count, mean, non_pred_feat)
+
+        return preds, pred_deltas, means
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -62,6 +72,7 @@ class LSTM_model(pl.LightningModule):
             Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
             On and on until we use all but one samples to predict the last one.
         '''
+        #TODO: shift weather data one image forward
         all_data = batch
         '''
         all_data of size (b, w, h, c, t)
@@ -78,8 +89,8 @@ class LSTM_model(pl.LightningModule):
         loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
-            delta = all_data[:, :4, :, :, t_end] - mean
-            loss = loss.add(l2_crit(x_delta, delta))
+            delta = all_data[:, :4, :, :, t_end] - mean[0]
+            loss = loss.add(l2_crit(x_delta[0], delta))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
@@ -94,7 +105,7 @@ class LSTM_model(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         '''
-            TBD: Here we could directly incorporate the EarthNet Score from the model demo.
+            TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
         all_data = batch
         context = all_data # here we will store the context + until now predicted images
@@ -106,7 +117,7 @@ class LSTM_model(pl.LightningModule):
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(context[:, :, :, :, :t_end]) # why x_pred, not y_pred
             # Add predictions to input data for next iteration
-            context[0,:4,:,:,t_end] = x_pred
+            context[0, :4, :, :, t_end] = x_pred
             delta = all_data[:, :4, :, :, t_end] - mean
             loss = loss.add(l2_crit(x_delta, delta))
         
