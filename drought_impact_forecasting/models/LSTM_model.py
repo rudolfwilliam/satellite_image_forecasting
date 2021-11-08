@@ -59,27 +59,29 @@ class LSTM_model(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         '''
-            This is not trivial: let's say we have T time steps in the cube for training. We start by taking the first t0 time samples and we try to predict the next one. We then measure the loss against the ground truth.
-            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict tbe t0 + 2. On and on until we use all but one samples to predict the last one.
+            This is not trivial: let's say we have T time steps in the cube for training.
+            We start by taking the first t0 time samples and we try to predict the next one.
+            We then measure the loss against the ground truth.
+            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
+            On and on until we use all but one samples to predict the last one.
         '''
         all_data = batch
         '''
-        highres_dynamic_context and highres_dynamic_target of size (b, w, h, c, t)
+        all_data of size (b, w, h, c, t)
             b = batch_size)
             w = width
             h = height
             c = channels
             t = time
         '''
-        
 
         T = all_data.size()[4]
-        t0 = T-1 #n of pics we start with
+        t0 = T - 20 # no. of pics we start with
         l2_crit = nn.MSELoss()
-        loss = torch.tensor([0.0], requires_grad = True)
-        for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
+        loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
+        for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
-            # TODO: for some reason the order in highres_dynamic seems to be b, c, w, h, t!! Not what's written in the title
+            # TODO: for some reason the order in all_data seems to be b, c, w, h, t!! Not what's written in the title
             delta = all_data[:, :4, :, :, t_end + 1] - mean
             loss = loss.add(l2_crit(x_delta, delta))
         
@@ -99,16 +101,21 @@ class LSTM_model(pl.LightningModule):
             TBD: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
         all_data = batch
-        pass
-        '''
-        T = highres_dynamic.size()[4]
-        t0 = T-1 #n of pics we start with
+        context = all_data # here we will store the context + until now predicted images
+
+        T = all_data.size()[4]
+        t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
-        for t_end in range(t0 - 1, T - 1): # this iterate with t_end = t0, ..., T-1
-            y_pred, last_state_list = self(highres_dynamic[:, :, :, :, :t_end])
-            loss = loss.add(l2_crit(y_pred, highres_dynamic[:, :, :, :, t_end + 1]))
+        for t_end in range(t0 - 1, T - 1): # this iterates with t_end = t0, ..., T-1
+            x_pred, x_delta, mean = self(context[:, :, :, :, :t_end]) # why x_pred, not y_pred
+            context[:,:,:,:,t_end] = x_pred
+            # TODO: for some reason the order in all_data seems to be b, c, w, h, t!! Not what's written in the title
+            delta = all_data[:, :4, :, :, t_end + 1] - mean
+            loss = loss.add(l2_crit(x_delta, delta))
         
-        wandb.log({"test_loss": loss})
-        return loss
-        '''
+        logs = {'test_loss': loss}
+        self.log_dict(
+            logs,
+            on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
