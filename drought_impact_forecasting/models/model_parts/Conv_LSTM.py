@@ -75,7 +75,7 @@ class Conv_LSTM(nn.Module):
     """
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
-                 batch_first=False, bias=True, prediction_count=1):
+                 batch_first=False, bias=True):
         super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -92,7 +92,6 @@ class Conv_LSTM(nn.Module):
         self.num_layers = num_layers                # n of cells in time
         self.batch_first = batch_first              # true if you have c_0, h_0
         self.bias = bias
-        self.prediction_count = prediction_count  #
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -106,7 +105,7 @@ class Conv_LSTM(nn.Module):
         self.cell_list = nn.ModuleList(cell_list)
 
     # TODO: Implement an inference mode of forward, so the model can take it's own predictions as input
-    def forward(self, input_tensor, hidden_state=None):
+    def forward(self, input_tensor, mean, hidden_state=None, prediction_count=1):
         """
         Parameters
         ----------
@@ -141,9 +140,31 @@ class Conv_LSTM(nn.Module):
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
 
-        prediction = layer_output_list[-1:][0][:, :, :, :, -1]
+        predictions = [layer_output_list[-1:][0][:, :, :, :, -1]]
 
-        return prediction
+        # allow for multiple predictions in a self feedback manner
+        if prediction_count > 1:
+            # output from layer beneath which for the lowest layer is the prediction from the previous time step
+            prev = predictions[0]
+            # convert to numpy array that allows for this kind of slicing
+            last_state_list = np.array(last_state_list)
+            last_states = last_state_list[:, 0]
+            last_memories = last_state_list[:, 1]
+
+            for counter in range(prediction_count - 1):
+                for layer_idx in range(self.num_layers):
+                    h, c = self.cell_list[layer_idx](input_tensor=prev, cur_state=[last_states[layer_idx], last_memories[layer_idx]])
+                    prev = h
+                    last_states[layer_idx] = h
+                    last_memories[layer_idx] = c
+                    # in the last layer, make prediction
+                    if layer_idx == (range(self.num_layers) - 1):
+                        predictions.append(h)
+                        prev = mean + h
+                        # update mean
+                        mean = 1/(seq_len + counter + 2) * ((seq_len + counter + 1) * mean + prev)
+
+        return predictions
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []

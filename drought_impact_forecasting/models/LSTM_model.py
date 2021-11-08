@@ -28,13 +28,12 @@ class LSTM_model(pl.LightningModule):
                               kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
                               num_layers=n_layers,
                               batch_first=False, 
-                              bias=True, 
-                              prediction_count=1)
+                              bias=True)
 
     def forward(self, x):
         # Compute mean cube
         mean = mean_cube(x[:, np.r_[0:5], :, :, :], True)
-        pred_delta = self.model(x)
+        pred_delta = self.model(x, mean)[0]
         # Prediction is mean + residual
         pred = pred_delta + mean
         return pred, pred_delta, mean
