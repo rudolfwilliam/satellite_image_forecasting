@@ -102,9 +102,10 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
         else:
             highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
-            # highres_dynamic = highres_dynamic[:,:,0:4,:]
             # Make data quality mask the 5th channel
             highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
+            # Ignore Cloud mask and ESA scene Classification channels
+            highres_dynamic = highres_dynamic[:,:,0:5,:]
 
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=30, axis=-1)
         # For mesoscale data cut out overlapping section of interest

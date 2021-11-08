@@ -79,7 +79,7 @@ class LSTM_model(pl.LightningModule):
         t0 = T - 20 # no. of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
-        for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
+        for t_end in range(t0, T-1): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
             # TODO: for some reason the order in all_data seems to be b, c, w, h, t!! Not what's written in the title
             delta = all_data[:, :4, :, :, t_end + 1] - mean
