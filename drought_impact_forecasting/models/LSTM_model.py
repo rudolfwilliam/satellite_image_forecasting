@@ -44,7 +44,7 @@ class LSTM_model(pl.LightningModule):
         """
         # compute mean cube
         mean = mean_cube(x[:, np.r_[0:5], :, :, :], True)
-        preds, pred_deltas, means = self.model(x, prediction_count, mean, non_pred_feat)
+        preds, pred_deltas, means = self.model(x, mean=mean, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, means
 
@@ -88,7 +88,7 @@ class LSTM_model(pl.LightningModule):
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
-            x_pred, x_delta, mean = self(all_data[:, :, :, :, :t_end])
+            x_pr, x_delta, mean = self(all_data[:, :, :, :, :t_end])
             delta = all_data[:, :4, :, :, t_end] - mean[0]
             loss = loss.add(l2_crit(x_delta[0], delta))
         
@@ -115,11 +115,11 @@ class LSTM_model(pl.LightningModule):
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
-            x_pred, x_delta, mean = self(context[:, :, :, :, :t_end]) # why x_pred, not y_pred
+            x_pred, x_delta, mean = self(context[:, :, :, :, :t_end])
             # Add predictions to input data for next iteration
-            context[0, :4, :, :, t_end] = x_pred
-            delta = all_data[:, :4, :, :, t_end] - mean
-            loss = loss.add(l2_crit(x_delta, delta))
+            context[0, :4, :, :, t_end] = x_pred[0]
+            delta = all_data[:, :4, :, :, t_end] - mean[0]
+            loss = loss.add(l2_crit(x_delta[0], delta))
         
         logs = {'test_loss': loss}
         self.log_dict(

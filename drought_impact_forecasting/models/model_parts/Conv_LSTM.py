@@ -143,6 +143,7 @@ class Conv_LSTM(nn.Module):
         pred_deltas = [layer_output_list[-1:][0][:, :, :, :, -1]]
         means = [mean]
         predictions = [torch.add(mean, layer_output_list[-1:][0][:, :, :, :, -1])]
+        
         # allow for multiple pred_deltas in a self feedback manner
         if prediction_count > 1:
             if mean is None:

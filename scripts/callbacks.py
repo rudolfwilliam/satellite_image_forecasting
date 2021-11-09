@@ -76,7 +76,7 @@ class Prediction_Callback(pl.Callback):
                                                                 transpose(1, 2, 0).astype(float), -1),0,1))
                 
                 # ground truth delta
-                delta_gt = self.sample[:4, :, :, 10] - means[0]
+                delta_gt = (self.sample[:4, :, :, 10] - means[0])[0]
                 for c, i in enumerate(["r", "g", "b", "i"]):
                     plt.imshow(np.flip(delta_gt.detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, c])
                     plt.colorbar()

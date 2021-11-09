@@ -66,6 +66,9 @@ def main():
 
     torch.save(model.state_dict(), "Models/model.torch")
 
+    if not os.path.isdir(os.getcwd() + '/Data/predictions/'):
+        os.mkdir(os.getcwd() + '/Data/predictions/')
+
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
