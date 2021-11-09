@@ -79,6 +79,12 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
                     md_new[j,k,3,i] = np.min(md[j,k,3,days])    # min temp
                     md_new[j,k,4,i] = np.max(md[j,k,4,days])    # max temp
 
+        # Move weather data 1 image forward
+        # => the nth image is predicted based on the (n-1)th image and nth weather data
+        # the last weather inputed will hence be a null prediction (this should never be used by the model!)
+        null_weather = md_new[:,:,:,-1:] * 0
+        md_new = np.append(md_new[:,:,:,1:], md_new[:,:,:,-1:], axis=-1)
+
         # Reshape to 128 x 128
         md_reshaped = np.empty((tuple([target_shape[0]] + [target_shape[1]] + [md.shape[2]] + [md_new.shape[3]])))
         for i in range(target_shape[0]):
