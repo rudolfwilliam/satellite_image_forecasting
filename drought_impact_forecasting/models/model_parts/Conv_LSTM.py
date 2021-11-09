@@ -104,7 +104,7 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, mean=None, non_pred_feat=None, hidden_state=None, prediction_count=1):
+    def forward(self, input_tensor, mean, non_pred_feat=None, hidden_state=None, prediction_count=1):
         """
         Parameters
         ----------
@@ -146,13 +146,15 @@ class Conv_LSTM(nn.Module):
         
         # allow for multiple pred_deltas in a self feedback manner
         if prediction_count > 1:
-            if mean is None:
-                raise ValueError('If prediction_count > 1, you need to provide the mean of the input images!')
             if non_pred_feat is None:
                 raise ValueError('If prediction_count > 1, you need to provide non-prediction features for the '
                                  'future time steps!')
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = pred_deltas[0]
+            # update the mean & glue together predicted + give channels
+            mean = 1/(seq_len + 1) * np.sum([(seq_len) * mean, prev], axis=0)
+            prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
+
             # convert to numpy array that allows for this kind of slicing
             last_state_list = np.array(last_state_list)
             last_states = last_state_list[:, 0]
@@ -166,15 +168,15 @@ class Conv_LSTM(nn.Module):
                     last_states[layer_idx] = h
                     last_memories[layer_idx] = c
                     # in the last layer, make prediction
-                    if layer_idx == (range(self.num_layers) - 1):
+                    if layer_idx == (self.num_layers - 1):
                         pred_deltas.append(h)
                         means.append(mean)
                         # next predicted entire image
                         prediction = np.sum([mean, h], axis=0)
                         predictions.append(prediction)
-                        prev = np.concatenate((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
                         # update mean
                         mean = 1/(seq_len + counter + 2) * np.sum([(seq_len + counter + 1) * mean, prev], axis=0)
+                        prev = torch.cat((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
 
         return predictions, pred_deltas, means
 

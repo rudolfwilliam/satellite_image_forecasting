@@ -72,7 +72,6 @@ class LSTM_model(pl.LightningModule):
             Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
             On and on until we use all but one samples to predict the last one.
         '''
-        #TODO: shift weather data one image forward
         all_data = batch
         '''
         all_data of size (b, w, h, c, t)
@@ -114,6 +113,9 @@ class LSTM_model(pl.LightningModule):
         t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
+
+        x_pred, x_delta, mean = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(context[:, :, :, :, :t_end])
             # Add predictions to input data for next iteration
