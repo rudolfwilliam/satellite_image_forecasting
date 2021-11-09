@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 import numpy as np
+import os
 
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import mean_cube
@@ -114,17 +115,19 @@ class LSTM_model(pl.LightningModule):
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
 
-        x_pred, x_delta, mean = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+        x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
 
-        for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
-            x_pred, x_delta, mean = self(context[:, :, :, :, :t_end])
-            # Add predictions to input data for next iteration
-            context[0, :4, :, :, t_end] = x_pred[0]
-            delta = all_data[:, :4, :, :, t_end] - mean[0]
-            loss = loss.add(l2_crit(x_delta[0], delta))
+        # Add up losses across all timesteps
+        for i in range(len(means)):
+            delta = all_data[:,:4,:,:,t0+i] - means[i]
+            loss = loss.add(l2_crit(x_deltas[i], delta))
         
         logs = {'test_loss': loss}
         self.log_dict(
             logs,
             on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
+        
+        if not os.path.isdir(os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'):
+            os.mkdir(os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/')
+        
