@@ -2,6 +2,7 @@ from logging import error
 import numpy as np
 from numpy.ma.core import masked_where
 import torch
+import earthnet as en
 
 def mean_cube(cube, mask_channel = False): #dumb one
     # cube is the input cube (note that the time is always the last coordinate)
@@ -48,4 +49,17 @@ def last_prediction(cube, mask_channel = False, timepoints = 20):
     
     new_cube = np.repeat(new_cube.transpose(2,3,1,0), timepoints, axis=-1)
     return new_cube
+
+def get_ENS(target, preds):
+    scores = []
+    for pred in preds:
+        output = en.parallel_score.CubeCalculator.get_scores({"pred_filepath": pred, "targ_filepath": target})
+        denom = 1/output['MAD'] + 1/output['OLS'] + 1/output['EMD'] + 1/output['SSIM']
+        scores.append(4/denom)
+    '''# Sometimes the Structural Similarity Index Measure (SSIM) gives 0 (no wonder we are always returning the same prediction).
+    if output['SSIM']==0:
+        print("HEREEEEEEEEEEEEE")
+    if output['SSIM']==0:
+        output['SSIM']=0.001'''
     
+    return scores

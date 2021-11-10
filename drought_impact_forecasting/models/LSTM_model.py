@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import mean_cube, mean_prediction, last_prediction
+from .model_parts.shared import mean_cube, mean_prediction, last_prediction, get_ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -146,6 +146,7 @@ class LSTM_model(pl.LightningModule):
             # Save our model prediction
             np.savez(pred_dir+'pred3', x_preds)
 
+            predictions = [pred_dir+'pred1.npz', pred_dir+'pred2.npz', pred_dir+'pred3.npz']
             # Calculate ENS scores
             target_files = []
             with open(os.getcwd() + self.cfg["data"]["test_dir"] + '/target_files.txt', 'r') as filehandle:
@@ -153,3 +154,10 @@ class LSTM_model(pl.LightningModule):
                     # remove linebreak which is the last character of the string
                     cur = line[:-1]
                     target_files.append(cur)
+            target_file = target_files[batch_idx]
+
+            scores = get_ENS(target_file, predictions)
+            best_score = max(scores)
+
+            with open(os.getcwd() + '/Data/scores.txt', 'a') as filehandle:
+                filehandle.write('Batch: ' + str(batch_idx) + ' Scores: ' + str(scores) + ' Best: ' + str(best_score))
