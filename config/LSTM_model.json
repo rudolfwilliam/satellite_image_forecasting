@@ -43,5 +43,9 @@
         "devices": 1,
         "log_steps": 50,
         "patience": 5
+    },
+    "project":
+    {
+        "evaluate": true
     }
 }

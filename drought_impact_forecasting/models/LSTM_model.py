@@ -112,7 +112,7 @@ class LSTM_model(pl.LightningModule):
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
-        loss = torch.tensor([0.0], requires_grad = True)
+        loss = torch.tensor([0.0])
 
         x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
 
@@ -126,21 +126,30 @@ class LSTM_model(pl.LightningModule):
             logs,
             on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
-        
-        # Store predictions ready for evaluation
-        pred_dir = os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'
-        if not os.path.isdir(pred_dir):
-            os.mkdir(pred_dir)
 
         x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
-
+        
         # Make all our predictions and save them
-        num_context = round(all_data.shape[-1]/3)
-        # Save avg predictions
-        avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
-        np.savez(pred_dir+'pred1', avg_cube)
-        # Save last cloud-free image predictions
-        last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
-        np.savez(pred_dir+'pred2', last_cube)
-        # Save our model prediction
-        np.savez(pred_dir+'pred3', x_preds)
+        if self.cfg["project"]["evaluate"]:
+            # Store predictions ready for evaluation
+            pred_dir = os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'
+            if not os.path.isdir(pred_dir):
+                os.mkdir(pred_dir)
+
+            num_context = round(all_data.shape[-1]/3)
+            # Save avg predictions
+            avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+            np.savez(pred_dir+'pred1', avg_cube)
+            # Save last cloud-free image predictions
+            last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+            np.savez(pred_dir+'pred2', last_cube)
+            # Save our model prediction
+            np.savez(pred_dir+'pred3', x_preds)
+
+            # Calculate ENS scores
+            target_files = []
+            with open(os.getcwd() + self.cfg["data"]["test_dir"] + '/target_files.txt', 'r') as filehandle:
+                for line in filehandle:
+                    # remove linebreak which is the last character of the string
+                    cur = line[:-1]
+                    target_files.append(cur)

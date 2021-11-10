@@ -28,8 +28,12 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
     test_context_files.sort()
     test_target_files.sort()
 
-    train_files = train_files[:min([training_samples, len(train_files)])]
+    # Save paths to test set for ENS calculation
+    with open(os.getcwd() + test_dir + '/target_files.txt', 'w') as filehandle:
+        for item in test_target_files:
+            filehandle.write('%s\n' % item)
 
+    train_files = train_files[:min([training_samples, len(train_files)])]
 
     train = Earthnet_Dataset(train_files, ms_cut)
     test = Earthnet_Dataset(test_context_files, ms_cut, test_target_files)
@@ -83,7 +87,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         # => the nth image is predicted based on the (n-1)th image and nth weather data
         # the last weather inputed will hence be a null prediction (this should never be used by the model!)
         null_weather = md_new[:,:,:,-1:] * 0
-        md_new = np.append(md_new[:,:,:,1:], md_new[:,:,:,-1:], axis=-1)
+        md_new = np.append(md_new[:,:,:,1:], null_weather, axis=-1)
 
         # Reshape to 128 x 128
         md_reshaped = np.empty((tuple([target_shape[0]] + [target_shape[1]] + [md.shape[2]] + [md_new.shape[3]])))

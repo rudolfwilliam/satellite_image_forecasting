@@ -35,17 +35,17 @@ def main():
                                             cfg["data"]["mesoscale_cut"],
                                             cfg["data"]["train_dir"], 
                                             cfg["data"]["test_dir"])
-    train_dataloader = DataLoader(  training_data, 
-                                    num_workers=cfg["training"]["num_workers"],
-                                    batch_size=cfg["training"]["batch_size"],
-                                    shuffle=True, 
-                                    drop_last=False)
+    train_dataloader = DataLoader(training_data, 
+                                  num_workers=cfg["training"]["num_workers"],
+                                  batch_size=cfg["training"]["batch_size"],
+                                  shuffle=True, 
+                                  drop_last=False)
     test_dataloader = DataLoader(test_data, 
                                 num_workers=cfg["training"]["num_workers"], 
                                 drop_last=False)
 
     # We might want to configure GPU, TPU, etc. usage here
-    trainer =   Trainer(max_epochs=cfg["training"]["epochs"], 
+    trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                         logger=wandb_logger,
                         log_every_n_steps = min(cfg["training"]["log_steps"],
                                             cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
