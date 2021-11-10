@@ -21,3 +21,31 @@ def mean_cube(cube, mask_channel = False): #dumb one
         masked_cube = np.ma.masked_where(mask, cube_to_mask)
         avg_cube = masked_cube.mean(axis=-1)
         return torch.tensor(avg_cube).float()
+
+def mean_prediction(cube, mask_channel = False, timepoints = 20):
+    # compute the mean image and make a prediction cube of the correct length
+    avg_cube = np.array(mean_cube(cube[:, 0:5, :, :, :], True)).transpose(2,3,1,0)
+    avg_cube = np.repeat(avg_cube, timepoints, axis=-1)
+    
+    return avg_cube
+
+def last_prediction(cube, mask_channel = False, timepoints = 20):
+    # find the last cloud free context image and return it as a constant prediction
+    if not mask_channel:
+        last_image = cube[:, :, :, :, -1]
+        last_cube = np.repeat(np.array(last_image).transpose(2,3,1,0), timepoints, axis=-1)
+        return last_cube
+
+    new_cube = np.array(mean_cube(cube[:, 0:4, :, :, :]))
+    # for each pixel, find the last good quality data point
+    # if no data point has good quality return the mean
+    for i in range(cube.shape[2]):
+        for j in range(cube.shape[3]):
+            for k in reversed(range(cube.shape[4])):
+                if cube[0,4,i,j,k] == 0:
+                    new_cube[0, :4, i, j] = cube[0,:4,i,j,k]
+                    break
+    
+    new_cube = np.repeat(new_cube.transpose(2,3,1,0), timepoints, axis=-1)
+    return new_cube
+    

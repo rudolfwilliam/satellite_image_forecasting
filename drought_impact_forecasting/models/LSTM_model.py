@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import mean_cube
+from .model_parts.shared import mean_cube, mean_prediction, last_prediction
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -44,7 +44,7 @@ class LSTM_model(pl.LightningModule):
         Do not use these for computing a loss!
         """
         # compute mean cube
-        mean = mean_cube(x[:, np.r_[0:5], :, :, :], True)
+        mean = mean_cube(x[:, 0:5, :, :, :], True)
         preds, pred_deltas, means = self.model(x, mean=mean, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, means
@@ -108,7 +108,6 @@ class LSTM_model(pl.LightningModule):
             TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
         all_data = batch
-        context = all_data # here we will store the context + until now predicted images
 
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
@@ -128,6 +127,20 @@ class LSTM_model(pl.LightningModule):
             on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
         
-        if not os.path.isdir(os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'):
-            os.mkdir(os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/')
-        
+        # Store predictions ready for evaluation
+        pred_dir = os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'
+        if not os.path.isdir(pred_dir):
+            os.mkdir(pred_dir)
+
+        x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
+
+        # Make all our predictions and save them
+        num_context = round(all_data.shape[-1]/3)
+        # Save avg predictions
+        avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+        np.savez(pred_dir+'pred1', avg_cube)
+        # Save last cloud-free image predictions
+        last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+        np.savez(pred_dir+'pred2', last_cube)
+        # Save our model prediction
+        np.savez(pred_dir+'pred3', x_preds)
