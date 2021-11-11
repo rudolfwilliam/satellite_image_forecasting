@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 import numpy as np
 import os
+import glob
 
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import mean_cube, mean_prediction, last_prediction, get_ENS
@@ -159,5 +160,7 @@ class LSTM_model(pl.LightningModule):
             scores = get_ENS(target_file, predictions)
             best_score = max(scores)
 
-            with open(os.getcwd() + '/Data/scores.txt', 'a') as filehandle:
-                filehandle.write('Batch: ' + str(batch_idx) + ' Scores: ' + str(scores) + ' Best: ' + str(best_score))
+            files = glob.glob(os.getcwd() + '/Data/scores/*.txt')
+            latest_file = max(files, key=os.path.getctime)
+            with open(latest_file, 'a') as filehandle:
+                filehandle.write('Batch ' + str(batch_idx) + ' scores: ' + str(scores) + ' Best: ' + str(best_score) + '\n')

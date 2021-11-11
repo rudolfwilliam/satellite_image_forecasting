@@ -51,15 +51,10 @@ def last_prediction(cube, mask_channel = False, timepoints = 20):
     return new_cube
 
 def get_ENS(target, preds):
+    # Calculate the ENS score of each prediction in preds
     scores = []
     for pred in preds:
         output = en.parallel_score.CubeCalculator.get_scores({"pred_filepath": pred, "targ_filepath": target})
         denom = 1/output['MAD'] + 1/output['OLS'] + 1/output['EMD'] + 1/output['SSIM']
-        scores.append(4/denom)
-    '''# Sometimes the Structural Similarity Index Measure (SSIM) gives 0 (no wonder we are always returning the same prediction).
-    if output['SSIM']==0:
-        print("HEREEEEEEEEEEEEE")
-    if output['SSIM']==0:
-        output['SSIM']=0.001'''
-    
+        scores.append(4/denom)    
     return scores

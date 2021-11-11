@@ -218,8 +218,11 @@ ENV/
 /wandb
 /DS_Lab
 
-# Data folder
-/Data
+# Data folder (only push prediction scores)
+!Data/
+
+Data/*
+!Data/scores/
 
 # images
 *.png
