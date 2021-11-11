@@ -37,10 +37,13 @@ class Prediction_Callback(pl.Callback):
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
+
+        torch.save(trainer.model.state_dict(), os.getcwd() + "/Models/runtime_models/model_"+str(self.epoch)+".torch")
+
         if self.print_predictions:
             if not os.path.exists(self.top_dir):
                 self.__create_dir_structure()
-            # take 10 context and predict 1
+            # take 10 context and predict 1 (index from )
             preds, delta_preds, means = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
             metrics = trainer.callback_metrics
             metrics['train_loss'] = [float(metrics['train_loss'])]
@@ -72,11 +75,11 @@ class Prediction_Callback(pl.Callback):
                 plt.close()
             # in the very first epoch, store ground truth
             if self.epoch == 0:
-                plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.clip(np.flip(self.sample[:3, :, :, 10].detach().numpy().
+                plt.imsave(self.top_dir + self.gt_dir + str(self.epoch) + "_gt.png", np.clip(np.flip(self.sample[:3, :, :, 9].detach().numpy().
                                                                 transpose(1, 2, 0).astype(float), -1),0,1))
                 
                 # ground truth delta
-                delta_gt = (self.sample[:4, :, :, 10] - means[0])[0]
+                delta_gt = (self.sample[:4, :, :, 9] - means[0])[0]
                 for c, i in enumerate(["r", "g", "b", "i"]):
                     plt.imshow(np.flip(delta_gt.detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, c])
                     plt.colorbar()

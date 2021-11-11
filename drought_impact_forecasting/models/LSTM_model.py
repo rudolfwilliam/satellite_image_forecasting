@@ -6,9 +6,10 @@ import pytorch_lightning as pl
 import numpy as np
 import os
 import glob
+from ..losses import cloud_mask_loss
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import mean_cube, mean_prediction, last_prediction, get_ENS
+from .model_parts.shared import last_cube, mean_cube, mean_prediction, last_prediction, get_ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -45,7 +46,7 @@ class LSTM_model(pl.LightningModule):
         Do not use these for computing a loss!
         """
         # compute mean cube
-        mean = mean_cube(x[:, 0:5, :, :, :], True)
+        mean = mean_cube(x[:, 0:5, :, :, :], 4)
         preds, pred_deltas, means = self.model(x, mean=mean, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, means
@@ -83,15 +84,15 @@ class LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
+        cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        t0 = T - 20 # no. of pics we start with
-        l2_crit = nn.MSELoss()
+        t0 = T - 1 # no. of pics we start with
         loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pr, x_delta, mean = self(all_data[:, :, :, :, :t_end])
             delta = all_data[:, :4, :, :, t_end] - mean[0]
-            loss = loss.add(l2_crit(x_delta[0], delta))
+            loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
@@ -139,10 +140,10 @@ class LSTM_model(pl.LightningModule):
 
             num_context = round(all_data.shape[-1]/3)
             # Save avg predictions
-            avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+            avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
             np.savez(pred_dir+'pred1', avg_cube)
             # Save last cloud-free image predictions
-            last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], True, num_context*2)
+            last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
             np.savez(pred_dir+'pred2', last_cube)
             # Save our model prediction
             np.savez(pred_dir+'pred3', x_preds)
