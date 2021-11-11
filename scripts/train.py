@@ -24,9 +24,15 @@ from datetime import datetime
 
 def main():
     args, cfg = command_line_parser()
+    
+
+
 
     if not cfg["training"]["offline"]:
         wandb.login()
+
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
     pl.seed_everything(cfg["training"]["seed"], workers=True)
@@ -34,7 +40,8 @@ def main():
     training_data, test_data = prepare_data(cfg["training"]["training_samples"], 
                                             cfg["data"]["mesoscale_cut"],
                                             cfg["data"]["train_dir"], 
-                                            cfg["data"]["test_dir"])
+                                            cfg["data"]["test_dir"],
+                                            device)
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["batch_size"],

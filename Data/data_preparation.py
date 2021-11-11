@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import os
 from os.path import isfile, join
+
  
-def prepare_data(training_samples, ms_cut, train_dir, test_dir):
+def prepare_data(training_samples, ms_cut, train_dir, test_dir, device):
     
     train_files = []
     for path, subdirs, files in os.walk(os.getcwd() + train_dir):
@@ -35,12 +36,12 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir):
 
     train_files = train_files[:min([training_samples, len(train_files)])]
 
-    train = Earthnet_Dataset(train_files, ms_cut)
-    test = Earthnet_Dataset(test_context_files, ms_cut, test_target_files)
+    train = Earthnet_Dataset(train_files, ms_cut, device=device)
+    test = Earthnet_Dataset(test_context_files, ms_cut, target_file_paths = test_target_files, device=device)
     return train, test
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_file_paths, ms_cut, target_file_paths = None):
+    def __init__(self, context_file_paths, ms_cut, device, target_file_paths = None):
         '''
             context_file_paths: list of paths of all the context files
             ms_cut: indxs for relevant mesoscale data
@@ -60,7 +61,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
                                        | Max temp: take the max
             mesoscale static      - we don't use this data, the relationships are too complex for the model to learn
         '''
-
+        self.device = device
         self.context_paths = context_file_paths
         self.ms_cut = ms_cut
         self.target_paths = target_file_paths
@@ -136,7 +137,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data, device=self.device).permute(2, 0, 1, 3)
         
 
         return all_data
