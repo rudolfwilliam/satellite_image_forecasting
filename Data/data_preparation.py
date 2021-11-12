@@ -30,9 +30,11 @@ def prepare_data(training_samples, ms_cut, train_dir, test_dir, device):
     test_target_files.sort()
 
     # Save paths to test set for ENS calculation
-    with open(os.getcwd() + test_dir + '/target_files.txt', 'w') as filehandle:
+    '''
+    with open(os.getcwd() + test_dir + '/target_files' + timestamp + '.txt', 'w') as filehandle:
         for item in test_target_files:
             filehandle.write('%s\n' % item)
+    '''
 
     train_files = train_files[:min([training_samples, len(train_files)])]
 
@@ -139,6 +141,8 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         '''
         all_data = torch.Tensor(all_data, device=self.device).permute(2, 0, 1, 3)
         
-
-        return all_data
+        if self.target_paths is not None:
+            return all_data, [self.target_paths[index]]
+        else:
+            return all_data, ["no target"]
 

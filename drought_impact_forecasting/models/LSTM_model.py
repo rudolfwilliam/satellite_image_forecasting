@@ -12,7 +12,7 @@ from .model_parts.Conv_LSTM import Conv_LSTM
 from .model_parts.shared import last_cube, mean_cube, mean_prediction, last_prediction, get_ENS
  
 class LSTM_model(pl.LightningModule):
-    def __init__(self, cfg):
+    def __init__(self, cfg, timestamp):
         """
         Base prediction model. It is based on the convolutional LSTM architecture.
         (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
@@ -23,6 +23,7 @@ class LSTM_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
+        self.timestamp = timestamp
 
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
@@ -75,7 +76,7 @@ class LSTM_model(pl.LightningModule):
             Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
             On and on until we use all but one samples to predict the last one.
         '''
-        all_data = batch
+        all_data, _ = batch
         '''
         all_data of size (b, w, h, c, t)
             b = batch_size
@@ -104,12 +105,14 @@ class LSTM_model(pl.LightningModule):
     # We could try early stopping here later on
     """def validation_step(self):
         pass"""
-
     def test_step(self, batch, batch_idx):
         '''
             TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
-        all_data = batch
+        all_data, path = batch
+        path = path[0][0]
+
+        _, cube_name = os.path.split(path)
 
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
@@ -134,34 +137,40 @@ class LSTM_model(pl.LightningModule):
         # Make all our predictions and save them
         if self.cfg["project"]["evaluate"]:
             # Store predictions ready for evaluation
-            pred_dir = os.getcwd() + '/Data/predictions/' + str(batch_idx) + '/'
+            model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
+            pred_dir = model_dir + "test_cubes/"
+            
+            model_pred_dir = pred_dir + "model_pred/"
+            average_pred_dir = pred_dir + "average_pred/"
+            last_pred_dir = pred_dir + "last_pred/"
+
             if not os.path.isdir(pred_dir):
                 os.mkdir(pred_dir)
+                os.mkdir(model_pred_dir)
+                os.mkdir(average_pred_dir)
+                os.mkdir(last_pred_dir)
 
             num_context = round(all_data.shape[-1]/3)
             # Save avg predictions
             avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-            np.savez(pred_dir+'pred1', avg_cube)
+            np.savez(average_pred_dir+cube_name, avg_cube)
             # Save last cloud-free image predictions
             last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-            np.savez(pred_dir+'pred2', last_cube)
+            np.savez(last_pred_dir+cube_name, last_cube)
             # Save our model prediction
-            np.savez(pred_dir+'pred3', x_preds)
+            np.savez(model_pred_dir+cube_name, x_preds)
 
-            predictions = [pred_dir+'pred1.npz', pred_dir+'pred2.npz', pred_dir+'pred3.npz']
+            predictions = [average_pred_dir+cube_name, last_pred_dir+cube_name, model_pred_dir+cube_name]
             # Calculate ENS scores
-            target_files = []
+            '''target_files = []
             with open(os.getcwd() + self.cfg["data"]["test_dir"] + '/target_files.txt', 'r') as filehandle:
                 for line in filehandle:
                     # remove linebreak which is the last character of the string
                     cur = line[:-1]
                     target_files.append(cur)
-            target_file = target_files[batch_idx]
+            target_file = target_files[batch_idx]'''
 
-            scores = get_ENS(target_file, predictions)
+            scores = get_ENS(path, predictions)
             best_score = max(scores)
-
-            files = glob.glob(os.getcwd() + '/Data/scores/*.txt')
-            latest_file = max(files, key=os.path.getctime)
-            with open(latest_file, 'a') as filehandle:
-                filehandle.write('Batch ' + str(batch_idx) + ' scores: ' + str(scores) + ' Best: ' + str(best_score) + '\n')
+            with open(model_dir + "scores.csv", 'a') as filehandle:
+                filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')

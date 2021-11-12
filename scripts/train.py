@@ -23,10 +23,12 @@ import wandb
 from datetime import datetime
 
 def main():
+
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M_%S") # timestamp unique to this training instance
+    print("Timestamp of the instance: " + timestamp)
+    os.mkdir(os.getcwd() + "/model_instances/model_"+timestamp)
+
     args, cfg = command_line_parser()
-    
-
-
 
     if not cfg["training"]["offline"]:
         wandb.login()
@@ -41,15 +43,16 @@ def main():
                                             cfg["data"]["mesoscale_cut"],
                                             cfg["data"]["train_dir"], 
                                             cfg["data"]["test_dir"],
-                                            device)
+                                            device = device)
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["batch_size"],
                                   shuffle=True, 
                                   drop_last=False)
     test_dataloader = DataLoader(test_data, 
-                                num_workers=cfg["training"]["num_workers"], 
-                                drop_last=False)
+                                num_workers = cfg["training"]["num_workers"],
+                                batch_size = 1, 
+                                drop_last = False)
 
     # We might want to configure GPU, TPU, etc. usage here
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
@@ -62,10 +65,11 @@ def main():
                                                         cfg["data"]["train_dir"],
                                                         cfg["data"]["test_dir"], 
                                                         training_data,
-                                                        cfg["training"]["print_predictions"])])
+                                                        cfg["training"]["print_predictions"],
+                                                        timestamp)])
 
     if args.model_name == "LSTM_model":
-        model = LSTM_model(cfg)
+        model = LSTM_model(cfg, timestamp)
     else:
         raise ValueError("The specified model name is invalid.")
 
