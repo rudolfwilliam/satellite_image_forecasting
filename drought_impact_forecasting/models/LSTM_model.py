@@ -1,4 +1,5 @@
 import torch
+import time
 from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
@@ -109,6 +110,7 @@ class LSTM_model(pl.LightningModule):
         '''
             TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
+        starting_time = time.time()
         all_data, path = batch
         path = path[0][0]
 
@@ -119,8 +121,9 @@ class LSTM_model(pl.LightningModule):
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0])
 
+        start_model_evaluating = time.time()
         x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
-
+        print("model time: {0}".format(time.time() - start_model_evaluating))
         # Add up losses across all timesteps
         for i in range(len(means)):
             delta = all_data[:,:4,:,:,t0+i] - means[i]
@@ -152,13 +155,23 @@ class LSTM_model(pl.LightningModule):
 
             num_context = round(all_data.shape[-1]/3)
             # Save avg predictions
+            avg_start_time = time.time()
             avg_cube = mean_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+            print("avg time: {0}".format(time.time() - avg_start_time))
+
             np.savez(average_pred_dir+cube_name, avg_cube)
             # Save last cloud-free image predictions
+            last_start_time = time.time()
             last_cube = last_prediction(all_data[:, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-            np.savez(last_pred_dir+cube_name, last_cube)
+            print("last time: {0}".format(time.time() - last_start_time))
+
             # Save our model prediction
+            save_time = time.time()
+            np.savez(last_pred_dir+cube_name, last_cube)
+            print("save time: {0}".format(time.time() - save_time))
+
             np.savez(model_pred_dir+cube_name, x_preds)
+            
 
             predictions = [average_pred_dir+cube_name, last_pred_dir+cube_name, model_pred_dir+cube_name]
             # Calculate ENS scores
@@ -169,8 +182,11 @@ class LSTM_model(pl.LightningModule):
                     cur = line[:-1]
                     target_files.append(cur)
             target_file = target_files[batch_idx]'''
-
+            time_ens_score = time.time()
             scores = get_ENS(path, predictions)
+            print("ENS score time: {0}".format(time.time() - time_ens_score))
+
             best_score = max(scores)
             with open(model_dir + "scores.csv", 'a') as filehandle:
                 filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
+            print("total time: {0}".format(time.time()-starting_time))

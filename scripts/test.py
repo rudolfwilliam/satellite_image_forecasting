@@ -26,6 +26,8 @@ def main():
 
     args, cfg = command_line_parser()
     filepath = os.getcwd() + cfg["project"]["model_path"]
+    timestamp = filepath.split("/")[-3][6:]
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -48,22 +50,18 @@ def main():
                                                         cfg["data"]["train_dir"],
                                                         cfg["data"]["test_dir"], 
                                                         training_data,
-                                                        cfg["training"]["print_predictions"])])
+                                                        cfg["training"]["print_predictions"],
+                                                        timestamp)])
 
     if args.model_name == "LSTM_model":
-        model = LSTM_model(cfg)
+        model = LSTM_model(cfg, timestamp)
         model.load_state_dict(torch.load(filepath))
         model.eval()
         
     else:
         raise ValueError("The specified model name is invalid.")
 
-    if not os.path.isdir(os.getcwd() + '/Data/predictions/'):
-        os.mkdir(os.getcwd() + '/Data/predictions/')
-
-    if cfg["project"]["evaluate"]:
-        with open(os.getcwd() + '/Data/scores/scores_' + datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '.txt', 'w') as filehandle:
-            filehandle.write('ENS scores: \n')
+    
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
