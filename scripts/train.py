@@ -75,14 +75,7 @@ def main():
 
     trainer.fit(model, train_dataloader)
 
-    torch.save(model.state_dict(), "Models/model.torch")
-
-    if not os.path.isdir(os.getcwd() + '/Data/predictions/'):
-        os.mkdir(os.getcwd() + '/Data/predictions/')
-
-    if cfg["project"]["evaluate"]:
-        with open(os.getcwd() + '/Data/scores/scores_' + datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '.txt', 'w') as filehandle:
-            filehandle.write('ENS scores: \n')
+    #torch.save(model.state_dict(), "Models/model.torch")
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
