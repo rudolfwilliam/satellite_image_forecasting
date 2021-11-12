@@ -46,6 +46,7 @@
     },
     "project":
     {
-        "evaluate": true
+        "evaluate": true,
+        "model_path": "/Models/runtime_models/model_23.torch"
     }
 }

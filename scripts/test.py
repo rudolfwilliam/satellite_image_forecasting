@@ -25,7 +25,7 @@ from datetime import datetime
 def main():
 
     args, cfg = command_line_parser()
-    filepath = "Models/runtime_models/model_23.torch"
+    filepath = os.getcwd() + cfg["project"]["model_path"]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
