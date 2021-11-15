@@ -40,7 +40,6 @@
         "training_samples": 4,
         "num_workers": 0,
         "accelerator": "auto",
-        "gpus": 1,
         "devices": 1,
         "log_steps": 50,
         "patience": 5

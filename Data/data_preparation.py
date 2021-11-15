@@ -139,7 +139,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        all_data = torch.Tensor(all_data, device=self.device).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
         
         if self.target_paths is not None:
             return all_data, self.target_paths[index]

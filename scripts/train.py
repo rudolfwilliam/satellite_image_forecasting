@@ -2,8 +2,8 @@ from logging import Logger
 import sys
 import os
 import numpy as np
-#from pytorch_lightning.accelerators import accelerator
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from shutil import copy2
+#from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
@@ -27,14 +27,17 @@ def main():
     timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M_%S") # timestamp unique to this training instance
     print("Timestamp of the instance: " + timestamp)
     os.mkdir(os.getcwd() + "/model_instances/model_"+timestamp)
+    copy2(os.getcwd() + "/config/LSTM_model.json", os.getcwd() + "/model_instances/model_"+timestamp + "/LSTM_model.json")
 
-    args, cfg = command_line_parser()
+    args, cfg = command_line_parser(mode = 'train')
+    print(args)
 
     if not cfg["training"]["offline"]:
         wandb.login()
 
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    gpu_count = torch.cuda.device_count() 
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
     pl.seed_everything(cfg["training"]["seed"], workers=True)
@@ -66,7 +69,8 @@ def main():
                                                         cfg["data"]["test_dir"], 
                                                         training_data,
                                                         cfg["training"]["print_predictions"],
-                                                        timestamp)])
+                                                        timestamp)],
+                        gpus = gpu_count)
 
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg, timestamp)

@@ -2,6 +2,8 @@ from logging import Logger
 import sys
 import os
 import numpy as np
+from os import listdir
+from os.path import isfile, join
 #from pytorch_lightning.accelerators import accelerator
 # from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -24,12 +26,14 @@ from datetime import datetime
 
 def main():
 
-    args, cfg = command_line_parser()
-    filepath = os.getcwd() + cfg["project"]["model_path"]
-    timestamp = filepath.split("/")[-3][6:]
+    args, cfg = command_line_parser(mode = 'validate')
+    #filepath = os.getcwd() + cfg["project"]["model_path"]
+    timestamp = args.ts
+    model_path = os.getcwd() + "/model_instances/model_"+timestamp+"/runtime_model"
+    models = [f for f in listdir(model_path) if isfile(join(model_path, f))].sort()
+    model_path = model_path + "/" + models[-1]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
     training_data, test_data = prepare_data(cfg["training"]["training_samples"], 
                                             cfg["data"]["mesoscale_cut"],
@@ -53,13 +57,9 @@ def main():
                                                         cfg["training"]["print_predictions"],
                                                         timestamp)])
 
-    if args.model_name == "LSTM_model":
-        model = LSTM_model(cfg, timestamp)
-        model.load_state_dict(torch.load(filepath))
-        model.eval()
-        
-    else:
-        raise ValueError("The specified model name is invalid.")
+    model = LSTM_model(cfg, timestamp)
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
 
     
     trainer.test(model, test_dataloader)
