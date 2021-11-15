@@ -37,7 +37,8 @@ def main():
 
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    gpu_count = torch.cuda.device_count() 
+    gpu_count = torch.cuda.device_count()
+    print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
     pl.seed_everything(cfg["training"]["seed"], workers=True)
