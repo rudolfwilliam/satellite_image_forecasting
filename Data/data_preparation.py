@@ -142,7 +142,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         all_data = torch.Tensor(all_data, device=self.device).permute(2, 0, 1, 3)
         
         if self.target_paths is not None:
-            return all_data, [self.target_paths[index]]
+            return all_data, self.target_paths[index]
         else:
-            return all_data, ["no target"]
+            return all_data, "no target"
 
