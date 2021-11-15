@@ -65,23 +65,16 @@ class LSTM_model(pl.LightningModule):
         return [self.optimizer], [self.scheduler]
 
     def training_step(self, batch, batch_idx):
-        '''
-            This is not trivial: let's say we have T time steps in the cube for training.
-            We start by taking the first t0 time samples and we try to predict the next one.
-            We then measure the loss against the ground truth.
-            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
-            On and on until we use all but one samples to predict the last one.
-        '''
         #TODO: shift weather data one image forward
+        '''
+                all_data of size (b, w, h, c, t)
+                    b = batch_size
+                    c = channels
+                    w = width
+                    h = height
+                    t = time
+                '''
         all_data = batch
-        '''
-        all_data of size (b, w, h, c, t)
-            b = batch_size
-            c = channels
-            w = width
-            h = height
-            t = time
-        '''
 
         T = all_data.size()[4]
         t0 = T - 20 # no. of pics we start with
@@ -99,7 +92,6 @@ class LSTM_model(pl.LightningModule):
         )
         return loss
     
-    # We could try early stopping here later on
     """def validation_step(self):
         pass"""
 
@@ -108,15 +100,15 @@ class LSTM_model(pl.LightningModule):
             TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
         all_data = batch
-        context = all_data # here we will store the context + until now predicted images
+        context = all_data # store the context + until now predicted images
 
         T = all_data.size()[4]
-        t0 = 10 # no. of pics we start with
+        t0 = 10 # no. of pics to start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0], requires_grad = True)
         for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
             x_pred, x_delta, mean = self(context[:, :, :, :, :t_end])
-            # Add predictions to input data for next iteration
+            # add predictions to input data for next iteration
             context[0, :4, :, :, t_end] = x_pred[0]
             delta = all_data[:, :4, :, :, t_end] - mean[0]
             loss = loss.add(l2_crit(x_delta[0], delta))
