@@ -7,8 +7,8 @@
         "anneal_end": 10,
         "channels": 11,
         "hidden_channels": 4,
-        "n_layers": 1,
-        "kernel": [3, 3]
+        "n_layers": 2,
+        "kernel": [1, 1]
     },
     "network": 
     [
@@ -32,12 +32,12 @@
     {
         "offline": true,
         "print_predictions": true,
-        "epochs": 20,
+        "epochs": 5,
         "start_learn_rate": 0.316227,
         "batch_size": 2,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 30,
+        "training_samples": 4,
         "num_workers": 0,
         "accelerator": "auto",
         "gpus": 1,
@@ -47,6 +47,7 @@
     },
     "project":
     {
-        "evaluate": true
+        "evaluate": true,
+        "model_path": "/model_instances/model_12_11_2021_16_40_51/runtime_model/model_4.torch"
     }
 }

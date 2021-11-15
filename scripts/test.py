@@ -29,8 +29,9 @@ def main():
     args, cfg = command_line_parser(mode = 'validate')
     #filepath = os.getcwd() + cfg["project"]["model_path"]
     timestamp = args.ts
+    print(timestamp)
     model_path = os.getcwd() + "/model_instances/model_"+timestamp+"/runtime_model"
-    models = [f for f in listdir(model_path) if isfile(join(model_path, f))].sort()
+    models = listdir(model_path)
     model_path = model_path + "/" + models[-1]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -48,8 +49,8 @@ def main():
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                         log_every_n_steps = min(cfg["training"]["log_steps"],
                                             cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
-                        devices = cfg["training"]["devices"], 
-                        accelerator=cfg["training"]["accelerator"],
+                        devices = 1, 
+                        accelerator= "cpu",
                         callbacks=[ Prediction_Callback(cfg["data"]["mesoscale_cut"], 
                                                         cfg["data"]["train_dir"],
                                                         cfg["data"]["test_dir"], 

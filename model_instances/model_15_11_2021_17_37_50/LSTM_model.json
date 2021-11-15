@@ -7,7 +7,7 @@
         "anneal_end": 10,
         "channels": 11,
         "hidden_channels": 4,
-        "n_layers": 1,
+        "n_layers": 5,
         "kernel": [3, 3]
     },
     "network": 
@@ -34,7 +34,7 @@
         "print_predictions": true,
         "epochs": 20,
         "start_learn_rate": 0.316227,
-        "batch_size": 2,
+        "batch_size": 10,
         "optimizer": "adam",
         "seed": 1,
         "training_samples": 30,

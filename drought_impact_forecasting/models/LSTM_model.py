@@ -90,8 +90,13 @@ class LSTM_model(pl.LightningModule):
 
         T = all_data.size()[4]
         t0 = T - 1 # no. of pics we start with
-        loss = torch.tensor([0.0], requires_grad = True)   ########## CHECK USE OF REQUIRES_GRAD
-        for t_end in range(t0, T): # this iterates with t_end = t0, ..., T-1
+        
+
+        _, x_delta, mean = self(all_data[:, :, :, :, :t0])
+        delta = all_data[:, :4, :, :, t0] - mean[0]
+        loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
+
+        for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
             _, x_delta, mean = self(all_data[:, :, :, :, :t_end])
             delta = all_data[:, :4, :, :, t_end] - mean[0]
             loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))

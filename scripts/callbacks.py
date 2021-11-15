@@ -15,7 +15,6 @@ class Prediction_Callback(pl.Callback):
         self.sample, _ = dataset.__getitem__(0)
         self.print_predictions = print_predictions
         self.epoch = 0
-
         self.instance_folder = os.getcwd() + "/model_instances/model_" + timestamp
         self.runtime_model_folder = self.instance_folder + "/runtime_model"
         self.runtime_prediction = self.instance_folder + "/runtime_pred"
@@ -42,14 +41,14 @@ class Prediction_Callback(pl.Callback):
 
         if self.print_predictions:
             # take 10 context and predict 1 (index from )
-            preds, delta_preds, means = trainer.model(torch.from_numpy(np.expand_dims(self.sample[:, :, :, :10], axis=0)))
+            preds, delta_preds, means = trainer.model(torch.unsqueeze(self.sample[:, :, :, :10], dim=0))
             metrics = trainer.callback_metrics
             metrics['train_loss'] = [float(metrics['train_loss'])]
             metrics['lr'] = [float(metrics['lr'])]
 
-            pre_pred = np.flip(preds[0][0, :3, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
+            pre_pred = np.flip(preds[0][0, :3, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
-            delta = np.flip(delta_preds[0][0, :4, :, :].detach().numpy().transpose(1, 2, 0).astype(float), -1)
+            delta = np.flip(delta_preds[0][0, :4, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
             # values need to be between 0 and 1
             cor_pred = np.clip(pre_pred, 0, 1)
@@ -73,13 +72,13 @@ class Prediction_Callback(pl.Callback):
                 plt.close()
             # in the very first epoch, store ground truth
             if self.epoch == 0:
-                plt.imsave(self.img_pred + "/gt.png", np.clip(np.flip(self.sample[:3, :, :, 9].detach().numpy().
+                plt.imsave(self.img_pred + "/gt.png", np.clip(np.flip(self.sample[:3, :, :, 9].detach().cpu().numpy().
                                                                 transpose(1, 2, 0).astype(float), -1),0,1))
                 
                 # ground truth delta
                 delta_gt = (self.sample[:4, :, :, 9] - means[0])[0]
                 for i, c in enumerate(self.channel_list):
-                    plt.imshow(np.flip(delta_gt.detach().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, i])
+                    plt.imshow(np.flip(delta_gt.detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)[:, :, i])
                     plt.colorbar()
                     plt.savefig(c + "/gt.png")
                     plt.close()
