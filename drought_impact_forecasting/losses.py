@@ -33,3 +33,12 @@ def base_line_total_loss(y_preds, batch_y, epoch, lambda1, lambda_kl_factor, ann
     # TODO: Add variants (GAN only, VAE only)
     loss_total = L1.add(L_KL).add(L_GAN).add(L_VAE_GAN)
     return loss_total
+
+def cloud_mask_loss(y_preds, y_truth, cloud_mask):
+    l2_loss = nn.MSELoss()
+
+    mask = torch.repeat_interleave(1-cloud_mask, 4, axis=1)
+    # Mask which data is cloudy and shouldn't be used for averaging
+    masked_y_pred = torch.mul(y_preds, mask)
+    masked_y_truth = torch.mul(y_truth, mask)
+    return l2_loss(masked_y_pred,masked_y_truth)
