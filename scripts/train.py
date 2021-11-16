@@ -56,27 +56,27 @@ def main():
                              device = device)
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["batch_size"],
+                                  batch_size=cfg["training"]["train_batch_size"],
                                   shuffle=True, 
                                   drop_last=False)
     val_1_dataloader = DataLoader(val_1_data, 
-                                  num_workers = cfg["training"]["num_workers"],
-                                  batch_size = 2, 
-                                  drop_last = False)
+                                  num_workers=cfg["training"]["num_workers"],
+                                  batch_size=cfg["training"]["val_1_batch_size"], 
+                                  drop_last=False)
     val_2_dataloader = DataLoader(val_2_data, 
-                                  num_workers = cfg["training"]["num_workers"],
-                                  batch_size = 1, 
-                                  drop_last = False)
+                                  num_workers=cfg["training"]["num_workers"],
+                                  batch_size=cfg["training"]["val_2_batch_size"], 
+                                  drop_last=False)
     test_dataloader = DataLoader(test_data, 
-                                num_workers = cfg["training"]["num_workers"],
-                                batch_size = 1, 
-                                drop_last = False)
+                                num_workers=cfg["training"]["num_workers"],
+                                batch_size=cfg["training"]["test_batch_size"], 
+                                drop_last=False)
 
     # We might want to configure GPU, TPU, etc. usage here
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                         logger=wandb_logger,
                         log_every_n_steps = min(cfg["training"]["log_steps"],
-                                            cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
+                                            cfg["training"]["training_samples"] / cfg["training"]["train_batch_size"]),
                         devices = cfg["training"]["devices"], 
                         accelerator=cfg["training"]["accelerator"],
                         callbacks=[ Prediction_Callback(cfg["data"]["mesoscale_cut"], 
@@ -93,12 +93,10 @@ def main():
         raise ValueError("The specified model name is invalid.")
 
     trainer.fit(model, train_dataloader, val_1_dataloader)
-    #trainer.validate(model, val_2_dataloader)
-    trainer.test(model, test_dataloader)
+    trainer.test(model, val_2_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
     # sometimes we get out of bound values!
-    # trainer.predict(model, test_dataloader)
 
     if not cfg["training"]["offline"]:
         wandb.finish()

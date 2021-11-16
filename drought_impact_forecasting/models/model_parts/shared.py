@@ -53,6 +53,9 @@ def get_ENS(target, preds):
     scores = []
     for pred in preds:
         output = en.parallel_score.CubeCalculator.get_scores({"pred_filepath": pred, "targ_filepath": target})
-        denom = 1/output['MAD'] + 1/output['OLS'] + 1/output['EMD'] + 1/output['SSIM']
-        scores.append(4/denom)    
+        if output['MAD'] == 0 or output['OLS'] == 0 or output['EMD'] == 0 or output['SSIM'] == 0:
+            scores.append(0)
+        else:
+            denom = 1/output['MAD'] + 1/output['OLS'] + 1/output['EMD'] + 1/output['SSIM']
+            scores.append(4/denom)    
     return scores
