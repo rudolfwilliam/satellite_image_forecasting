@@ -4,6 +4,7 @@ import os
 import numpy as np
 import random
 from shutil import copy2
+from os import listdir
 #from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
@@ -24,16 +25,15 @@ import wandb
 from datetime import datetime
 
 def main():
-
-    timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M_%S") # timestamp unique to this training instance
-    print("Timestamp of the instance: " + timestamp)
-
-
-    os.mkdir(os.getcwd() + "/model_instances/model_"+timestamp)
-    copy2(os.getcwd() + "/config/LSTM_model.json", os.getcwd() + "/model_instances/model_"+timestamp + "/LSTM_model.json")
-
-    args, cfg = command_line_parser(mode = 'train')
-    print(args)
+    args, cfg = command_line_parser(mode = 'validate')
+    #filepath = os.getcwd() + cfg["project"]["model_path"]
+    timestamp = args.ts
+    print("Timestamp: {0}".format(timestamp))
+    model_path = os.getcwd() + "/model_instances/model_"+timestamp+"/runtime_model"
+    models = listdir(model_path)
+    model_path = model_path + "/" + models[-1]
+    # to check that it's the last model
+    print("validating model {0}".format(models[-1]))
 
     if not cfg["training"]["offline"]:
         wandb.login()
@@ -46,6 +46,7 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
+    # For now the seed is super important!! Otherwise we validate on the training set. TODO: more elegant solution
     training_data, val_1_data, val_2_data = prepare_data(cfg["data"]["mesoscale_cut"],
                                                   cfg["data"]["train_dir"],
                                                   device = device,
@@ -53,29 +54,11 @@ def main():
                                                   val_1_samples=cfg["training"]["val_1_samples"],
                                                   val_2_samples=cfg["training"]["val_2_samples"])
    
-    test_data = prepare_data(cfg["data"]["mesoscale_cut"], 
-                             cfg["data"]["test_dir"],
-                             device = device)
-    
-
-    train_dataloader = DataLoader(training_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["train_batch_size"],
-                                  shuffle=True, 
-                                  drop_last=False)
-    val_1_dataloader = DataLoader(val_1_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["val_1_batch_size"], 
-                                  drop_last=False)
     val_2_dataloader = DataLoader(val_2_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["val_2_batch_size"], 
                                   drop_last=False)
-    
-    test_dataloader = DataLoader(test_data, 
-                                num_workers=cfg["training"]["num_workers"],
-                                batch_size=cfg["training"]["test_batch_size"], 
-                                drop_last=False)
+
 
     # Load model Callbacks
     callbacks = Prediction_Callback(cfg["data"]["mesoscale_cut"], 
@@ -97,11 +80,11 @@ def main():
     #setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg, timestamp)
+        model.load_state_dict(torch.load(model_path))
+        model.eval()
     else:
         raise ValueError("The specified model name is invalid.")
 
-    # Run training
-    trainer.fit(model, train_dataloader, val_1_dataloader)
     # Run validation
     trainer.test(model, val_2_dataloader)
 
