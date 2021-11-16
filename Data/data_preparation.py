@@ -3,44 +3,39 @@ import numpy as np
 import torch
 import os
 from os.path import isfile, join
-
+import random
  
-def prepare_data(training_samples, ms_cut, train_dir, test_dir, device):
+def prepare_data(ms_cut, data_dir, device, training_samples = None, validation_samples = None):
     
-    train_files = []
-    for path, subdirs, files in os.walk(os.getcwd() + train_dir):
-        for name in files:
-            # Ignore any licence, progress, etc. files
-            if '.npz' in name:
-                train_files.append(join(path, name))
+    if training_samples is not None:
+        train_files = []
+        for path, subdirs, files in os.walk(os.getcwd() + data_dir):
+            for name in files:
+                # Ignore any licence, progress, etc. files
+                if '.npz' in name:
+                    train_files.append(join(path, name))
+        
+        train_files = train_files[:min([training_samples+validation_samples, len(train_files)])]
+        train_set = random.sample(train_files, training_samples)
+        val_set = [x for x in train_files if x not in train_set]
+        return Earthnet_Dataset(train_set, ms_cut, device=device), Earthnet_Dataset(val_set, ms_cut, device=device)
+    else:
+        test_context_files = []
+        test_target_files = []
+        for path, subdirs, files in os.walk(os.getcwd() + data_dir):
+            for name in files:
+                if '.npz' in name:
+                    full_name = join(path, name)
+                    if 'context' in full_name:
+                        test_context_files.append(full_name)
+                    else:
+                        test_target_files.append(full_name)
 
-    test_context_files = []
-    test_target_files = []
-    for path, subdirs, files in os.walk(os.getcwd() + test_dir):
-        for name in files:
-            if '.npz' in name:
-                full_name = join(path, name)
-                if 'context' in full_name:
-                    test_context_files.append(full_name)
-                else:
-                    test_target_files.append(full_name)
+        # Sort file names just in case (so we glue together the right context & target)
+        test_context_files.sort()
+        test_target_files.sort()
 
-    # Sort file names just in case (so we glue together the right context & target)
-    test_context_files.sort()
-    test_target_files.sort()
-
-    # Save paths to test set for ENS calculation
-    '''
-    with open(os.getcwd() + test_dir + '/target_files' + timestamp + '.txt', 'w') as filehandle:
-        for item in test_target_files:
-            filehandle.write('%s\n' % item)
-    '''
-
-    train_files = train_files[:min([training_samples, len(train_files)])]
-
-    train = Earthnet_Dataset(train_files, ms_cut, device=device)
-    test = Earthnet_Dataset(test_context_files, ms_cut, target_file_paths = test_target_files, device=device)
-    return train, test
+        return Earthnet_Dataset(test_context_files, ms_cut, target_file_paths = test_target_files, device=device)
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, context_file_paths, ms_cut, device, target_file_paths = None):

@@ -70,16 +70,23 @@ class LSTM_model(pl.LightningModule):
         return [self.optimizer], [self.scheduler]
 
     def training_step(self, batch, batch_idx):
-        #TODO: shift weather data one image forward
         '''
-                all_data of size (b, w, h, c, t)
-                    b = batch_size
-                    c = channels
-                    w = width
-                    h = height
-                    t = time
-                '''
-        all_data = batch
+            This is not trivial: let's say we have T time steps in the cube for training.
+            We start by taking the first t0 time samples and we try to predict the next one.
+            We then measure the loss against the ground truth.
+            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
+            On and on until we use all but one samples to predict the last one.
+        '''
+        all_data, _ = batch
+        '''
+        all_data of size (b, w, h, c, t)
+            b = batch_size
+            c = channels
+            w = width
+            h = height
+            t = time
+        '''
+        cloud_mask_channel = 4
 
         T = all_data.size()[4]
         t0 = T - 1 # no. of pics we start with
@@ -101,6 +108,7 @@ class LSTM_model(pl.LightningModule):
         )
         return loss
     
+    # We could try early stopping here later on
     """def validation_step(self):
         pass"""
     
@@ -108,7 +116,6 @@ class LSTM_model(pl.LightningModule):
         '''
             TODO: Here we could directly incorporate the EarthNet Score from the model demo.
         '''
-
         #starting_time = time.time()
         all_data, path = batch
         path = list(path)
@@ -116,7 +123,7 @@ class LSTM_model(pl.LightningModule):
         cube_name = [os.path.split(i)[1] for i in path]
 
         T = all_data.size()[4]
-        t0 = 10 # no. of pics to start with
+        t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
         loss = torch.tensor([0.0])
 
@@ -127,7 +134,7 @@ class LSTM_model(pl.LightningModule):
         for i in range(len(means)):
             delta = all_data[:,:4,:,:,t0+i] - means[i]
             loss = loss.add(l2_crit(x_deltas[i], delta))
-
+        
         logs = {'test_loss': loss}
         self.log_dict(
             logs,

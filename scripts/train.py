@@ -2,6 +2,7 @@ from logging import Logger
 import sys
 import os
 import numpy as np
+import random
 from shutil import copy2
 #from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -41,18 +42,26 @@ def main():
     print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='train', offline=True)
+    random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    training_data, test_data = prepare_data(cfg["training"]["training_samples"], 
-                                            cfg["data"]["mesoscale_cut"],
-                                            cfg["data"]["train_dir"], 
-                                            cfg["data"]["test_dir"],
-                                            device = device)
+    training_data, validation_data = prepare_data(cfg["data"]["mesoscale_cut"],
+                                                  cfg["data"]["train_dir"],
+                                                  device = device,
+                                                  training_samples=cfg["training"]["training_samples"],
+                                                  validation_samples=cfg["training"]["validation_samples"])
+    test_data = prepare_data(cfg["data"]["mesoscale_cut"], 
+                             cfg["data"]["test_dir"],
+                             device = device)
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["batch_size"],
                                   shuffle=True, 
                                   drop_last=False)
+    validation_data = DataLoader(validation_data, 
+                                num_workers = cfg["training"]["num_workers"],
+                                batch_size = 1, 
+                                drop_last = False)
     test_dataloader = DataLoader(test_data, 
                                 num_workers = cfg["training"]["num_workers"],
                                 batch_size = 1, 
@@ -80,7 +89,6 @@ def main():
 
     trainer.fit(model, train_dataloader)
 
-    #torch.save(model.state_dict(), "Models/model.torch")
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions
