@@ -45,11 +45,12 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    training_data, validation_data = prepare_data(cfg["data"]["mesoscale_cut"],
+    training_data, val_1_data, val_2_data = prepare_data(cfg["data"]["mesoscale_cut"],
                                                   cfg["data"]["train_dir"],
                                                   device = device,
                                                   training_samples=cfg["training"]["training_samples"],
-                                                  validation_samples=cfg["training"]["validation_samples"])
+                                                  val_1_samples=cfg["training"]["val_1_samples"],
+                                                  val_2_samples=cfg["training"]["val_2_samples"])
     test_data = prepare_data(cfg["data"]["mesoscale_cut"], 
                              cfg["data"]["test_dir"],
                              device = device)
@@ -58,10 +59,14 @@ def main():
                                   batch_size=cfg["training"]["batch_size"],
                                   shuffle=True, 
                                   drop_last=False)
-    validation_data = DataLoader(validation_data, 
-                                num_workers = cfg["training"]["num_workers"],
-                                batch_size = 1, 
-                                drop_last = False)
+    val_1_dataloader = DataLoader(val_1_data, 
+                                  num_workers = cfg["training"]["num_workers"],
+                                  batch_size = 2, 
+                                  drop_last = False)
+    val_2_dataloader = DataLoader(val_2_data, 
+                                  num_workers = cfg["training"]["num_workers"],
+                                  batch_size = 1, 
+                                  drop_last = False)
     test_dataloader = DataLoader(test_data, 
                                 num_workers = cfg["training"]["num_workers"],
                                 batch_size = 1, 
@@ -87,8 +92,8 @@ def main():
     else:
         raise ValueError("The specified model name is invalid.")
 
-    trainer.fit(model, train_dataloader)
-
+    trainer.fit(model, train_dataloader, val_1_dataloader)
+    #trainer.validate(model, val_2_dataloader)
     trainer.test(model, test_dataloader)
 
     # We may have to add a floor/ceil function on the predictions

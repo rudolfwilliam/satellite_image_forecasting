@@ -70,13 +70,7 @@ class LSTM_model(pl.LightningModule):
         return [self.optimizer], [self.scheduler]
 
     def training_step(self, batch, batch_idx):
-        '''
-            This is not trivial: let's say we have T time steps in the cube for training.
-            We start by taking the first t0 time samples and we try to predict the next one.
-            We then measure the loss against the ground truth.
-            Then we do the same thing by looking at t0 + 1 time samples in the dataset, to predict the t0 + 2.
-            On and on until we use all but one samples to predict the last one.
-        '''
+
         all_data, _ = batch
         '''
         all_data of size (b, w, h, c, t)
@@ -109,12 +103,42 @@ class LSTM_model(pl.LightningModule):
         return loss
     
     # We could try early stopping here later on
-    """def validation_step(self):
-        pass"""
+    def validation_step(self, batch, batch_idx):
+        
+        all_data, _ = batch
+        '''
+        all_data of size (b, w, h, c, t)
+            b = batch_size
+            c = channels
+            w = width
+            h = height
+            t = time
+        '''
+        cloud_mask_channel = 4
+
+        T = all_data.size()[4]
+        t0 = 10 # no. of pics we start with
+
+        _, x_delta, mean = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+        
+        delta = all_data[:, :4, :, :, t0] - mean[0]
+        loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
+        
+        for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
+            delta = all_data[:, :4, :, :, t_end] - mean[t_end-t0]
+            loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
+
+        logs = {'val_loss': loss}
+        self.log_dict(
+            logs,
+            on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
+        return loss
     
     def test_step(self, batch, batch_idx):
         '''
-            TODO: Here we could directly incorporate the EarthNet Score from the model demo.
+            The test step takes the test data and makes predictions.
+            They are then evaluated using the ENS score.
         '''
         #starting_time = time.time()
         all_data, path = batch
@@ -144,49 +168,48 @@ class LSTM_model(pl.LightningModule):
         x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
         
         # Make all our predictions and save them
-        if self.cfg["project"]["evaluate"]:
-            # Store predictions ready for evaluation
-            model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
-            pred_dir = model_dir + "test_cubes/"
-            
-            model_pred_dir = pred_dir + "model_pred/"
-            average_pred_dir = pred_dir + "average_pred/"
-            last_pred_dir = pred_dir + "last_pred/"
+        # Store predictions ready for evaluation
+        model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
+        pred_dir = model_dir + "test_cubes/"
+        
+        model_pred_dir = pred_dir + "model_pred/"
+        average_pred_dir = pred_dir + "average_pred/"
+        last_pred_dir = pred_dir + "last_pred/"
 
-            if not os.path.isdir(pred_dir):
-                os.mkdir(pred_dir)
-                os.mkdir(model_pred_dir)
-                os.mkdir(average_pred_dir)
-                os.mkdir(last_pred_dir)
+        if not os.path.isdir(pred_dir):
+            os.mkdir(pred_dir)
+            os.mkdir(model_pred_dir)
+            os.mkdir(average_pred_dir)
+            os.mkdir(last_pred_dir)
 
-            num_context = round(all_data.shape[-1]/3)
-            
-            for i in range(len(path)):
-                # Save avg predictions
-                #avg_start_time = time.time()
-                avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-                #print("avg time: {0}".format(time.time() - avg_start_time))
+        num_context = round(all_data.shape[-1]/3)
+        
+        for i in range(len(path)):
+            # Save avg predictions
+            #avg_start_time = time.time()
+            avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+            #print("avg time: {0}".format(time.time() - avg_start_time))
 
-                np.savez(average_pred_dir+cube_name[i], avg_cube)
-                # Save last cloud-free image predictions
-                #last_start_time = time.time()
-                last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-                #print("last time: {0}".format(time.time() - last_start_time))
+            np.savez(average_pred_dir+cube_name[i], avg_cube)
+            # Save last cloud-free image predictions
+            #last_start_time = time.time()
+            last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+            #print("last time: {0}".format(time.time() - last_start_time))
 
-                #save_time = time.time()
-                np.savez(last_pred_dir+cube_name[i], last_cube)
-                #print("save time: {0}".format(time.time() - save_time))
-                # Save our model prediction
-                np.savez(model_pred_dir+cube_name[i], x_preds[:,:,:,i*2*num_context:i*2*num_context+20])
-            
+            #save_time = time.time()
+            np.savez(last_pred_dir+cube_name[i], last_cube)
+            #print("save time: {0}".format(time.time() - save_time))
+            # Save our model prediction
+            np.savez(model_pred_dir+cube_name[i], x_preds[:,:,:,i*2*num_context:i*2*num_context+20])
+        
 
-                predictions = [average_pred_dir+cube_name[i], last_pred_dir+cube_name[i], model_pred_dir+cube_name[i]]
-                # Calculate ENS scores
-                #time_ens_score = time.time()
-                scores = get_ENS(path[i], predictions)
-                #print("ENS score time: {0}".format(time.time() - time_ens_score))
+            predictions = [average_pred_dir+cube_name[i], last_pred_dir+cube_name[i], model_pred_dir+cube_name[i]]
+            # Calculate ENS scores
+            #time_ens_score = time.time()
+            scores = get_ENS(path[i], predictions)
+            #print("ENS score time: {0}".format(time.time() - time_ens_score))
 
-                best_score = max(scores)
-                with open(model_dir + "scores.csv", 'a') as filehandle:
-                    filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
-                #print("total time: {0}".format(time.time()-starting_time))
+            best_score = max(scores)
+            with open(model_dir + "scores.csv", 'a') as filehandle:
+                filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
+            #print("total time: {0}".format(time.time()-starting_time))
