@@ -224,6 +224,9 @@ ENV/
 Data/*
 !Data/scores/
 
+# Models
+/model_instances
+
 # images
 *.png
 *.jpg

@@ -5,7 +5,7 @@ import os
 from os.path import isfile, join
 import random
  
-def prepare_data(ms_cut, data_dir, device, training_samples = None, validation_samples = None):
+def prepare_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None):
     
     if training_samples is not None:
         train_files = []
@@ -15,10 +15,12 @@ def prepare_data(ms_cut, data_dir, device, training_samples = None, validation_s
                 if '.npz' in name:
                     train_files.append(join(path, name))
         
-        train_files = train_files[:min([training_samples+validation_samples, len(train_files)])]
+        train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
         train_set = random.sample(train_files, training_samples)
         val_set = [x for x in train_files if x not in train_set]
-        return Earthnet_Dataset(train_set, ms_cut, device=device), Earthnet_Dataset(val_set, ms_cut, device=device)
+        val_1_set = random.sample(val_set, val_1_samples)
+        val_2_set = [x for x in val_set if x not in val_1_set]
+        return Earthnet_Dataset(train_set, ms_cut, device=device), Earthnet_Dataset(val_1_set, ms_cut, device=device), Earthnet_Dataset(val_2_set, ms_cut, device=device)
     else:
         test_context_files = []
         test_target_files = []

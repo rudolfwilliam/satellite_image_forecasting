@@ -45,6 +45,7 @@ class Prediction_Callback(pl.Callback):
             metrics = trainer.callback_metrics
             metrics['train_loss'] = [float(metrics['train_loss'])]
             metrics['lr'] = [float(metrics['lr'])]
+            metrics['val_loss'] = [float(metrics['val_loss'])]
 
             pre_pred = np.flip(preds[0][0, :3, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
