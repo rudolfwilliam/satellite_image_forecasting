@@ -3,7 +3,7 @@
     {
         "decay_point": 10,
         "dilation_rate": 2,
-        "num_conv_layers": 3,
+        "num_conv_blocks": 3,
         "classes": 10,
         "anneal_start": 5,
         "anneal_end": 10,

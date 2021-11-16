@@ -2,44 +2,70 @@ import numpy as np
 import torch.nn as nn
 import torch
 
+class Conv_Block(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, num_conv_layers=3, dilation_rate=2):
+        super(Conv_Block, self).__init__()
+        self.num_conv_layers = num_conv_layers
+        self.input_dim = in_channels
+        self.output_dim = out_channels
+
+        # define operations
+        self.norm = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU()
+        # bias not needed due to batch norm
+        self.in_mid_conv = nn.Conv2d(in_channels, in_channels, dilation=dilation_rate, kernel_size=kernel_size,
+                                     bias=False, padding='same')
+        self.out_conv = nn.Conv2d(in_channels, out_channels, dilation=dilation_rate, kernel_size=kernel_size,
+                                     bias=True, padding='same')
+        self.device = self.in_mid_conv.weight.device
+
+    def forward(self, input_tensor):
+        x = self.norm(input_tensor)
+        for i in range(self.num_conv_layers):
+            x = self.in_mid_conv(x)
+            x = self.norm(x)
+            x = self.relu(x)
+        out = self.out_conv(x)
+        return out
+
 
 class Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, hidden_dim, kernel_size, bias):
+    def __init__(self, input_dim, num_conv_layers, hidden_dim, kernel_size, dilation_rate):
         """
         Initialize ConvLSTM cell.
         Parameters
         ----------
         input_dim: int
             Number of channels of input tensor.
+        num_conv_layers: int
+            Number of convolutional blocks within the cell
         hidden_dim: int
             Number of channels of hidden state.
         kernel_size: (int, int)
             Size of the convolutional kernel.
-        bias: bool
-            Whether or not to add the bias.
+
         """
 
         super(Conv_LSTM_Cell, self).__init__()
 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-
+        self.dilation_rate = dilation_rate
+        self.num_conv_layers = num_conv_layers
         self.kernel_size = kernel_size
-        self.padding = kernel_size[0] // 2, kernel_size[1] // 2
-        self.bias = bias
 
-        self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
-                              out_channels=4 * self.hidden_dim,
-                              kernel_size=self.kernel_size,
-                              padding=self.padding,
-                              bias=self.bias)
+        self.conv_block = Conv_Block(in_channels=self.input_dim + self.hidden_dim,
+                                     out_channels=4 * self.hidden_dim,
+                                     dilation_rate=self.dilation_rate,
+                                     num_conv_layers=self.num_conv_layers,
+                                     kernel_size=self.kernel_size)
 
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
-        combined_conv = self.conv(combined)
+        combined_conv = self.conv_block(combined)
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
         i = torch.sigmoid(cc_i)
         f = torch.sigmoid(cc_f)
@@ -53,8 +79,8 @@ class Conv_LSTM_Cell(nn.Module):
 
     def init_hidden(self, batch_size, image_size):
         height, width = image_size
-        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device),
-                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device))
+        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block.device),
+                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block.device))
 
 
 class Conv_LSTM(nn.Module):
@@ -64,9 +90,10 @@ class Conv_LSTM(nn.Module):
         input_dim: Number of channels in input
         hidden_dim: Number of hidden channels
         kernel_size: Size of kernel in convolutions
+        num_conv_layers: Number of convolutional layers within the cell
+        dilation_rate: Size of holes in convolutions
         num_layers: Number of LSTM layers stacked on each other
         batch_first: Whether or not dimension 0 is the batch or not
-        bias: Bias or no bias in Convolution
         Note: Will do same padding.
     Input:
         A tensor of shape (b, c, w, h, t)
@@ -74,8 +101,7 @@ class Conv_LSTM(nn.Module):
         The residual from the mean cube
     """
 
-    def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
-                 batch_first=False, bias=True):
+    def __init__(self, input_dim, hidden_dim, kernel_size, num_conv_layers, num_layers, dilation_rate, batch_first=False):
         super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -91,20 +117,22 @@ class Conv_LSTM(nn.Module):
         self.kernel_size = kernel_size              # n kernel size (no magic here)
         self.num_layers = num_layers                # n of cells in time
         self.batch_first = batch_first              # true if you have c_0, h_0
-        self.bias = bias
+        self.dilation_rate = dilation_rate
+        self.num_conv_layers = num_conv_layers
 
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.hidden_dim[i - 1]
 
             cell_list.append(Conv_LSTM_Cell(input_dim=cur_input_dim,
-                                          hidden_dim=self.hidden_dim[i],
-                                          kernel_size=self.kernel_size[i],
-                                          bias=self.bias))
+                                            hidden_dim=self.hidden_dim[i],
+                                            kernel_size=self.kernel_size[i],
+                                            num_conv_layers=num_conv_layers,
+                                            dilation_rate=dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, mean, non_pred_feat=None, hidden_state=None, prediction_count=1):
+    def forward(self, input_tensor, mean, non_pred_feat=None, prediction_count=1):
         """
         Parameters
         ----------

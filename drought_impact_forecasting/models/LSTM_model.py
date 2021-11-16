@@ -30,11 +30,12 @@ class LSTM_model(pl.LightningModule):
         hidden_channels = self.cfg["model"]["hidden_channels"]
         n_layers = self.cfg["model"]["n_layers"]
         self.model = Conv_LSTM(input_dim=channels,
-                              hidden_dim=[hidden_channels] * n_layers,
-                              kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
-                              num_layers=n_layers,
-                              batch_first=False, 
-                              bias=True)
+                               dilation_rate=self.cfg["model"]["dilation_rate"],
+                               hidden_dim=[hidden_channels] * n_layers,
+                               kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
+                               num_layers=n_layers,
+                               num_conv_layers=self.cfg["model"]["num_conv_layers"],
+                               batch_first=False)
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
