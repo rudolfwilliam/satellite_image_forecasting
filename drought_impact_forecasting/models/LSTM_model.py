@@ -35,6 +35,7 @@ class LSTM_model(pl.LightningModule):
                                kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
                                num_layers=n_layers,
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
+                               num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False)
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):

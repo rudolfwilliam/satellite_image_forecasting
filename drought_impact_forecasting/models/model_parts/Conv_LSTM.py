@@ -1,6 +1,7 @@
 import numpy as np
 import torch.nn as nn
 import torch
+from collections import OrderedDict
 
 class Conv_Block(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, num_conv_layers=3, dilation_rate=2):
@@ -20,17 +21,19 @@ class Conv_Block(nn.Module):
         self.device = self.in_mid_conv.weight.device
 
     def forward(self, input_tensor):
-        x = self.norm(input_tensor)
+        ops = []
         for i in range(self.num_conv_layers):
-            x = self.in_mid_conv(x)
-            x = self.norm(x)
-            x = self.relu(x)
-        out = self.out_conv(x)
+            ops.append(self.in_mid_conv)
+            ops.append(self.norm)
+            ops.append(self.relu)
+        ops.append(self.out_conv)
+        seq = nn.Sequential(*ops)
+        out = seq(input_tensor)
         return out
 
 
 class Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, num_conv_layers, hidden_dim, kernel_size, dilation_rate):
+    def __init__(self, input_dim, num_conv_layers, num_conv_layers_mem, hidden_dim, kernel_size, dilation_rate):
         """
         Initialize ConvLSTM cell.
         Parameters
@@ -39,6 +42,9 @@ class Conv_LSTM_Cell(nn.Module):
             Number of channels of input tensor.
         num_conv_layers: int
             Number of convolutional blocks within the cell
+        num_conv_layers_mem: int
+            Number of convolutional blocks for the weight matrices that perform a hadamard product with current memory
+            (should be much lower than num_conv_layers)
         hidden_dim: int
             Number of channels of hidden state.
         kernel_size: (int, int)
@@ -52,12 +58,18 @@ class Conv_LSTM_Cell(nn.Module):
         self.hidden_dim = hidden_dim
         self.dilation_rate = dilation_rate
         self.num_conv_layers = num_conv_layers
+        self.num_conv_layers_mem = num_conv_layers_mem
         self.kernel_size = kernel_size
 
         self.conv_block = Conv_Block(in_channels=self.input_dim + self.hidden_dim,
-                                     out_channels=4 * self.hidden_dim,
+                                     out_channels=4*self.hidden_dim,
                                      dilation_rate=self.dilation_rate,
                                      num_conv_layers=self.num_conv_layers,
+                                     kernel_size=self.kernel_size)
+        self.conv_block_mem = Conv_Block(in_channels=self.input_dim + 2*self.hidden_dim,
+                                     out_channels=3*self.hidden_dim,
+                                     dilation_rate=self.dilation_rate,
+                                     num_conv_layers=self.num_conv_layers_mem,
                                      kernel_size=self.kernel_size)
 
     def forward(self, input_tensor, cur_state):
@@ -66,10 +78,13 @@ class Conv_LSTM_Cell(nn.Module):
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
         combined_conv = self.conv_block(combined)
+        combined_conv_weights = self.conv_block_mem(torch.concat([combined, c_cur], dim=1))
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
-        i = torch.sigmoid(cc_i)
-        f = torch.sigmoid(cc_f)
-        o = torch.sigmoid(cc_o)
+        w_i, w_f, w_o = torch.split(combined_conv_weights, self.hidden_dim, dim=1)
+
+        i = torch.sigmoid(cc_i + w_i * c_cur)
+        f = torch.sigmoid(cc_f + w_f * c_cur)
+        o = torch.sigmoid(cc_o + w_o * c_cur)
         g = torch.tanh(cc_g)
 
         c_next = f * c_cur + i * g
@@ -91,6 +106,8 @@ class Conv_LSTM(nn.Module):
         hidden_dim: Number of hidden channels
         kernel_size: Size of kernel in convolutions
         num_conv_layers: Number of convolutional layers within the cell
+        num_conv_layers_mem: Number of convolutional blocks for the weight matrices that perform a
+                                 hadamard product with current memory (should be much lower than num_conv_layers)
         dilation_rate: Size of holes in convolutions
         num_layers: Number of LSTM layers stacked on each other
         batch_first: Whether or not dimension 0 is the batch or not
@@ -101,7 +118,8 @@ class Conv_LSTM(nn.Module):
         The residual from the mean cube
     """
 
-    def __init__(self, input_dim, hidden_dim, kernel_size, num_conv_layers, num_layers, dilation_rate, batch_first=False):
+    def __init__(self, input_dim, hidden_dim, kernel_size, num_conv_layers, num_conv_layers_mem,
+                 num_layers, dilation_rate, batch_first=False):
         super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -116,9 +134,10 @@ class Conv_LSTM(nn.Module):
         self.hidden_dim = hidden_dim                # n of channels that go through hidden layers
         self.kernel_size = kernel_size              # n kernel size (no magic here)
         self.num_layers = num_layers                # n of cells in time
-        self.batch_first = batch_first              # true if you have c_0, h_0
+        self.batch_first = batch_first                # true if you have c_0, h_0
         self.dilation_rate = dilation_rate
         self.num_conv_layers = num_conv_layers
+        self.num_conv_layers_mem = num_conv_layers
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -127,8 +146,9 @@ class Conv_LSTM(nn.Module):
             cell_list.append(Conv_LSTM_Cell(input_dim=cur_input_dim,
                                             hidden_dim=self.hidden_dim[i],
                                             kernel_size=self.kernel_size[i],
-                                            num_conv_layers=num_conv_layers,
-                                            dilation_rate=dilation_rate))
+                                            num_conv_layers=self.num_conv_layers,
+                                            num_conv_layers_mem=self.num_conv_layers_mem,
+                                            dilation_rate=self.dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
 
