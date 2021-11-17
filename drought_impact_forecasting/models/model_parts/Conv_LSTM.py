@@ -4,7 +4,7 @@ import torch
 from collections import OrderedDict
 
 class Conv_Block(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, num_conv_layers=3, dilation_rate=2):
+    def __init__(self, in_channels, out_channels, kernel_size,  num_conv_layers=3, dilation_rate=2):
         super(Conv_Block, self).__init__()
         self.num_conv_layers = num_conv_layers
         self.input_dim = in_channels
@@ -18,8 +18,6 @@ class Conv_Block(nn.Module):
                                      bias=False, padding='same')
         self.out_conv = nn.Conv2d(in_channels, out_channels, dilation=dilation_rate, kernel_size=kernel_size,
                                      bias=True, padding='same')
-        self.device = self.in_mid_conv.weight.device
-
     def forward(self, input_tensor):
         ops = []
         for i in range(self.num_conv_layers):
@@ -71,7 +69,6 @@ class Conv_LSTM_Cell(nn.Module):
                                      dilation_rate=self.dilation_rate,
                                      num_conv_layers=self.num_conv_layers_mem,
                                      kernel_size=self.kernel_size)
-
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
@@ -94,8 +91,8 @@ class Conv_LSTM_Cell(nn.Module):
 
     def init_hidden(self, batch_size, image_size):
         height, width = image_size
-        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block.device),
-                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block.device))
+        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.in_mid_conv.weight.device),  
+                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.in_mid_conv.weight.device))
 
 
 class Conv_LSTM(nn.Module):

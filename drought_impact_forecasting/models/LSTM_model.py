@@ -37,6 +37,7 @@ class LSTM_model(pl.LightningModule):
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False)
+        self.model = self.model.cuda()
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -150,7 +151,7 @@ class LSTM_model(pl.LightningModule):
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
-        loss = torch.tensor([0.0]) # This needs to change!!!!!!!!!!!!
+        loss = torch.tensor([0.0])
 
         num_context = round(all_data.shape[-1]/3)
 
@@ -170,11 +171,11 @@ class LSTM_model(pl.LightningModule):
             for i in range(len(path)):
                 # Cut out 'target' data
                 target = all_data[i,:5, :, :, t0:]
-                target = np.array(target).transpose(1,2,0,3)
+                target = np.array(target.cpu()).transpose(1,2,0,3)
                 np.savez(target_dir+str(i), highresdynamic=target)
 
                 x_preds, x_deltas, means = self(all_data[i:i+1, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[i:i+1,4:,:,:,t0+1:])
-                x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
+                x_preds = np.array(torch.cat(x_preds, axis=0).cpu()).transpose(2,3,1,0)
                 np.savez(model_val_pred_dir+str(i), highresdynamic=x_preds)
 
                 predictions = [model_val_pred_dir+str(i)+'.npz']
@@ -214,7 +215,7 @@ class LSTM_model(pl.LightningModule):
                 on_step=False, on_epoch=True, prog_bar=True, logger=True
             )
 
-            x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
+            x_preds = np.array(torch.cat(x_preds, axis=0).cpu()).transpose(2,3,1,0)
             
             # Make all our predictions and save them
             # Store predictions ready for evaluation
@@ -225,14 +226,14 @@ class LSTM_model(pl.LightningModule):
                 avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
                 #print("avg time: {0}".format(time.time() - avg_start_time))
 
-                np.savez(average_pred_dir+cube_name[i], highresdynamic=avg_cube)
+                np.savez(average_pred_dir+cube_name[i], highresdynamic=avg_cube.cpu())
                 # Save last cloud-free image predictions
                 #last_start_time = time.time()
                 last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
                 #print("last time: {0}".format(time.time() - last_start_time))
 
                 #save_time = time.time()
-                np.savez(last_pred_dir+cube_name[i], highresdynamic=last_cube)
+                np.savez(last_pred_dir+cube_name[i], highresdynamic=last_cube.cpu())
                 #print("save time: {0}".format(time.time() - save_time))
                 # Save our model prediction
                 np.savez(model_pred_dir+cube_name[i], highresdynamic=x_preds[:,:,:,i*2*num_context:i*2*num_context+20])

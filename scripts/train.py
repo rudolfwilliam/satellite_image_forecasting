@@ -18,7 +18,7 @@ from pytorch_lightning.loggers import WandbLogger
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import prepare_data
-from scripts.callbacks import Prediction_Callback
+from callbacks import Prediction_Callback
 
 import wandb
 from datetime import datetime
