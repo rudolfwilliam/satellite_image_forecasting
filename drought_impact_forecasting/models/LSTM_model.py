@@ -106,7 +106,9 @@ class LSTM_model(pl.LightningModule):
     
     # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
-        
+        '''
+            The validation step also uses the L2 loss, but on a prediction of all non-context images
+        '''
         all_data, _ = batch
         '''
         all_data of size (b, w, h, c, t)
@@ -144,74 +146,105 @@ class LSTM_model(pl.LightningModule):
         '''
         #starting_time = time.time()
         all_data, path = batch
-        path = list(path)
-
-        cube_name = [os.path.split(i)[1] for i in path]
 
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
         l2_crit = nn.MSELoss()
-        loss = torch.tensor([0.0])
-
-        #start_model_evaluating = time.time()
-        x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
-        #print("model time: {0}".format(time.time() - start_model_evaluating))
-        # Add up losses across all timesteps
-        for i in range(len(means)):
-            delta = all_data[:,:4,:,:,t0+i] - means[i]
-            loss = loss.add(l2_crit(x_deltas[i], delta))
-        
-        logs = {'test_loss': loss}
-        self.log_dict(
-            logs,
-            on_step=False, on_epoch=True, prog_bar=True, logger=True
-        )
-
-        x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
-        
-        # Make all our predictions and save them
-        # Store predictions ready for evaluation
-        model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
-        pred_dir = model_dir + "test_cubes/"
-        
-        model_pred_dir = pred_dir + "model_pred/"
-        average_pred_dir = pred_dir + "average_pred/"
-        last_pred_dir = pred_dir + "last_pred/"
-
-        if not os.path.isdir(pred_dir):
-            os.mkdir(pred_dir)
-            os.mkdir(model_pred_dir)
-            os.mkdir(average_pred_dir)
-            os.mkdir(last_pred_dir)
+        loss = torch.tensor([0.0]) # This needs to change!!!!!!!!!!!!
 
         num_context = round(all_data.shape[-1]/3)
-        
-        for i in range(len(path)):
-            # Save avg predictions
-            #avg_start_time = time.time()
-            avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-            #print("avg time: {0}".format(time.time() - avg_start_time))
 
-            np.savez(average_pred_dir+cube_name[i], avg_cube)
-            # Save last cloud-free image predictions
-            #last_start_time = time.time()
-            last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
-            #print("last time: {0}".format(time.time() - last_start_time))
+        # Create necessary directories
+        model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
+        pred_dir = model_dir + "test_cubes/"
+        if not os.path.isdir(pred_dir):
+            os.mkdir(pred_dir)
 
-            #save_time = time.time()
-            np.savez(last_pred_dir+cube_name[i], last_cube)
-            #print("save time: {0}".format(time.time() - save_time))
-            # Save our model prediction
-            np.savez(model_pred_dir+cube_name[i], x_preds[:,:,:,i*2*num_context:i*2*num_context+20])
-        
+        if path[0] == "no target": # We use the validation test set
+            model_val_pred_dir = pred_dir + "model_val_pred/"
+            target_dir = pred_dir + "targets/"
+            if not os.path.isdir(model_val_pred_dir):
+                os.mkdir(model_val_pred_dir)
+                os.mkdir(target_dir)
 
-            predictions = [average_pred_dir+cube_name[i], last_pred_dir+cube_name[i], model_pred_dir+cube_name[i]]
-            # Calculate ENS scores
-            #time_ens_score = time.time()
-            scores = get_ENS(path[i], predictions)
-            #print("ENS score time: {0}".format(time.time() - time_ens_score))
+            for i in range(len(path)):
+                # Cut out 'target' data
+                target = all_data[i,:5, :, :, t0:]
+                target = np.array(target).transpose(1,2,0,3)
+                np.savez(target_dir+str(i), highresdynamic=target)
 
-            best_score = max(scores)
-            with open(model_dir + "scores.csv", 'a') as filehandle:
-                filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
-            #print("total time: {0}".format(time.time()-starting_time))
+                x_preds, x_deltas, means = self(all_data[i:i+1, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[i:i+1,4:,:,:,t0+1:])
+                x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
+                np.savez(model_val_pred_dir+str(i), highresdynamic=x_preds)
+
+                predictions = [model_val_pred_dir+str(i)+'.npz']
+                # Calculate ENS scores
+                #time_ens_score = time.time()
+                scores = get_ENS(target_dir+str(i)+'.npz', predictions)
+                #print("ENS score time: {0}".format(time.time() - time_ens_score))
+
+                best_score = max(scores)
+                with open(model_dir + "scores.csv", 'a') as filehandle:
+                    filehandle.write(str(scores[0]) + "," + str(best_score) + '\n')
+                #print("total time: {0}".format(time.time()-starting_time))                
+        else: # We use the 'real' test set
+            model_pred_dir = pred_dir + "model_pred/"
+            average_pred_dir = pred_dir + "average_pred/"
+            last_pred_dir = pred_dir + "last_pred/"
+            if not os.path.isdir(model_pred_dir):
+                os.mkdir(model_pred_dir)
+                os.mkdir(average_pred_dir)
+                os.mkdir(last_pred_dir)
+
+            path = list(path)
+
+            cube_name = [os.path.split(i)[1] for i in path]
+
+            #start_model_evaluating = time.time()
+            x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+            #print("model time: {0}".format(time.time() - start_model_evaluating))
+            # Add up losses across all timesteps
+            for i in range(len(means)):
+                delta = all_data[:,:4,:,:,t0+i] - means[i]
+                loss = loss.add(l2_crit(x_deltas[i], delta))
+            
+            logs = {'test_loss': loss}
+            self.log_dict(
+                logs,
+                on_step=False, on_epoch=True, prog_bar=True, logger=True
+            )
+
+            x_preds = np.array(torch.cat(x_preds, axis=0)).transpose(2,3,1,0)
+            
+            # Make all our predictions and save them
+            # Store predictions ready for evaluation
+            
+            for i in range(len(path)):
+                # Save avg predictions
+                #avg_start_time = time.time()
+                avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+                #print("avg time: {0}".format(time.time() - avg_start_time))
+
+                np.savez(average_pred_dir+cube_name[i], highresdynamic=avg_cube)
+                # Save last cloud-free image predictions
+                #last_start_time = time.time()
+                last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+                #print("last time: {0}".format(time.time() - last_start_time))
+
+                #save_time = time.time()
+                np.savez(last_pred_dir+cube_name[i], highresdynamic=last_cube)
+                #print("save time: {0}".format(time.time() - save_time))
+                # Save our model prediction
+                np.savez(model_pred_dir+cube_name[i], highresdynamic=x_preds[:,:,:,i*2*num_context:i*2*num_context+20])
+            
+
+                predictions = [average_pred_dir+cube_name[i], last_pred_dir+cube_name[i], model_pred_dir+cube_name[i]]
+                # Calculate ENS scores
+                #time_ens_score = time.time()
+                scores = get_ENS(path[i], predictions)
+                #print("ENS score time: {0}".format(time.time() - time_ens_score))
+
+                best_score = max(scores)
+                with open(model_dir + "scores.csv", 'a') as filehandle:
+                    filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
+                #print("total time: {0}".format(time.time()-starting_time))
