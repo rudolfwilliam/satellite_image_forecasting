@@ -37,7 +37,6 @@ class LSTM_model(pl.LightningModule):
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False)
-        self.model = self.model.cuda()
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -163,10 +162,15 @@ class LSTM_model(pl.LightningModule):
 
         if path[0] == "no target": # We use the validation test set
             model_val_pred_dir = pred_dir + "model_val_pred/"
-            target_dir = pred_dir + "targets/"
+            target_dir = pred_dir + "val_targets/"
+            average_pred_dir = pred_dir + "val_average_pred/"
+            last_pred_dir = pred_dir + "val_last_pred/"
+
             if not os.path.isdir(model_val_pred_dir):
                 os.mkdir(model_val_pred_dir)
                 os.mkdir(target_dir)
+                os.mkdir(average_pred_dir)
+                os.mkdir(last_pred_dir)
 
             for i in range(len(path)):
                 # Cut out 'target' data
@@ -174,20 +178,27 @@ class LSTM_model(pl.LightningModule):
                 target = np.array(target.cpu()).transpose(1,2,0,3)
                 np.savez(target_dir+str(i), highresdynamic=target)
 
+                # Avg prediction
+                avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+                np.savez(average_pred_dir+str(i), highresdynamic=avg_cube)
+
+                # Last cloud-free image
+                last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
+                np.savez(last_pred_dir+str(i), highresdynamic=last_cube)
+
+                # Our model
                 x_preds, x_deltas, means = self(all_data[i:i+1, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[i:i+1,4:,:,:,t0+1:])
                 x_preds = np.array(torch.cat(x_preds, axis=0).cpu()).transpose(2,3,1,0)
                 np.savez(model_val_pred_dir+str(i), highresdynamic=x_preds)
 
-                predictions = [model_val_pred_dir+str(i)+'.npz']
+                predictions = [average_pred_dir+str(i)+'.npz', last_pred_dir+str(i)+'.npz', model_val_pred_dir+str(i)+'.npz']
                 # Calculate ENS scores
-                #time_ens_score = time.time()
                 scores = get_ENS(target_dir+str(i)+'.npz', predictions)
-                #print("ENS score time: {0}".format(time.time() - time_ens_score))
 
                 best_score = max(scores)
                 with open(model_dir + "scores.csv", 'a') as filehandle:
-                    filehandle.write(str(scores[0]) + "," + str(best_score) + '\n')
-                #print("total time: {0}".format(time.time()-starting_time))                
+                    filehandle.write(str(scores[0]) + "," +str(scores[1]) + "," + str(scores[2]) + "," + str(best_score) + '\n')
+
         else: # We use the 'real' test set
             model_pred_dir = pred_dir + "model_pred/"
             average_pred_dir = pred_dir + "average_pred/"
@@ -226,14 +237,14 @@ class LSTM_model(pl.LightningModule):
                 avg_cube = mean_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
                 #print("avg time: {0}".format(time.time() - avg_start_time))
 
-                np.savez(average_pred_dir+cube_name[i], highresdynamic=avg_cube.cpu())
+                np.savez(average_pred_dir+cube_name[i], highresdynamic=avg_cube)
                 # Save last cloud-free image predictions
                 #last_start_time = time.time()
                 last_cube = last_prediction(all_data[i:i+1, 0:5, :, :, :num_context], mask_channel = 4, timepoints = num_context*2)
                 #print("last time: {0}".format(time.time() - last_start_time))
 
                 #save_time = time.time()
-                np.savez(last_pred_dir+cube_name[i], highresdynamic=last_cube.cpu())
+                np.savez(last_pred_dir+cube_name[i], highresdynamic=last_cube)
                 #print("save time: {0}".format(time.time() - save_time))
                 # Save our model prediction
                 np.savez(model_pred_dir+cube_name[i], highresdynamic=x_preds[:,:,:,i*2*num_context:i*2*num_context+20])
