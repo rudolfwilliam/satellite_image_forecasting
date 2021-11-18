@@ -171,6 +171,9 @@ class LSTM_model(pl.LightningModule):
                 os.mkdir(target_dir)
                 os.mkdir(average_pred_dir)
                 os.mkdir(last_pred_dir)
+                with open(model_dir + "scores.csv", 'w') as filehandle:
+                    filehandle.write("average, last, model, best\n")
+                
 
             for i in range(len(path)):
                 # Cut out 'target' data

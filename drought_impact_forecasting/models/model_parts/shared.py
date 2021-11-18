@@ -37,6 +37,20 @@ def last_cube(cube, mask_channel = 4):
                     break
     return new_cube
 
+def last_frame(cube, mask_channel = 4):
+    # Note that by default the last challe will be 
+    T = cube.shape[-1]
+    mask = 1 - cube[:, mask_channel, :, :, T - 1] #    1 = good quality, 0 = bad quality (in the flipped version)   
+    new_cube = cube[:, :4, :, :, T - 1] * mask
+
+    t = T - 1
+    while (torch.max(mask) > 0 and t >= 0):
+        mask = (1 - mask) * (1 - cube[:, mask_channel, :, :, t])
+        new_cube += cube[:, :4, :, :, t] * mask
+        t -= 1
+    return new_cube
+
+
 def mean_prediction(cube, mask_channel = False, timepoints = 20):
     # compute the mean image and make a prediction cube of the correct length
     avg_cube = np.array(mean_cube(cube[:, 0:5, :, :, :], True)).transpose(2,3,1,0)
@@ -45,7 +59,7 @@ def mean_prediction(cube, mask_channel = False, timepoints = 20):
 def last_prediction(cube, mask_channel = 4, timepoints = 20):
     # find the last cloud free context image and return it as a constant prediction
 
-    new_cube = last_cube(cube, mask_channel)
+    new_cube = last_frame(cube, mask_channel)
     return np.repeat(new_cube.permute(2,3,1,0), timepoints, axis=-1)
 
 def get_ENS(target, preds):
