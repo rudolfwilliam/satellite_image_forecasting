@@ -74,3 +74,19 @@ def get_ENS(target, preds):
             denom = 1/output['MAD'] + 1/output['OLS'] + 1/output['EMD'] + 1/output['SSIM']
             scores.append(4/denom)    
     return scores
+
+def ENS(target, prediction):
+    mask = 1 - np.repeat(target[:,:,4:,:], 4, axis=2)
+    target = target[:,:,:4,:]
+    ndvi_target = ((target[:,:,3,...] - target[:,:,2,...])/(target[:,:,3,...] + target[:,:,2,...] + 1e-6))[:,:,np.newaxis,...]
+    ndvi_prediction = ((prediction[:,:,3,...] - prediction[:,:,2,...])/(prediction[:,:,3,...] + prediction[:,:,2,...] + 1e-6))[:,:,np.newaxis,...]
+    ndvi_mask = mask[:,:,:1,:]
+    # Partial score
+    mad, _ = en.parallel_score.CubeCalculator.MAD(target, prediction, mask)
+    ssim, _ = en.parallel_score.CubeCalculator.SSIM(target, prediction, mask)
+    ols, _ = en.parallel_score.CubeCalculator.OLS(ndvi_target, ndvi_prediction, ndvi_mask)
+    emd, _ = en.parallel_score.CubeCalculator.EMD(ndvi_target, ndvi_prediction, ndvi_mask) # this is the slow one
+    if mad == 0 or ssim == 0 or ols == 0 or emd == 0:
+        return 0
+    else:
+        return 4/(1/mad + 1/ssim + 1/ols + 1/emd)
