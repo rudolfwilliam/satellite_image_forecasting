@@ -85,7 +85,7 @@ def main():
                                     cfg["training"]["print_predictions"],
                                     timestamp)
 
-    #setup Trainer
+    # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                         logger=wandb_logger,
                         log_every_n_steps = min(cfg["training"]["log_steps"],
@@ -94,7 +94,7 @@ def main():
                         accelerator=cfg["training"]["accelerator"],
                         callbacks=[callbacks])
 
-    #setup Model
+    # setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg, timestamp)
     else:

@@ -45,7 +45,7 @@
         "seed": 1,
         "training_samples": 2,
         "val_1_samples": 2,
-        "val_2_samples": 20,
+        "val_2_samples": 200,
         "num_workers": 0,
         "accelerator": "auto",
         "gpus": 1,

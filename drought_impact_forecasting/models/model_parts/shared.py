@@ -24,23 +24,25 @@ def mean_cube(cube, mask_channel = False): #dumb one
         return avg_cube
 
 def last_cube(cube, mask_channel = 4):
-    #note that cube can either be a torch tensor or a numpy arrat
+    # note that cube can either be a torch tensor or a numpy array
     new_cube = mean_cube(cube[:, 0:4, :, :, :])
 
     # for each pixel, find the last good quality data point
     # if no data point has good quality return the mean
-    for i in range(cube.shape[2]):
-        for j in range(cube.shape[3]):
-            for k in reversed(range(cube.shape[mask_channel])):
-                if cube[0,mask_channel,i,j,k] == 0:
-                    new_cube[0, :4, i, j] = cube[0,:4,i,j,k]
-                    break
+    for c in range(cube.shape[0]):
+        for i in range(cube.shape[2]):
+            for j in range(cube.shape[3]):
+                for k in reversed(range(cube.shape[mask_channel])):
+                    if cube[c,mask_channel,i,j,k] == 0:
+                        new_cube[c, :4, i, j] = cube[c,:4,i,j,k]
+                        break
     return new_cube
 
 def last_frame(cube, mask_channel = 4):
-    # Note that by default the last challe will be 
+    # Note that by default the last channel will be the mask
     T = cube.shape[-1]
-    mask = 1 - cube[:, mask_channel, :, :, T - 1] #    1 = good quality, 0 = bad quality (in the flipped version)   
+    # 1 = good quality, 0 = bad quality (in the flipped version)   
+    mask = 1 - cube[:, mask_channel, :, :, T - 1] 
     new_cube = cube[:, :4, :, :, T - 1] * mask
 
     t = T - 1
@@ -49,7 +51,6 @@ def last_frame(cube, mask_channel = 4):
         new_cube += cube[:, :4, :, :, t] * mask
         t -= 1
     return new_cube
-
 
 def mean_prediction(cube, mask_channel = False, timepoints = 20):
     # compute the mean image and make a prediction cube of the correct length

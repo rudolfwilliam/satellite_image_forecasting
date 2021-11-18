@@ -157,23 +157,12 @@ class LSTM_model(pl.LightningModule):
         # Create necessary directories
         model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
         pred_dir = model_dir + "test_cubes/"
-        if not os.path.isdir(pred_dir):
-            os.mkdir(pred_dir)
 
         if path[0] == "no target": # We use the validation test set
             model_val_pred_dir = pred_dir + "model_val_pred/"
             target_dir = pred_dir + "val_targets/"
             average_pred_dir = pred_dir + "val_average_pred/"
             last_pred_dir = pred_dir + "val_last_pred/"
-
-            if not os.path.isdir(model_val_pred_dir):
-                os.mkdir(model_val_pred_dir)
-                os.mkdir(target_dir)
-                os.mkdir(average_pred_dir)
-                os.mkdir(last_pred_dir)
-                with open(model_dir + "scores.csv", 'w') as filehandle:
-                    filehandle.write("average, last, model, best\n")
-                
 
             for i in range(len(path)):
                 # Cut out 'target' data
@@ -206,10 +195,6 @@ class LSTM_model(pl.LightningModule):
             model_pred_dir = pred_dir + "model_pred/"
             average_pred_dir = pred_dir + "average_pred/"
             last_pred_dir = pred_dir + "last_pred/"
-            if not os.path.isdir(model_pred_dir):
-                os.mkdir(model_pred_dir)
-                os.mkdir(average_pred_dir)
-                os.mkdir(last_pred_dir)
 
             path = list(path)
 

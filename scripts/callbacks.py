@@ -18,20 +18,34 @@ class Prediction_Callback(pl.Callback):
         self.instance_folder = os.getcwd() + "/model_instances/model_" + timestamp
         self.runtime_model_folder = self.instance_folder + "/runtime_model"
         self.runtime_prediction = self.instance_folder + "/runtime_pred"
+        self.pred_dir = self.instance_folder + "/test_cubes/"
         self.r_pred = self.runtime_prediction + "/r"
         self.g_pred = self.runtime_prediction + "/g"
         self.b_pred = self.runtime_prediction + "/b"
         self.i_pred = self.runtime_prediction + "/i"
         self.img_pred = self.runtime_prediction + "/img"
+        self.target_dir = self.pred_dir + "val_targets/"
+        self.model_val_pred_dir = self.pred_dir + "model_val_pred/"
+        self.average_val_pred_dir = self.pred_dir + "val_average_pred/"
+        self.last_val_pred_dir = self.pred_dir + "val_last_pred/"
+        self.model_pred_dir = self.pred_dir + "model_pred/"
+        self.average_pred_dir = self.pred_dir + "average_pred/"
+        self.last_pred_dir = self.pred_dir + "last_pred/"
 
+        # Set up Prediction directory structure if necessary
         for dir_path in [self.instance_folder,
-                         self.runtime_model_folder,
-                         self.runtime_prediction,
-                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
+                         self.runtime_model_folder,self.runtime_prediction,self.pred_dir,
+                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred,
+                         self.target_dir,self.model_val_pred_dir,self.average_val_pred_dir,self.last_val_pred_dir,
+                         self.model_pred_dir,self.average_pred_dir,self.last_pred_dir]:
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
+        
+        if not os.path.isfile(self.instance_folder + "/scores.csv"):
+            with open(self.instance_folder + "/scores.csv", 'w') as filehandle:
+                filehandle.write("average, last, model, best\n")
+        
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
-        # Set up Prediction directory structure if necessary
 
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None

@@ -48,18 +48,21 @@ def main():
                                 num_workers=cfg["training"]["num_workers"], 
                                 drop_last=False)
 
-    # We might want to configure GPU, TPU, etc. usage here
+    # Load model Callbacks
+    callbacks = Prediction_Callback(cfg["data"]["mesoscale_cut"], 
+                                    cfg["data"]["train_dir"],
+                                    cfg["data"]["test_dir"], 
+                                    training_data,
+                                    cfg["training"]["print_predictions"],
+                                    timestamp)
+
+    # setup trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                         log_every_n_steps = min(cfg["training"]["log_steps"],
                                             cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
                         devices = 1, 
                         accelerator= "cpu",
-                        callbacks=[ Prediction_Callback(cfg["data"]["mesoscale_cut"], 
-                                                        cfg["data"]["train_dir"],
-                                                        cfg["data"]["test_dir"], 
-                                                        training_data,
-                                                        cfg["training"]["print_predictions"],
-                                                        timestamp)])
+                        callbacks=[callbacks])
 
     model = LSTM_model(cfg, timestamp)
     model.load_state_dict(torch.load(model_path))
