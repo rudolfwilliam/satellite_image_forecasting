@@ -15,7 +15,7 @@ from .model_parts.shared import last_cube, mean_cube, mean_prediction, last_pred
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg, timestamp):
         """
-        Base prediction model. It is based on the convolutional LSTM architecture.
+        Base prediction model. It is roughly based on the convolutional LSTM architecture.
         (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
 
         Parameters:
