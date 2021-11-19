@@ -149,15 +149,15 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, mean, non_pred_feat=None, prediction_count=1):
+    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
         """
         Parameters
         ----------
         input_tensor:
             (b - batch_size, h - height, w - width, c - channel, t - time)
             5-D Tensor either of shape (b, c, w, h, t)
-        mean:
-            mean of the input variables. Only needed for prediction_count > 1.
+        baseline:
+            baseline conmuted on the input variables. Only needed for prediction_count > 1.
         Returns
         -------
         pred_deltas
@@ -188,8 +188,8 @@ class Conv_LSTM(nn.Module):
             last_memory_list.append(c)
 
         pred_deltas = [layer_output_list[-1:][0][:, :, :, :, -1]]
-        means = [mean]
-        predictions = [torch.add(mean, layer_output_list[-1:][0][:, :, :, :, -1])]
+        baselines = [baseline]
+        predictions = [torch.add(baseline, layer_output_list[-1:][0][:, :, :, :, -1])]
         
         # allow for multiple pred_deltas in a self feedback manner
         if prediction_count > 1:
@@ -198,8 +198,9 @@ class Conv_LSTM(nn.Module):
                                  'future time steps!')
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = predictions[0]
-            # update the mean & glue together predicted + give channels
-            mean = 1/(seq_len + 1) * (prev + (mean * seq_len))
+            # update the baseline & glue together predicted + give channels
+            ############## TODO: add last frame functionality
+            baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) # Change this for last frame
             prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
 
             # convert to numpy array that allows for this kind of slicing
@@ -215,15 +216,16 @@ class Conv_LSTM(nn.Module):
                     # in the last layer, make prediction
                     if layer_idx == (self.num_layers - 1):
                         pred_deltas.append(h)
-                        means.append(mean)
+                        baselines.append(baseline)
                         # next predicted entire image
-                        prediction = mean + h
+                        prediction = baseline + h
                         predictions.append(prediction)
-                        # update mean
-                        mean = 1/(seq_len + counter + 2) * ((seq_len + counter + 1) * mean + prev)
+                        # update baseline
+                        ############## TODO: add last frame functionality
+                        baseline = 1/(seq_len + counter + 2) * ((seq_len + counter + 1) * baseline + prev)
                         prev = torch.cat((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
 
-        return predictions, pred_deltas, means
+        return predictions, pred_deltas, baselines
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []

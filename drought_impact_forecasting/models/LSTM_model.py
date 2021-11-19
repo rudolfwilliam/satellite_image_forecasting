@@ -10,7 +10,7 @@ import glob
 from ..losses import cloud_mask_loss
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import last_cube, mean_cube, mean_prediction, last_prediction, get_ENS
+from .model_parts.shared import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg, timestamp):
@@ -37,6 +37,7 @@ class LSTM_model(pl.LightningModule):
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False)
+        self.baseline = self.cfg["model"]["baseline"]
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -46,14 +47,16 @@ class LSTM_model(pl.LightningModule):
         by the model for all the future to be predicted time steps.
         :return: preds: Full predicted images.
         :return: predicted deltas: Predicted deltas with respect to means.
-        :return: means: All future means as computed by the predicted deltas. Note: These are NOT the ground truth means.
+        :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.
         Do not use these for computing a loss!
         """
-        # compute mean cube
-        mean = mean_cube(x[:, 0:5, :, :, :], 4)
-        preds, pred_deltas, means = self.model(x, mean=mean, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
+        # compute the baseline
+        baseline = mean_cube(x[:, 0:5, :, :, :], 4)
+        baseline1 = last_frame(x[:, 0:5, :, :, :], 4)
 
-        return preds, pred_deltas, means
+        preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
+
+        return preds, pred_deltas, baselines
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":

@@ -11,7 +11,8 @@
         "channels": 11,
         "hidden_channels": 4,
         "n_layers": 1,
-        "kernel": [3, 3]
+        "kernel": [3, 3],
+        "baseline": "last_frame"
     },
     "network": 
     [

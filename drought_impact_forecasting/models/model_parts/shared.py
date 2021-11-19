@@ -42,12 +42,12 @@ def last_frame(cube, mask_channel = 4):
     # Note that by default the last channel will be the mask
     T = cube.shape[-1]
     # 1 = good quality, 0 = bad quality (in the flipped version)   
-    mask = 1 - cube[:, mask_channel, :, :, T - 1] 
+    mask = 1 - cube[:, mask_channel:mask_channel+1, :, :, T - 1] 
     new_cube = cube[:, :4, :, :, T - 1] * mask
 
     t = T - 1
     while (torch.max(mask) > 0 and t >= 0):
-        mask = (1 - mask) * (1 - cube[:, mask_channel, :, :, t])
+        mask = (1 - mask) * (1 - cube[:, mask_channel:mask_channel+1, :, :, t])
         new_cube += cube[:, :4, :, :, t] * mask
         t -= 1
     return new_cube
