@@ -197,6 +197,14 @@ class Conv_LSTM(nn.Module):
             if non_pred_feat is None:
                 raise ValueError('If prediction_count > 1, you need to provide non-prediction features for the '
                                  'future time steps!')
+            non_pred_feat = torch.cat((torch.zeros((non_pred_feat.shape[0],
+                                                        1,
+                                                        non_pred_feat.shape[2],
+                                                        non_pred_feat.shape[3],
+                                                        non_pred_feat.shape[4])),
+                                         non_pred_feat),
+                                        dim = 1)
+
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = predictions[0]
             # update the baseline & glue together predicted + given channels

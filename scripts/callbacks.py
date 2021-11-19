@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 from Data.data_preparation import prepare_data
 import json
+import wandb
 
 
 
@@ -18,32 +19,23 @@ class Prediction_Callback(pl.Callback):
         self.instance_folder = os.getcwd() + "/model_instances/model_" + timestamp
         self.runtime_model_folder = self.instance_folder + "/runtime_model"
         self.runtime_prediction = self.instance_folder + "/runtime_pred"
-        self.pred_dir = self.instance_folder + "/test_cubes/"
         self.r_pred = self.runtime_prediction + "/r"
         self.g_pred = self.runtime_prediction + "/g"
         self.b_pred = self.runtime_prediction + "/b"
         self.i_pred = self.runtime_prediction + "/i"
         self.img_pred = self.runtime_prediction + "/img"
-        self.target_dir = self.pred_dir + "val_targets/"
-        self.model_val_pred_dir = self.pred_dir + "model_val_pred/"
-        self.average_val_pred_dir = self.pred_dir + "val_average_pred/"
-        self.last_val_pred_dir = self.pred_dir + "val_last_pred/"
-        self.model_pred_dir = self.pred_dir + "model_pred/"
-        self.average_pred_dir = self.pred_dir + "average_pred/"
-        self.last_pred_dir = self.pred_dir + "last_pred/"
+
 
         # Set up Prediction directory structure if necessary
         for dir_path in [self.instance_folder,
-                         self.runtime_model_folder,self.runtime_prediction,self.pred_dir,
-                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred,
-                         self.target_dir,self.model_val_pred_dir,self.average_val_pred_dir,self.last_val_pred_dir,
-                         self.model_pred_dir,self.average_pred_dir,self.last_pred_dir]:
+                         self.runtime_model_folder,self.runtime_prediction,
+                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
         
         if not os.path.isfile(self.instance_folder + "/scores.csv"):
             with open(self.instance_folder + "/scores.csv", 'w') as filehandle:
-                filehandle.write("average, last, model, best\n")
+                filehandle.write("mad, ssim, ols, emd, score\n")
         
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
 
@@ -59,7 +51,7 @@ class Prediction_Callback(pl.Callback):
             metrics = trainer.callback_metrics
             metrics['train_loss'] = [float(metrics['train_loss'])]
             metrics['lr'] = [float(metrics['lr'])]
-            metrics['val_loss'] = [float(metrics['val_loss'])]
+            metrics['online_val_loss'] = [float(metrics['online_val_loss'])]
 
             pre_pred = np.flip(preds[0][0, :3, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
@@ -74,17 +66,22 @@ class Prediction_Callback(pl.Callback):
                 with open(self.instance_folder  + "/metrics.json", "r+") as fp:
                     data = json.load(fp)
                     data['train_loss'] = data['train_loss'] + metrics['train_loss'] 
-                    data['lr'] = data['lr'] + metrics['lr'] 
+                    data['lr'] = data['lr'] + metrics['lr']  
+                    data['lr'] = data['online_val_loss'] + metrics['online_val_loss'] 
                     fp.seek(0)
                     json.dump(data, fp)            
 
             plt.imsave(self.img_pred + "/epoch_" + str(self.epoch) + ".png", cor_pred)
             # store different rgb values of delta separately
+            ims = []
             for i, c in enumerate(self.channel_list):
                 plt.imshow(delta[:, :, i])
                 plt.colorbar()
                 plt.savefig(c + "/epoch_" + str(self.epoch) + ".png")
                 plt.close()
+                ims.append(wandb.Image(plt.imread(c + "/epoch_" + str(self.epoch) + ".png"), caption = "channel {0}".format(c)))
+
+            wandb.log({"Predictions":ims})
             # in the very first epoch, store ground truth
             if self.epoch == 0:
                 plt.imsave(self.img_pred + "/gt.png", np.clip(np.flip(self.sample[:3, :, :, 9].detach().cpu().numpy().
@@ -103,14 +100,6 @@ class Prediction_Callback(pl.Callback):
 
         return super().on_train_end(trainer, pl_module)
 
-
-    def __create_dir_structure(self):
-        for sub_dir in [self.pred_dir, self.gt_dir]:
-            if sub_dir == self.pred_dir:
-                for sub_sub_dir in [self.delta_dir, self.imgs_dir]:
-                    os.makedirs(self.top_dir + self.pred_dir + sub_sub_dir, exist_ok=True)
-            else:
-                os.makedirs(self.top_dir + self.gt_dir, exist_ok=True)
 
 
 

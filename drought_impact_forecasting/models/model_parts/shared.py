@@ -75,18 +75,55 @@ def get_ENS(target, preds):
             scores.append(4/denom)    
     return scores
 
-def ENS(target, prediction):
-    mask = 1 - np.repeat(target[:,:,4:,:], 4, axis=2)
-    target = target[:,:,:4,:]
-    ndvi_target = ((target[:,:,3,...] - target[:,:,2,...])/(target[:,:,3,...] + target[:,:,2,...] + 1e-6))[:,:,np.newaxis,...]
-    ndvi_prediction = ((prediction[:,:,3,...] - prediction[:,:,2,...])/(prediction[:,:,3,...] + prediction[:,:,2,...] + 1e-6))[:,:,np.newaxis,...]
-    ndvi_mask = mask[:,:,:1,:]
-    # Partial score
-    mad, _ = en.parallel_score.CubeCalculator.MAD(target, prediction, mask)
-    ssim, _ = en.parallel_score.CubeCalculator.SSIM(target, prediction, mask)
-    ols, _ = en.parallel_score.CubeCalculator.OLS(ndvi_target, ndvi_prediction, ndvi_mask)
-    emd, _ = en.parallel_score.CubeCalculator.EMD(ndvi_target, ndvi_prediction, ndvi_mask) # this is the slow one
-    if mad == 0 or ssim == 0 or ols == 0 or emd == 0:
-        return 0
-    else:
-        return 4/(1/mad + 1/ssim + 1/ols + 1/emd)
+def ENS(target: torch.Tensor, prediction: torch.Tensor):
+    '''
+        target of size (b, w, h, c, t)
+            b = batch_size (>0)
+            c = channels (=5)
+            w = width (=128)
+            h = height (=128)
+            t = time (20/40/140)
+        target of prediction (b, w, h, c, t)
+            b = batch_size (>0)
+            c = channels (=4) no mask
+            w = width (=128)
+            h = height (=128)
+            t = time (20/40/140)
+    '''
+    # numpy conversion
+    target = np.array(target.cpu()).transpose(0, 2, 3, 1, 4)
+    prediction = np.array(prediction.cpu()).transpose(0, 2, 3, 1, 4)
+    
+    # mask
+    mask = 1 - np.repeat(target[:,:,:,4:,:], 4, axis=3)
+    target = target[:,:,:,:4,:]
+
+    # NDVI
+    ndvi_target = ((target[:,:,:,3,:] - target[:,:,:,2,:])/(target[:,:,:,3,:] + target[:,:,:,2,:] + 1e-6))[:,:,:,np.newaxis,:]
+    ndvi_prediction = ((prediction[:,:,:,3,:] - prediction[:,:,:,2,:])/(prediction[:,:,:,3,:] + prediction[:,:,:,2,:] + 1e-6))[:,:,:,np.newaxis,:]
+    ndvi_mask = mask[:,:,:,0,:][:,:,:,np.newaxis,:]
+    
+    # floor and ceiling
+    prediction[prediction < 0] = 0
+    prediction[prediction > 1] = 1
+
+    target[np.isnan(target)] = 0
+    target[target > 1] = 1
+    target[target < 0] = 0
+
+    partial_score = np.zeros((target.shape[0], 4))
+    score = np.zeros(target.shape[0])
+    # partial score computation
+    for i in range(target.shape[0]):
+        partial_score[i, 0], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], target[i], mask[i])
+        partial_score[i, 1], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], target[i], mask[i])
+        partial_score[i, 2], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
+        partial_score[i, 3], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
+        if np.min(partial_score[i,:]) == 0:
+            score[i] = 0
+        else:
+            score[i] = 4/(1/partial_score[0] + 1/partial_score[1] + 1/partial_score[2] + 1/partial_score[3])
+    
+    return score, partial_score
+    # score is a np array with all the scores
+    # partial scores is np array with 4 columns, mad ssim ols emd, in this order (one row per elem in batch)

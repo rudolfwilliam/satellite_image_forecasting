@@ -7,10 +7,12 @@ import pytorch_lightning as pl
 import numpy as np
 import os
 import glob
+
+from torchmetrics import metric
 from ..losses import cloud_mask_loss
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS
+from .model_parts.shared import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg, timestamp):
@@ -126,7 +128,7 @@ class LSTM_model(pl.LightningModule):
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
 
-        _, x_delta, baselines = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+        _, x_delta, baselines = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,5:,:,:,t0+1:])
         
         delta = all_data[:, :4, :, :, t0] - baselines[0]
         loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
@@ -135,7 +137,7 @@ class LSTM_model(pl.LightningModule):
             delta = all_data[:, :4, :, :, t_end] - baselines[t_end-t0]
             loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
 
-        logs = {'val_loss': loss}
+        logs = {'online_val_loss': loss}
         self.log_dict(
             logs,
             on_step=False, on_epoch=True, prog_bar=True, logger=True
@@ -150,12 +152,34 @@ class LSTM_model(pl.LightningModule):
         #starting_time = time.time()
         all_data, path = batch
 
-        T = all_data.size()[4]
-        t0 = 10 # no. of pics we start with
-        l2_crit = nn.MSELoss()
-        loss = torch.tensor([0.0])
 
-        num_context = round(all_data.shape[-1]/3)
+        T = all_data.size()[4]
+
+        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+
+        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
+        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
+        npf = all_data[:, 5:, :, :, t0+1:]
+
+        x_preds, x_deltas, baselines = self(x = context, 
+                                            prediction_count = T-t0, 
+                                            non_pred_feat = npf)
+        
+        x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
+        
+        score, part_scores = ENS(prediction = x_preds, target = target)
+        logs = {'val_loss': np.mean(score)}
+        self.log_dict(
+            logs,
+            on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
+        # store to file the scores
+        with open(os.getcwd() + "/model_instances/model_" + self.timestamp + "/scores.csv", 'a') as filehandle:
+            for i in range(len(score)):
+                filehandle.write(str(part_scores[i,0]) + "," +str(part_scores[i,1]) + "," + str(part_scores[i,2]) + "," + str(part_scores[i,3])+ "," + str(score[i]) + '\n')
+
+        return logs
+
 
         # Create necessary directories
         model_dir = os.getcwd() + "/model_instances/model_" + self.timestamp + "/"
@@ -169,7 +193,7 @@ class LSTM_model(pl.LightningModule):
 
             for i in range(len(path)):
                 # Cut out 'target' data
-                target = all_data[i,:5, :, :, t0:]
+                target = all_data[i,:5, :, :, num_context:]
                 target = np.array(target.cpu()).transpose(1,2,0,3)
                 np.savez(target_dir+str(i), highresdynamic=target)
 
