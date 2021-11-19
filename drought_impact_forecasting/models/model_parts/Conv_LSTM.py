@@ -116,7 +116,7 @@ class Conv_LSTM(nn.Module):
     """
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_conv_layers, num_conv_layers_mem,
-                 num_layers, dilation_rate, batch_first=False):
+                 num_layers, dilation_rate, batch_first=False, baseline="mean_cube"):
         super(Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -148,6 +148,7 @@ class Conv_LSTM(nn.Module):
                                             dilation_rate=self.dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
+        self.baseline = baseline
 
     def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
         """
@@ -198,9 +199,11 @@ class Conv_LSTM(nn.Module):
                                  'future time steps!')
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = predictions[0]
-            # update the baseline & glue together predicted + give channels
-            ############## TODO: add last frame functionality
-            baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) # Change this for last frame
+            # update the baseline & glue together predicted + given channels
+            if self.baseline == "mean_cube":
+                baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) 
+            else:
+                baseline = prev # We don't predict image quality, so we just feed in the last prediction
             prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
 
             # convert to numpy array that allows for this kind of slicing
@@ -220,9 +223,11 @@ class Conv_LSTM(nn.Module):
                         # next predicted entire image
                         prediction = baseline + h
                         predictions.append(prediction)
-                        # update baseline
-                        ############## TODO: add last frame functionality
-                        baseline = 1/(seq_len + counter + 2) * ((seq_len + counter + 1) * baseline + prev)
+                        # update the baseline & glue together predicted + given channels
+                        if self.baseline == "mean_cube":
+                            baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) 
+                        else:
+                            baseline = prev # We don't predict image quality, so we just feed in the last prediction
                         prev = torch.cat((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
 
         return predictions, pred_deltas, baselines

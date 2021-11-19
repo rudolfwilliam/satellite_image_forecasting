@@ -36,7 +36,8 @@ class LSTM_model(pl.LightningModule):
                                num_layers=n_layers,
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
-                               batch_first=False)
+                               batch_first=False,
+                               baseline=self.cfg["model"]["baseline"])
         self.baseline = self.cfg["model"]["baseline"]
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
@@ -46,13 +47,12 @@ class LSTM_model(pl.LightningModule):
         :param non_pred_feat: Only need if prediction_count > 1. All features that are not predicted
         by the model for all the future to be predicted time steps.
         :return: preds: Full predicted images.
-        :return: predicted deltas: Predicted deltas with respect to means.
+        :return: predicted deltas: Predicted deltas with respect to baselines.
         :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.
         Do not use these for computing a loss!
         """
         # compute the baseline
-        baseline = mean_cube(x[:, 0:5, :, :, :], 4)
-        baseline1 = last_frame(x[:, 0:5, :, :, :], 4)
+        baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
 
         preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
@@ -91,13 +91,13 @@ class LSTM_model(pl.LightningModule):
         t0 = T - 1 # no. of pics we start with
         
 
-        _, x_delta, mean = self(all_data[:, :, :, :, :t0])
-        delta = all_data[:, :4, :, :, t0] - mean[0]
+        _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
+        delta = all_data[:, :4, :, :, t0] - baseline[0]
         loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
 
         for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
-            _, x_delta, mean = self(all_data[:, :, :, :, :t_end])
-            delta = all_data[:, :4, :, :, t_end] - mean[0]
+            _, x_delta, baseline = self(all_data[:, :, :, :, :t_end])
+            delta = all_data[:, :4, :, :, t_end] - baseline[0]
             loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
@@ -126,13 +126,13 @@ class LSTM_model(pl.LightningModule):
         T = all_data.size()[4]
         t0 = 10 # no. of pics we start with
 
-        _, x_delta, mean = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+        _, x_delta, baselines = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
         
-        delta = all_data[:, :4, :, :, t0] - mean[0]
+        delta = all_data[:, :4, :, :, t0] - baselines[0]
         loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
         
         for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
-            delta = all_data[:, :4, :, :, t_end] - mean[t_end-t0]
+            delta = all_data[:, :4, :, :, t_end] - baselines[t_end-t0]
             loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
 
         logs = {'val_loss': loss}
@@ -182,7 +182,7 @@ class LSTM_model(pl.LightningModule):
                 np.savez(last_pred_dir+str(i), highresdynamic=last_cube)
 
                 # Our model
-                x_preds, x_deltas, means = self(all_data[i:i+1, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[i:i+1,4:,:,:,t0+1:])
+                x_preds, x_deltas, baselines = self(all_data[i:i+1, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[i:i+1,4:,:,:,t0+1:])
                 x_preds = np.array(torch.cat(x_preds, axis=0).cpu()).transpose(2,3,1,0)
                 np.savez(model_val_pred_dir+str(i), highresdynamic=x_preds)
 
@@ -204,11 +204,11 @@ class LSTM_model(pl.LightningModule):
             cube_name = [os.path.split(i)[1] for i in path]
 
             #start_model_evaluating = time.time()
-            x_preds, x_deltas, means = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
+            x_preds, x_deltas, baselines = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,4:,:,:,t0+1:])
             #print("model time: {0}".format(time.time() - start_model_evaluating))
             # Add up losses across all timesteps
-            for i in range(len(means)):
-                delta = all_data[:,:4,:,:,t0+i] - means[i]
+            for i in range(len(baselines)):
+                delta = all_data[:,:4,:,:,t0+i] - baselines[i]
                 loss = loss.add(l2_crit(x_deltas[i], delta))
             
             logs = {'test_loss': loss}
