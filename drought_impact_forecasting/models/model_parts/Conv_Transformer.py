@@ -196,7 +196,7 @@ class Feature_Generator(nn.Module):
         return out
 
 
-class Transformer(nn.Module):
+class Conv_Transformer(nn.Module):
 
     def __init__(self, configs):
         super().__init__()
@@ -209,13 +209,13 @@ class Transformer(nn.Module):
             nn.Conv2d(self.num_hidden[-1], 1, kernel_size=1)
         )
 
-    def forward(self, frames, mask = None):
+    def forward(self, frames, num_pred, mask = None):
         b, n, h, w, l = frames.shape
         feature_map = self.feature_embedding(img=frames, configs=self.configs)
         enc_in = self.pos_embedding(feature_map)
         enc_out = self.Encoder(enc_in)
-        # TODO decide which one is the query: feature_map or frames
-        dec_out = self.Decoder(enc_in, enc_out)
+        # queries correspond to num_pred * (last embedding)
+        dec_out = self.Decoder(enc_in[..., -1].repeat(num_pred), enc_out)
         out_list = []
         for i in l:
             out_list.append(self.back_to_pixel(dec_out[..., i]))
