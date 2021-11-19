@@ -105,7 +105,10 @@ class LSTM_model(pl.LightningModule):
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
             logs,
-            on_step=False, on_epoch=True, prog_bar=True, logger=True
+            on_step=False, 
+            on_epoch=True, 
+            prog_bar=True, 
+            logger=True
         )
         return loss
     
@@ -140,7 +143,10 @@ class LSTM_model(pl.LightningModule):
         logs = {'online_val_loss': loss}
         self.log_dict(
             logs,
-            on_step=False, on_epoch=True, prog_bar=True, logger=True
+            on_step=False, 
+            on_epoch=True, 
+            prog_bar=True, 
+            logger=True
         )
         return loss
     

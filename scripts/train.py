@@ -17,6 +17,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from drought_impact_forecasting.models.Baseline_model import Last_model
 from Data.data_preparation import prepare_data
 from callbacks import Prediction_Callback
 
@@ -63,10 +64,12 @@ def main():
                                   batch_size=cfg["training"]["train_batch_size"],
                                   shuffle=True, 
                                   drop_last=False)
+
     val_1_dataloader = DataLoader(val_1_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["val_1_batch_size"], 
                                   drop_last=False)
+
     val_2_dataloader = DataLoader(val_2_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["val_2_batch_size"], 
@@ -97,6 +100,7 @@ def main():
     # setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg, timestamp)
+        model_last = Last_model()
     else:
         raise ValueError("The specified model name is invalid.")
 

@@ -38,7 +38,7 @@ class Prediction_Callback(pl.Callback):
                 filehandle.write("mad, ssim, ols, emd, score\n")
         
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
-
+    
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
@@ -72,17 +72,8 @@ class Prediction_Callback(pl.Callback):
                     json.dump(data, fp)            
 
             plt.imsave(self.img_pred + "/epoch_" + str(self.epoch) + ".png", cor_pred)
-            # store different rgb values of delta separately
             ims = []
-            for i, c in enumerate(self.channel_list):
-                plt.imshow(delta[:, :, i])
-                plt.colorbar()
-                plt.savefig(c + "/epoch_" + str(self.epoch) + ".png")
-                plt.close()
-                ims.append(wandb.Image(plt.imread(c + "/epoch_" + str(self.epoch) + ".png"), caption = "channel {0}".format(c)))
-
-            wandb.log({"Predictions":ims})
-            # in the very first epoch, store ground truth
+            # store different rgb values of delta separately
             if self.epoch == 0:
                 plt.imsave(self.img_pred + "/gt.png", np.clip(np.flip(self.sample[:3, :, :, 9].detach().cpu().numpy().
                                                                 transpose(1, 2, 0).astype(float), -1),0,1))
@@ -94,6 +85,22 @@ class Prediction_Callback(pl.Callback):
                     plt.colorbar()
                     plt.savefig(c + "/gt.png")
                     plt.close()
+                    ims.append(wandb.Image(plt.imread(c + "/gt.png"), 
+                                           caption = "ground truth c: {1}".format(self.epoch, c[-1])))
+                wandb.log({"Runtime Predictions":ims})
+
+            ims = []
+            for i, c in enumerate(self.channel_list):
+                plt.imshow(delta[:, :, i])
+                plt.colorbar()
+                plt.savefig(c + "/epoch_" + str(self.epoch) + ".png")
+                plt.close()
+                ims.append(wandb.Image(plt.imread(c + "/epoch_" + str(self.epoch) + ".png"), 
+                                       caption = "epoch: {0} c: {1}".format(self.epoch, c[-1])))
+
+            wandb.log({"Runtime Predictions":ims})
+            # in the very first epoch, store ground truth
+
 
             self.epoch += 1
     def on_train_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:

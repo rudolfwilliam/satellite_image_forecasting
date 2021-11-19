@@ -42,13 +42,15 @@ def last_frame(cube, mask_channel = 4):
     # Note that by default the last channel will be the mask
     T = cube.shape[-1]
     # 1 = good quality, 0 = bad quality (in the flipped version)   
-    mask = 1 - cube[:, mask_channel:mask_channel+1, :, :, T - 1] 
+    mask = 1 - cube[:, mask_channel:mask_channel+1, :, :, T - 1]
+    missing = cube[:, mask_channel:mask_channel+1, :, :, T - 1] #1 = is missing, 0 = is already assigned
     new_cube = cube[:, :4, :, :, T - 1] * mask
 
     t = T - 1
-    while (torch.max(mask) > 0 and t >= 0):
-        mask = (1 - mask) * (1 - cube[:, mask_channel:mask_channel+1, :, :, t])
+    while (torch.min(mask) == 0 and t >= 0):
+        mask = missing * (1 - cube[:, mask_channel:mask_channel+1, :, :, t])
         new_cube += cube[:, :4, :, :, t] * mask
+        missing = missing * (1 - mask)
         t -= 1
     return new_cube
 
@@ -122,7 +124,7 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
         if np.min(partial_score[i,:]) == 0:
             score[i] = 0
         else:
-            score[i] = 4/(1/partial_score[0] + 1/partial_score[1] + 1/partial_score[2] + 1/partial_score[3])
+            score[i] = 4/(1/partial_score[i, 0] + 1/partial_score[i, 1] + 1/partial_score[i, 2] + 1/partial_score[i, 3])
     
     return score, partial_score
     # score is a np array with all the scores
