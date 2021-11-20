@@ -71,9 +71,5 @@ def main():
     
     trainer.test(model, test_dataloader)
 
-    # We may have to add a floor/ceil function on the predictions
-    # sometimes we get out of bound values!
-    # trainer.predict(model, test_dataloader)
-
 if __name__ == "__main__":
     main()

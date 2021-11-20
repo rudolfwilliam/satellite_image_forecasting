@@ -4,7 +4,8 @@ import os
 import numpy as np
 import random
 from shutil import copy2
-#from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
+#from pytorch_lightning.accelerators import accelerato
+#from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 

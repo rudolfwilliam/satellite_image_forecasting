@@ -201,7 +201,7 @@ class Conv_LSTM(nn.Module):
                                                         1,
                                                         non_pred_feat.shape[2],
                                                         non_pred_feat.shape[3],
-                                                        non_pred_feat.shape[4])),
+                                                        non_pred_feat.shape[4]), device=non_pred_feat.device),
                                          non_pred_feat),
                                         dim = 1)
 
@@ -213,9 +213,6 @@ class Conv_LSTM(nn.Module):
             else:
                 baseline = prev # We don't predict image quality, so we just feed in the last prediction
             prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
-
-            # convert to numpy array that allows for this kind of slicing
-            # last_state_list = np.array(last_state_list)
 
             for counter in range(prediction_count - 1):
                 for layer_idx in range(self.num_layers):
