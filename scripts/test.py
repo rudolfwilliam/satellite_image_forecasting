@@ -36,7 +36,7 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    training_data, validation_data = prepare_data(cfg["data"]["mesoscale_cut"],
+    training_data, val_1_data, val_2_data = prepare_data(cfg["data"]["mesoscale_cut"],
                                                   cfg["data"]["train_dir"],
                                                   device = device,
                                                   training_samples=cfg["training"]["training_samples"],
@@ -46,7 +46,7 @@ def main():
                              cfg["data"]["test_dir"],
                              device = device)
     
-    test_dataloader = DataLoader(test_data, 
+    test_dataloader = DataLoader(val_2_data, 
                                 num_workers=cfg["training"]["num_workers"],
                                 batch_size=cfg["training"]["val_2_batch_size"],
                                 drop_last=False)

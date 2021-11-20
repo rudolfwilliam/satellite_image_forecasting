@@ -185,7 +185,7 @@ class LSTM_model(pl.LightningModule):
         x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
         
         score, part_scores = ENS(prediction = x_preds, target = target)
-        logs = {'val_loss': np.mean(score)}
+        logs = {'val_2_loss': np.mean(score)}
         self.log_dict(
             logs,
             on_step=False, on_epoch=True, prog_bar=True, logger=True
