@@ -40,12 +40,15 @@ def main():
                                                   cfg["data"]["train_dir"],
                                                   device = device,
                                                   training_samples=cfg["training"]["training_samples"],
-                                                  validation_samples=cfg["training"]["validation_samples"])
+                                                  val_1_samples=cfg["training"]["val_1_samples"],
+                                                  val_2_samples=cfg["training"]["val_2_samples"])
     test_data = prepare_data(cfg["data"]["mesoscale_cut"], 
                              cfg["data"]["test_dir"],
                              device = device)
+    
     test_dataloader = DataLoader(test_data, 
-                                num_workers=cfg["training"]["num_workers"], 
+                                num_workers=cfg["training"]["num_workers"],
+                                batch_size=cfg["training"]["val_2_batch_size"],
                                 drop_last=False)
 
     # Load model Callbacks
@@ -57,11 +60,11 @@ def main():
                                     timestamp)
 
     # setup trainer
-    trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
+    trainer = Trainer(max_epochs=cfg["training"]["epochs"],
                         log_every_n_steps = min(cfg["training"]["log_steps"],
-                                            cfg["training"]["training_samples"] / cfg["training"]["batch_size"]),
-                        devices = 1, 
-                        accelerator= "cpu",
+                                            cfg["training"]["training_samples"] / cfg["training"]["train_batch_size"]),
+                        devices = cfg["training"]["devices"], 
+                        accelerator=cfg["training"]["accelerator"],
                         callbacks=[callbacks])
 
     model = LSTM_model(cfg, timestamp)

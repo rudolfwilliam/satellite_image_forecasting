@@ -59,7 +59,6 @@ def main():
                              cfg["data"]["test_dir"],
                              device = device)
     
-
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["train_batch_size"],
