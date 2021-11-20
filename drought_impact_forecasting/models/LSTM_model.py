@@ -41,6 +41,7 @@ class LSTM_model(pl.LightningModule):
                                batch_first=False,
                                baseline=self.cfg["model"]["baseline"])
         self.baseline = self.cfg["model"]["baseline"]
+        self.val_metric = self.cfg["model"]["val_metric"]
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -95,12 +96,12 @@ class LSTM_model(pl.LightningModule):
 
         _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
         delta = all_data[:, :4, :, :, t0] - baseline[0]
-        loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
+        loss = cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
 
         for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
             _, x_delta, baseline = self(all_data[:, :, :, :, :t_end])
             delta = all_data[:, :4, :, :, t_end] - baseline[0]
-            loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
+            loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
         
         logs = {'train_loss': loss, 'lr': self.optimizer.param_groups[0]['lr']}
         self.log_dict(
@@ -129,17 +130,27 @@ class LSTM_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        t0 = 10 # no. of pics we start with
+        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
 
-        _, x_delta, baselines = self(all_data[:, :, :, :, :t0], prediction_count=T-t0, non_pred_feat=all_data[:,5:,:,:,t0+1:])
-        
-        delta = all_data[:, :4, :, :, t0] - baselines[0]
-        loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
-        
-        for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
-            delta = all_data[:, :4, :, :, t_end] - baselines[t_end-t0]
-            loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t_end]))
+        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
+        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
+        npf = all_data[:, 5:, :, :, t0+1:]
 
+        x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
+        
+        if self.val_metric=="ENS":
+            # ENS loss = 1-ENS (ENS==1 would mean perfect prediction)
+            x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
+            score, _ = ENS(prediction = x_preds, target = target)
+            loss = 1-np.mean(score)
+        else: # L2 cloud mask loss
+            delta = all_data[:, :4, :, :, t0] - baselines[0]
+            loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
+            
+            for t_end in range(t0 + 1, T): # this iterates with t_end = t0 + 1, ..., T-1
+                delta = all_data[:, :4, :, :, t_end] - baselines[t_end-t0]
+                loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
+            
         logs = {'online_val_loss': loss}
         self.log_dict(
             logs,

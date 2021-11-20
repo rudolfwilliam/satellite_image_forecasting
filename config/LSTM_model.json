@@ -12,7 +12,8 @@
         "hidden_channels": 4,
         "n_layers": 1,
         "kernel": [3, 3],
-        "baseline": "last_frame"
+        "baseline": "last_frame",
+        "val_metric": "ENS"
     },
     "network": 
     [
@@ -39,12 +40,12 @@
         "epochs": 30,
         "start_learn_rate": 0.1,
         "train_batch_size": 2,
-        "val_1_batch_size": 1,
-        "val_2_batch_size": 1,
+        "val_1_batch_size": 2,
+        "val_2_batch_size": 2,
         "test_batch_size": 1,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 20,
+        "training_samples": 2,
         "val_1_samples": 2,
         "val_2_samples": 2,
         "num_workers": 0,
