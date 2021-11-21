@@ -29,7 +29,7 @@ def command_line_parser(mode = "train"):
         args = parser.parse_args()
         check_model_exists(args.model_name)
         try:
-            cfg = json.load(open(os.getcwd() + "/model_instances/model_" + args.ts + "/Transformer_model.json", 'r'))
+            cfg = json.load(open(os.getcwd() + "/model_instances/model_" + args.ts + "/" + args.model_name + ".json", 'r'))
         except:
             raise ValueError("The timestamp doesn't exist.")
 

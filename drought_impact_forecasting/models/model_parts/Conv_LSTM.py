@@ -163,6 +163,8 @@ class Conv_LSTM(nn.Module):
         -------
         pred_deltas
         """
+        #TODO: Make code slimmer (there are some redundancies)
+
         b, _, w, h, _ = input_tensor.size()
 
         hidden_state = self._init_hidden(batch_size=b, image_size=(h, w))
@@ -198,12 +200,10 @@ class Conv_LSTM(nn.Module):
                 raise ValueError('If prediction_count > 1, you need to provide non-prediction features for the '
                                  'future time steps!')
             non_pred_feat = torch.cat((torch.zeros((non_pred_feat.shape[0],
-                                                        1,
-                                                        non_pred_feat.shape[2],
-                                                        non_pred_feat.shape[3],
-                                                        non_pred_feat.shape[4]), device=non_pred_feat.device),
-                                         non_pred_feat),
-                                        dim = 1)
+                                                    1,
+                                                    non_pred_feat.shape[2],
+                                                    non_pred_feat.shape[3],
+                                                    non_pred_feat.shape[4]), device=non_pred_feat.device), non_pred_feat), dim = 1)
 
             # output from layer beneath which for the lowest layer is the prediction from the previous time step
             prev = predictions[0]

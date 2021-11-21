@@ -4,7 +4,9 @@
         "num_hidden": [],
         "img_width": 128,
         "filter_size": 3,
-        "device": "CPU"
+        "device": "CPU",
+        "baseline": "last_frame",
+        "val_metric": "ENS"
     },
     "network":
     [
