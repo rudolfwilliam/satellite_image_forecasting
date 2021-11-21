@@ -2,6 +2,9 @@ import argparse
 import os
 import json
 
+def check_model_exists(name):
+    if name not in ["LSTM_model", "Transformer_model"]:
+        raise ValueError("The specified model name is invalid.")
 
 def command_line_parser(mode = "train"):
     """"
@@ -13,22 +16,23 @@ def command_line_parser(mode = "train"):
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
+
     if mode == 'train':
-        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model'], help='CNN architecture')
+        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model'], help='frame prediction architecture')
         args = parser.parse_args()
-        if args.model_name == "LSTM_model":
-            cfg = json.load(open(os.getcwd() + "/config/LSTM_model.json", 'r'))
-        else:
-            raise ValueError("The specified model name is invalid.")
+        check_model_exists(args.model_name)
+        cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
+
     
     if mode == 'validate':
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate')
         args = parser.parse_args()
+        check_model_exists(args.model_name)
         try:
-            cfg = json.load(open(os.getcwd() + "/model_instances/model_"+args.ts+"/LSTM_model.json", 'r'))
+            cfg = json.load(open(os.getcwd() + "/model_instances/model_" + args.ts + "/Transformer_model.json", 'r'))
         except:
             raise ValueError("The timestamp doesn't exist.")
-    
+
     return args, cfg
 
 def read_config(path):
