@@ -1,12 +1,20 @@
 {
     "model":
     {
-        "num_hidden": [],
-        "img_width": 128,
+        "num_hidden": [3, 3, 3, 3],
+        "input_length": 10,
+        "depth": 1,
+        "decay_point": 10,
+        "kernel_size": 10,
+        "num_conv_layers": 3,
+        "dilation_rate": 3,
+        "img_width": 124,
         "filter_size": 3,
-        "device": "CPU",
+        "device": "cpu",
         "baseline": "last_frame",
-        "val_metric": "ENS"
+        "val_metric": "ENS",
+        "input_length": 10,
+        "batch_size": 2
     },
     "network":
     [

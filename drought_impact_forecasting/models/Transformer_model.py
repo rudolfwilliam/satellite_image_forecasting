@@ -9,7 +9,7 @@ import glob
 from ..losses import cloud_mask_loss
 from .model_parts.Conv_Transformer import Conv_Transformer
 import pytorch_lightning as pl
-from .model_parts.shared import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 
 class Transformer_model(pl.LightningModule):
@@ -42,10 +42,9 @@ class Transformer_model(pl.LightningModule):
         Do not use these for computing a loss!
         """
         # compute the baseline
-        baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
+        # baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
 
-        preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat,
-                                                   prediction_count=prediction_count)
+        preds, pred_deltas, baselines = self.model(x, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, baselines
 

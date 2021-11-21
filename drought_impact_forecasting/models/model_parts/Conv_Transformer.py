@@ -2,9 +2,9 @@ import numpy as np
 
 import torch
 from einops import rearrange
+from .shared import Conv_Block
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 
 
@@ -34,14 +34,12 @@ class FeedForward(nn.Module):
     def __init__(self, configs):
         super().__init__()
         self.configs = configs
-        self.net = nn.Sequential(
-            nn.Linear(self.configs.input_length, self.configs.input_length*4),
-            nn.LeakyReLU(),
-            nn.Linear(self.configs.input_length*4, self.configs.input_length),
-        )
+        self.num_hidden = configs["num_hidden"][-1]
+        self.conv = Conv_Block(self.num_hidden, self.num_hidden, kernel_size=self.configs["kernel_size"],
+                               dilation_rate=self.configs["dilation_rate"], num_conv_layers=self.configs["num_conv_layers"])
 
     def forward(self, x):
-        return self.net(x)
+        return self.conv(x)
 
 
 class ConvAttention(nn.Module):
@@ -49,19 +47,19 @@ class ConvAttention(nn.Module):
     def __init__(self, configs):
         super(ConvAttention, self).__init__()
         self.configs = configs
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
+        self.num_hidden = configs["num_hidden"]
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channel=self.num_hidden[-1], out_channel=3*self.num_hidden[-1], kernel_size=1)
+            nn.Conv2d(in_channels=self.num_hidden[-1], out_channels=3*self.num_hidden[-1], kernel_size=1)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channel=self.num_hidden[-1], out_channel=self.num_hidden[-1], kernel_size=5, padding=2)
+            nn.Conv2d(in_channels=self.num_hidden[-1], out_channels=self.num_hidden[-1], kernel_size=5, padding=2)
         )
 
     def forward(self, x, enc_out= None, dec=False):
-        b, c, h, w, l = x.shape
+        b, c, h, w, t = x.shape
         qkv_setlist = []
         Vout_list = []
-        for i in l:
+        for i in range(t):
             qkv_setlist.append(self.conv1(x[..., i]))
         qkv_set = torch.stack(qkv_setlist, dim=-1)
         if dec:
@@ -70,14 +68,14 @@ class ConvAttention(nn.Module):
             Q, K, _ = torch.split(qkv_set, self.num_hidden[-1], dim=1)
             V = enc_out
 
-        for i in l:
-            Qi = rearrange([Q[..., i]] * l + K, 'b n h w l -> (b l) n h w')
-            tmp = rearrange(self.conv2(Qi), '(b l) n h w -> b n h w l', l=l)
-            tmp = F.softmax(tmp, dim=4)                                       #(b, n, h, w, l)
-            tmp = np.multiply(tmp, torch.stack([V[i]] * l, dim=-1))
-            Vout_list.append(torch.sum(tmp, dim=4))                           #(b, n, h, w)
-        Vout = torch.stack(Vout_list, dim=-1 )
-        return Vout                                                           #(b, n, h, w, l)
+        for i in range(t):
+            Qi = rearrange([Q[..., i]] * t + K, 'b n h w l -> (b l) n h w')
+            tmp = rearrange(self.conv2(Qi), '(b l) n h w -> b n h w l', l=t)
+            tmp = F.softmax(tmp, dim=4)                                       #(b, c, w, h, t)
+            tmp = np.multiply(tmp, torch.stack([V[i]] * t, dim=-1))
+            Vout_list.append(torch.sum(tmp, dim=4))                           #(b, c, w, h)
+        Vout = torch.stack(Vout_list, dim=-1)
+        return Vout                                                           #(b, c, w, h, t)
 
 
 class PositionalEncoding(nn.Module):
@@ -85,7 +83,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, configs):
         super(PositionalEncoding, self).__init__()
         self.configs = configs
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
+        self.num_hidden = self.configs["num_hidden"]
         # Not a parameter
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table())
 
@@ -95,16 +93,17 @@ class PositionalEncoding(nn.Module):
 
         def get_position_angle_vec(position):
 
-            return_list = [torch.ones((self.configs.batch_size,
-                                       self.configs.img_width,
-                                       self.configs.img_width)).to(self.configs.device)*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
+            return_list = [torch.ones((self.configs["batch_size"],
+                                       self.configs["img_width"],
+                                       self.configs["img_width"])).to(self.configs["device"])*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
             return torch.stack(return_list, dim=1)
 
-        sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(self.configs.input_length)]
-        sinusoid_table[0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
-        sinusoid_table[1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+        sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(self.configs["input_length"])]
+        sinusoid_table = torch.stack(sinusoid_table, dim=0)
+        sinusoid_table[:, :, 0::2] = np.sin(sinusoid_table[:, :, 0::2])  # dim 2i
+        sinusoid_table[:, :, 1::2] = np.cos(sinusoid_table[:, :, 1::2])  # dim 2i+1
 
-        return torch.stack(sinusoid_table, dim=-1)
+        return torch.moveaxis(sinusoid_table, 0, -1)
 
     def forward(self, x):
         '''
@@ -120,18 +119,18 @@ class Encoder(nn.Module):
         super().__init__()
         self.configs = configs
         self.layers = nn.ModuleList([])
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
+        self.num_hidden = self.configs["num_hidden"]
         for _ in range(self.configs["depth"]):
             self.layers.append(nn.ModuleList([
-                Residual(PreNorm([self.num_hidden[-1], self.configs.img_width, self.configs.img_width],
-                                 ConvAttention(self.configs))),
-                Residual(PreNorm([self.num_hidden[-1], self.configs.img_width, self.configs.img_width],
-                                 FeedForward(self.configs)))
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"],
+                                  self.configs["input_length"]], ConvAttention(self.configs))),
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"],
+                                  self.configs["input_length"]], FeedForward(self.configs)))
             ]))
 
-    def forward(self, x, mask = None):
+    def forward(self, x):
         for attn, ff in self.layers:
-            x = attn(x, mask = mask)
+            x = attn(x)
             x = ff(x)
         return x
 
@@ -142,16 +141,16 @@ class Decoder(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([])
         self.configs = configs
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
+        self.num_hidden = self.configs["num_hidden"]
         for _ in range(self.configs["depth"]):
             self.layers.append(nn.ModuleList([
-                Residual(PreNorm([self.num_hidden[-1], self.configs.img_width, self.configs.img_width],
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
                                  ConvAttention(self.configs))),
-                Residual(PreNorm([self.num_hidden[-1], self.configs.img_width, self.configs.img_width],
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
                                  FeedForward(self.configs)))
             ]))
 
-    def forward(self, x, enc_out, mask=None):
+    def forward(self, x, enc_out):
         for attn, ff in (self.layers):
             x = attn(x, enc_out=enc_out, dec=True)
             x = ff(x)
@@ -162,27 +161,27 @@ class Feature_Generator(nn.Module):
     def __init__(self, configs):
         super(Feature_Generator, self).__init__()
         self.configs = configs
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
-        self.conv1 = nn.Conv2d(in_channels=1,
+        self.num_hidden = self.configs["num_hidden"]
+        self.conv1 = nn.Conv2d(in_channels=11,
                                out_channels=self.num_hidden[0],
-                               kernel_size=self.configs.filter_size,
+                               kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs.filter_size-1)//2)
+                               padding=(self.configs["kernel_size"]-1)//2)
         self.conv2 = nn.Conv2d(in_channels=self.num_hidden[0],
                                out_channels=self.num_hidden[1],
-                               kernel_size=self.configs.filter_size,
+                               kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs.filter_size-1)//2)
+                               padding=(self.configs["kernel_size"]-1)//2)
         self.conv3 = nn.Conv2d(in_channels=self.num_hidden[1],
                                out_channels=self.num_hidden[2],
-                               kernel_size=self.configs.filter_size,
+                               kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs.filter_size-1)//2)
+                               padding=(self.configs["kernel_size"]-1)//2)
         self.conv4 = nn.Conv2d(in_channels=self.num_hidden[2],
                                out_channels=self.num_hidden[3],
-                               kernel_size=self.configs.filter_size,
+                               kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs.filter_size-1)//2)
+                               padding=(self.configs["kernel_size"]-1)//2)
         self.bn1 = nn.BatchNorm2d(self.num_hidden[0])
         self.bn2 = nn.BatchNorm2d(self.num_hidden[1])
         self.bn3 = nn.BatchNorm2d(self.num_hidden[2])
@@ -201,30 +200,30 @@ class Conv_Transformer(nn.Module):
     def __init__(self, configs):
         super().__init__()
         self.configs = configs
-        self.num_hidden = [int(x) for x in self.configs.num_hidden.split(',')]
+        self.num_hidden = configs["num_hidden"]
         self.pos_embedding = PositionalEncoding(self.configs)
-        self.Encoder = Encoder(self.dim, self.configs)
-        self.Decoder = Decoder(self.dim, self.configs)
+        self.Encoder = Encoder(self.configs)
+        self.Decoder = Decoder(self.configs)
         self.back_to_pixel = nn.Sequential(
             nn.Conv2d(self.num_hidden[-1], 1, kernel_size=1)
         )
 
-    def forward(self, frames, num_pred, mask = None):
-        b, n, h, w, l = frames.shape
+    def forward(self, frames, prediction_count, non_pred_feat = None):
+        b, c, w, h, t = frames.shape
         feature_map = self.feature_embedding(img=frames, configs=self.configs)
         enc_in = self.pos_embedding(feature_map)
         enc_out = self.Encoder(enc_in)
         # queries correspond to num_pred * (last embedding)
-        dec_out = self.Decoder(enc_in[..., -1].repeat(num_pred), enc_out)
+        dec_out = self.Decoder(enc_in[..., -1].repeat(prediction_count), enc_out)
         out_list = []
-        for i in l:
+        for i in t:
             out_list.append(self.back_to_pixel(dec_out[..., i]))
         x = torch.stack(out_list, dim=-1)
 
         return x
 
     def feature_embedding(self, img, configs):
-        generator = Feature_Generator(configs).to(configs.device)
+        generator = Feature_Generator(configs).to(configs["device"])
         gen_img = []
         for i in range(img.shape[-1]):
             gen_img.append(generator(img[:, :, :, :, i]))
