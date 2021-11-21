@@ -12,7 +12,7 @@ from torchmetrics import metric
 from ..losses import cloud_mask_loss
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .model_parts.shared import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg, timestamp):

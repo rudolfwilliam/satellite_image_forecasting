@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from .model_parts.shared import last_frame, ENS
+from .utils.utils import last_frame, ENS
 import pytorch_lightning as pl
 
 class Last_model(pl.LightningModule):
