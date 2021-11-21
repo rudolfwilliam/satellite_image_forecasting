@@ -67,7 +67,7 @@ class Prediction_Callback(pl.Callback):
                     data = json.load(fp)
                     data['train_loss'] = data['train_loss'] + metrics['train_loss'] 
                     data['lr'] = data['lr'] + metrics['lr']  
-                    data['lr'] = data['online_val_loss'] + metrics['online_val_loss'] 
+                    data['online_val_loss'] = data['online_val_loss'] + metrics['online_val_loss'] 
                     fp.seek(0)
                     json.dump(data, fp)            
 

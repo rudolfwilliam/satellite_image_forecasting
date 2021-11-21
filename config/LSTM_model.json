@@ -37,7 +37,7 @@
     {
         "offline": true,
         "print_predictions": true,
-        "epochs": 30,
+        "epochs": 5,
         "start_learn_rate": 0.1,
         "train_batch_size": 2,
         "val_1_batch_size": 2,
