@@ -25,6 +25,7 @@ def command_line_parser(mode = "train"):
 
     
     if mode == 'validate':
+        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate')
         args = parser.parse_args()
         check_model_exists(args.model_name)
