@@ -5,7 +5,7 @@ from .shared import Conv_Block
 from collections import OrderedDict
 
 
-class Conv_LSTM_Cell(nn.Module):
+class Conv_net(nn.Module):
     def __init__(self, input_dim, num_conv_layers, num_conv_layers_mem, hidden_dim, kernel_size, dilation_rate):
         """
         Initialize ConvLSTM cell.
@@ -66,8 +66,8 @@ class Conv_LSTM_Cell(nn.Module):
 
     def init_hidden(self, batch_size, image_size):
         height, width = image_size
-        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device),  
-                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device))
+        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.in_mid_conv.weight.device),  
+                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.in_mid_conv.weight.device))
 
 
 class Conv_LSTM(nn.Module):

@@ -14,7 +14,7 @@ from ..losses import cloud_mask_loss
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
-class LSTM_model(pl.LightningModule):
+class Conv_model(pl.LightningModule):
     def __init__(self, cfg):
         """
         Base prediction model. It is roughly based on the convolutional LSTM architecture.

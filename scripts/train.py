@@ -33,22 +33,16 @@ def main():
 
     #TODO: Make this modular so that it works both for LSTM and Transformer
 
-    timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M_%S") # timestamp unique to this training instance
-    print("Timestamp of the instance: " + timestamp)
-
     args, cfg = command_line_parser(mode='train')
     print(args)
     
-    #os.mkdir(os.getcwd() + "/model_instances/model_" + timestamp)
-    #copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.getcwd() + "/model_instances/model_" + timestamp + "/" + args.model_name + ".json")
 
     if not cfg["training"]["offline"]:
         wandb.login()
-    
-    wandb.init()
 
+    wandb.init()
     # Store the model to wandb
-    copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, "configs.json"))
+    copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
     #GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
@@ -80,6 +74,7 @@ def main():
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["val_2_batch_size"], 
                                   drop_last=False)
+    # To build back the datasets
     with open(os.path.join(wandb.run.dir, "train_data_paths.pkl"), "wb") as fp:
         pickle.dump(training_data.paths, fp)
     with open(os.path.join(wandb.run.dir, "val_1_data_paths.pkl"), "wb") as fp:
@@ -87,12 +82,6 @@ def main():
     with open(os.path.join(wandb.run.dir, "val_2_data_paths.pkl"), "wb") as fp:
         pickle.dump(val_2_data.paths, fp)
     # Load model Callbacks
-    callbacks = Prediction_Callback(cfg["data"]["mesoscale_cut"], 
-                                    cfg["data"]["train_dir"],
-                                    cfg["data"]["test_dir"], 
-                                    training_data,
-                                    cfg["training"]["print_predictions"],
-                                    timestamp)
     wd_callbacks = WandbTrain_callback()
     # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
@@ -105,17 +94,18 @@ def main():
 
     # setup Model
     if args.model_name == "LSTM_model":
-        model = LSTM_model(cfg, timestamp)
+        model = LSTM_model(cfg)
     elif args.model_name == "Transformer_model":
-        model = Transformer_model(cfg, timestamp)
+        model = Transformer_model(cfg)
+    elif args.model_name == "Conv_net":
+        model = Conv_net(cfg)
     else:
         raise ValueError("The specified model name is invalid.")
 
-    model_last = Last_model()
     # Run training
     trainer.fit(model, train_dataloader, val_1_dataloader)
     # Run validation
-    trainer.test(model, val_2_dataloader)
+    # trainer.test(model, val_2_dataloader)
 
     if not cfg["training"]["offline"]:
         wandb.finish()

@@ -120,7 +120,7 @@ class WandbTrain_callback(pl.Callback):
                                     caption = "epoch: {0} c: {1}".format(epoch, c[-1])))
             plt.close(fig)
 
-        wandb.log({"pred_imgs": figs})
+        wandb.log({"epoch": epoch, "pred_imgs": figs})
 
     def log_groundtruth(self, model, sample):
         preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
@@ -136,10 +136,11 @@ class WandbTrain_callback(pl.Callback):
 
             figs.append(wandb.Image(plt.imread(c + "/gt.png"), 
                                     caption = "ground truth c: {0}".format(c[-1])))
+            plt.close(fig)
         
         #self.print_table = wandb.Table(columns=["id", "r", "g", "b", "i"], data = [figs])
 
-        wandb.log({"pred_imgs": figs})
+        wandb.log({"epoch": -1,"pred_imgs": figs})
         
 
 class WandbTest_callback(pl.Callback):

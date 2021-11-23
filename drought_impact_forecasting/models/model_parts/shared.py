@@ -7,22 +7,17 @@ class Conv_Block(nn.Module):
         self.input_dim = in_channels
         self.output_dim = out_channels
 
-        # define operations
-        self.norm = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU()
-        # bias not needed due to batch norm
-        self.in_mid_conv = nn.Conv2d(in_channels, in_channels, dilation=dilation_rate, kernel_size=kernel_size,
-                                     bias=False, padding='same')
-        self.out_conv = nn.Conv2d(in_channels, out_channels, dilation=dilation_rate, kernel_size=kernel_size,
-                                     bias=True, padding='same')
-    def forward(self, input_tensor):
         ops = []
         for i in range(self.num_conv_layers):
-            ops.append(self.in_mid_conv)
-            ops.append(self.norm)
-            ops.append(self.relu)
-        ops.append(self.out_conv)
-        seq = nn.Sequential(*ops)
-        out = seq(input_tensor)
+            ops.append(nn.Conv2d(in_channels, in_channels, dilation=dilation_rate, kernel_size=kernel_size,
+                                     bias=False, padding='same'))
+            ops.append(nn.BatchNorm2d(in_channels))
+            ops.append(nn.ReLU())
+        ops.append(nn.Conv2d(in_channels, out_channels, dilation=dilation_rate, kernel_size=kernel_size,
+                                     bias=True, padding='same'))
+        self.seq = nn.Sequential(*ops)
+
+    def forward(self, input_tensor):
+        out = self.seq(input_tensor)
         return out
 
