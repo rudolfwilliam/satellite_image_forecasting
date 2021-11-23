@@ -6,14 +6,153 @@ from os import path
 import numpy as np
 from pathlib import Path
 from Data.data_preparation import prepare_data
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import json
 import wandb
 
+class WandbTrain_callback(pl.Callback):
+    def __init__(self, print_preds = True):
+        self.print_preds = print_preds
+        self.print_sample = None
+        self.print_table = None
 
+        self.step_train_loss = []
+        self.epoch_train_loss = []
+        self.validation_loss = []
+
+        self.runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
+        self.runtime_prediction = os.path.join(wandb.run.dir,"runtime_pred") 
+        self.r_pred = os.path.join(self.runtime_prediction,"r")
+        self.g_pred = os.path.join(self.runtime_prediction,"g")
+        self.b_pred = os.path.join(self.runtime_prediction,"b")
+        self.i_pred = os.path.join(self.runtime_prediction,"i")
+        self.img_pred = os.path.join(self.runtime_prediction,"img")
+        self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
+
+        for dir_path in [self.runtime_model_folder,self.runtime_prediction,
+                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
+            if not path.isdir(dir_path):
+                os.mkdir(dir_path)
+        #wandb.init()
+
+        wandb.define_metric("step")
+        wandb.define_metric("epoch")
+
+
+        wandb.define_metric('batch_training_loss', step_metric = "step")
+        wandb.define_metric('epoch_training_loss', step_metric = "epoch")
+
+    
+        # define our custom x axis metric
+        pass
+
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
+        tr_loss = float(outputs['loss'])
+        self.step_train_loss.append(tr_loss)
+        trainer.logger.experiment.log({ 
+                                        'step': trainer.global_step,
+                                        'batch_training_loss': tr_loss
+                                    })
+        return super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+    
+    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused = None) -> None:
+        # compute the avg training loss
+        e_loss = sum(self.step_train_loss)/len(self.step_train_loss)
+        self.epoch_train_loss.append(e_loss)
+
+        # resetting the per-batch training loss
+        self.step_train_loss = []
+
+        trainer.logger.experiment.log({ 
+                                        'epoch': trainer.current_epoch,
+                                        'epoch_training_loss': e_loss, 
+                                    })
+        
+        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
+        return super().on_train_epoch_end(trainer, pl_module, unused=unused)
+    
+    def on_validation_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
+        self.validation_loss.append(outputs)
+        # Assigning the picture
+        if self.print_preds:
+            if self.print_sample is None:
+                self.print_sample = batch[0:,...]
+                self.log_groundtruth(trainer.model, self.print_sample)
+        return super().on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+
+    def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        v_loss = np.mean(np.vstack(self.validation_loss), axis = 0)
+
+        # resetting the per-batch validation loss
+        self.validation_loss = []
+
+        trainer.logger.experiment.log({ 
+                                'epoch': trainer.current_epoch,
+                                'epoch_validation_ENS':  v_loss[0],
+                                'epoch_validation_mad':  v_loss[1],
+                                'epoch_validation_ssim': v_loss[2],
+                                'epoch_validation_ols':  v_loss[3],
+                                'epoch_validation_emd':  v_loss[4]
+                            })
+        if self.print_preds:
+            self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
+        return super().on_validation_end(trainer, pl_module)
+
+    def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
+
+        return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+    
+    def log_predictions(self, model, sample, epoch):
+        preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
+        delta = np.flip(delta_preds[0][0, :4, :, :].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+        #delta_gt = np.flip(((self.sample[:4, :, :, 9] - means[0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+     
+        figs = []
+        for i, c in enumerate(self.channel_list):
+            fig, ax = plt.subplots()
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            im = ax.imshow(delta[:, :, i], cmap='inferno')
+            fig.colorbar(im, cax=cax, orientation='vertical')
+            plt.savefig(c + "/epoch_" + str(epoch) + ".png")
+            plt.close()
+            figs.append(wandb.Image(plt.imread(c + "/epoch_" + str(epoch) + ".png"), 
+                                    caption = "epoch: {0} c: {1}".format(epoch, c[-1])))
+            plt.close(fig)
+
+        wandb.log({"pred_imgs": figs})
+
+    def log_groundtruth(self, model, sample):
+        preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
+        delta_gt = np.flip(((sample[:1,:4, :, :, 9] - baselines[0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+        figs = []
+        for i, c in enumerate(self.channel_list):
+            fig, ax = plt.subplots()
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            im = ax.imshow(delta_gt[:, :, i], cmap='inferno')
+            fig.colorbar(im, cax=cax, orientation='vertical')
+            fig.savefig(c + "/gt.png")
+
+            figs.append(wandb.Image(plt.imread(c + "/gt.png"), 
+                                    caption = "ground truth c: {0}".format(c[-1])))
+        
+        #self.print_table = wandb.Table(columns=["id", "r", "g", "b", "i"], data = [figs])
+
+        wandb.log({"pred_imgs": figs})
+        
+
+class WandbTest_callback(pl.Callback):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
+        return super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+    pass
 
 class Prediction_Callback(pl.Callback):
     def __init__(self, ms_cut, train_dir, test_dir, dataset, print_predictions, timestamp):
-        self.sample, _ = dataset.__getitem__(0)
+        self.sample = dataset.__getitem__(0)
         self.print_predictions = print_predictions
         self.epoch = 0
         self.instance_folder = os.getcwd() + "/model_instances/model_" + timestamp
@@ -39,6 +178,7 @@ class Prediction_Callback(pl.Callback):
         
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
     
+
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
@@ -48,17 +188,34 @@ class Prediction_Callback(pl.Callback):
         if self.print_predictions:
             # take 10 context and predict 1 (index from )
             preds, delta_preds, means = trainer.model(torch.unsqueeze(self.sample[:, :, :, :10], dim=0))
+            '''
             metrics = trainer.callback_metrics
+            metrics = {k:float(v) for k, v in metrics.items()}
             metrics['train_loss'] = [float(metrics['train_loss'])]
             metrics['lr'] = [float(metrics['lr'])]
             metrics['online_val_loss'] = [float(metrics['online_val_loss'])]
+            '''
+            pre_pred = np.flip(preds[0][0, :3, :, :].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
-            pre_pred = np.flip(preds[0][0, :3, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+            delta = np.flip(delta_preds[0][0, :4, :, :].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
 
-            delta = np.flip(delta_preds[0][0, :4, :, :].detach().cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+            delta_gt = np.flip(((self.sample[:4, :, :, 9] - means[0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+            
+            ims = []
+            for i, c in enumerate(self.channel_list):
+                plt.imshow(delta[:, :, i])
+                plt.colorbar()
+                plt.savefig(c + "/epoch_" + str(self.epoch) + ".png")
+                plt.close()
+                ims.append(wandb.Image(plt.imread(c + "/epoch_" + str(self.epoch) + ".png"), 
+                                       caption = "epoch: {0} c: {1}".format(self.epoch, c[-1])))
+                    
+
+            wandb.log({"Runtime Predictions":ims})
 
             # values need to be between 0 and 1
             cor_pred = np.clip(pre_pred, 0, 1)
+            '''
             if self.epoch == 0:
                 with open(self.instance_folder  + "/metrics.json", 'w') as fp:
                     json.dump(metrics, fp)
@@ -69,7 +226,7 @@ class Prediction_Callback(pl.Callback):
                     data['lr'] = data['lr'] + metrics['lr']  
                     data['online_val_loss'] = data['online_val_loss'] + metrics['online_val_loss'] 
                     fp.seek(0)
-                    json.dump(data, fp)            
+                    json.dump(data, fp)       '''     
 
             plt.imsave(self.img_pred + "/epoch_" + str(self.epoch) + ".png", cor_pred)
             ims = []

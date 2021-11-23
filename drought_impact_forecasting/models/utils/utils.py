@@ -58,7 +58,6 @@ def last_frame(cube, mask_channel=4):
         t -= 1
     return new_cube
 
-
 def mean_prediction(cube, mask_channel=False, timepoints=20):
     # compute the mean image and make a prediction cube of the correct length
     avg_cube = np.array(mean_cube(cube[:, 0:5, :, :, :], True)).transpose(2, 3, 1, 0)
@@ -123,21 +122,21 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
     target[target > 1] = 1
     target[target < 0] = 0
 
-    partial_score = np.zeros((target.shape[0], 4))
+    partial_score = np.zeros((target.shape[0], 5))
     score = np.zeros(target.shape[0])
     # partial score computation
     for i in range(target.shape[0]):
-        partial_score[i, 0], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], target[i], mask[i])
-        partial_score[i, 1], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], target[i], mask[i])
-        partial_score[i, 2], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
-        partial_score[i, 3], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
+        partial_score[i, 1], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], target[i], mask[i])
+        partial_score[i, 2], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], target[i], mask[i])
+        partial_score[i, 3], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
+        partial_score[i, 4], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
         if np.min(partial_score[i, :]) == 0:
-            score[i] = 0
+            score[i] = partial_score[i, 0] = 0
         else:
-            score[i] = 4 / (
+            score[i] = partial_score[i, 0] = 4 / (
                         1 / partial_score[i, 0] + 1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[
                     i, 3])
 
     return score, partial_score
     # score is a np array with all the scores
-    # partial scores is np array with 4 columns, mad ssim ols emd, in this order (one row per elem in batch)
+    # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
