@@ -22,6 +22,7 @@ from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Transformer_model import Transformer_model
 from drought_impact_forecasting.models.Baseline_model import Last_model
+from drought_impact_forecasting.models.Conv_model import Conv_model
 from Data.data_preparation import prepare_data
 from callbacks import Prediction_Callback
 from callbacks import WandbTrain_callback
@@ -97,8 +98,8 @@ def main():
         model = LSTM_model(cfg)
     elif args.model_name == "Transformer_model":
         model = Transformer_model(cfg)
-    elif args.model_name == "Conv_net":
-        model = Conv_net(cfg)
+    elif args.model_name == "Conv_model":
+        model = Conv_model(cfg)
     else:
         raise ValueError("The specified model name is invalid.")
 

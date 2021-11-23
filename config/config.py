@@ -3,7 +3,7 @@ import os
 import json
 
 def check_model_exists(name):
-    if name not in ["LSTM_model", "Transformer_model"]:
+    if name not in ["LSTM_model", "Transformer_model", 'Conv_model']:
         raise ValueError("The specified model name is invalid.")
 
 def command_line_parser(mode = "train"):
@@ -18,14 +18,14 @@ def command_line_parser(mode = "train"):
     )
 
     if mode == 'train':
-        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model'], help='frame prediction architecture')
+        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
 
     
     if mode == 'validate':
-        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model'], help='frame prediction architecture')
+        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate')
         args = parser.parse_args()
         check_model_exists(args.model_name)

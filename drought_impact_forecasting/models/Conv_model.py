@@ -7,6 +7,7 @@ import pytorch_lightning as pl
 import numpy as np
 import os
 import glob
+from .model_parts.shared import Conv_Block
 
 from torchmetrics import metric
 from ..losses import cloud_mask_loss
@@ -30,16 +31,16 @@ class Conv_model(pl.LightningModule):
 
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
+        out_channel = 4
         n_layers = self.cfg["model"]["n_layers"]
-        self.model = Conv_LSTM(input_dim=channels,
-                               dilation_rate=self.cfg["model"]["dilation_rate"],
-                               hidden_dim=[hidden_channels] * n_layers,
-                               kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
-                               num_layers=n_layers,
-                               num_conv_layers=self.cfg["model"]["num_conv_layers"],
-                               num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
-                               batch_first=False,
-                               baseline=self.cfg["model"]["baseline"])
+        kernel_size = self.cfg["model"]["kernel"]
+
+        self.model = Conv_Block(in_channels = channels,
+                                out_channels = out_channel,
+                                kernel_size= kernel_size,
+                                num_conv_layers= n_layers,
+                                dilation_rate= self.cfg["model"]["dilation_rate"])
+
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]
 
@@ -56,10 +57,46 @@ class Conv_model(pl.LightningModule):
         """
         # compute the baseline
         baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
+        input_data = torch.cat((baseline, x[:,4:,:,:,-1]), axis=1)
+        pred = self.model(input_data)
+        seq_len = 10
 
-        preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
+        pred_deltas = [pred]
+        baselines = [baseline]
+        predictions = [torch.add(baseline, pred)]
 
-        return preds, pred_deltas, baselines
+        if prediction_count > 1:
+            if non_pred_feat is None:
+                raise ValueError('If prediction_count > 1, you need to provide non-prediction features for the '
+                                 'future time steps!')
+            non_pred_feat = torch.cat((torch.zeros((non_pred_feat.shape[0],
+                                                    1,
+                                                    non_pred_feat.shape[2],
+                                                    non_pred_feat.shape[3],
+                                                    non_pred_feat.shape[4]), device=non_pred_feat.device), non_pred_feat), dim = 1)
+
+            # output from layer beneath which for the lowest layer is the prediction from the previous time step
+            prev = predictions[0]
+            # update the baseline & glue together predicted + given channels
+            if self.baseline == "mean_cube":
+                baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) 
+            else:
+                baseline = prev # We don't predict image quality, so we just feed in the last prediction
+            prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
+
+            for counter in range(prediction_count - 1):
+                #Only works with last!
+                baseline = prev[:,:4,:,:]
+                pred_delta = self.model(prev)
+                next = torch.add(baseline, pred_delta)
+
+                baselines.append(baseline)
+                pred_deltas.append(pred_delta)
+                predictions.append(next)
+
+                prev = torch.cat((next, non_pred_feat[:,:,:,:,counter]), axis=1)
+
+        return predictions, pred_deltas, baselines 
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -94,15 +131,15 @@ class Conv_model(pl.LightningModule):
         #t0 = T - 1 # no. of pics we start with
         t0 = T - 1
 
-        _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
-        delta = all_data[:, :4, :, :, t0] - baseline[0]
-        loss = cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
+        non_pred_feat = all_data[:, 5:, :, :, t0:]
 
-        for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
-            _, x_delta, baseline = self(all_data[:, :, :, :, :t_end])
-            delta = all_data[:, :4, :, :, t_end] - baseline[0]
-            loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
-        
+        _, x_delta, baseline = self(all_data[:, :, :, :, :t0], non_pred_feat = non_pred_feat, prediction_count = T-t0)
+        delta = all_data[:, :4, :, :, t0:] - torch.stack(baseline, dim=-1)
+        loss = cloud_mask_loss(x_delta[0], delta[:,:,:,:,0], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
+
+        for i, t_end in enumerate(range(t0 + 1, T)): # this iterates with t_end = t0, ..., T-1
+            loss = loss.add(cloud_mask_loss(x_delta[i+1], delta[:,:,:,:,i+1], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
+            
         return loss
     
     # We could try early stopping here later on
