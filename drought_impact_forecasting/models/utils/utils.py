@@ -130,7 +130,7 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
         partial_score[i, 2], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], target[i], mask[i])
         partial_score[i, 3], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
         partial_score[i, 4], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_target[i], ndvi_mask[i])
-        if np.min(partial_score[i, :]) == 0:
+        if np.min(partial_score[i, 1:]) == 0:
             score[i] = partial_score[i, 0] = 0
         else:
             score[i] = partial_score[i, 0] = 4 / (
