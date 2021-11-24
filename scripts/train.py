@@ -39,9 +39,11 @@ def main():
     
 
     if not cfg["training"]["offline"]:
-        wandb.login()
+        os.environ["WANDB_MODE"]="online"
+    else:
+        os.environ["WANDB_MODE"]="offline"
 
-    wandb.init()
+    wandb.init(entity="eth-ds-lab", project="drought_impact_forecasting-scripts")
     # Store the model to wandb
     copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
     #GPU handling
