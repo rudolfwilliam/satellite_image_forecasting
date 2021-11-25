@@ -9,7 +9,6 @@ import torch.nn.functional as F
 
 
 class Residual(nn.Module):
-
     def __init__(self, fn):
         super().__init__()
         self.fn = fn
@@ -19,80 +18,92 @@ class Residual(nn.Module):
 
 
 class PreNorm(nn.Module):
-
     def __init__(self, dim, fn):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.fn = fn
 
     def forward(self, x, **kwargs):
-        return self.fn(self.norm(x), **kwargs)
+        return self.fn(torch.stack([self.norm(x[..., i]) for i in range(x.size()[-1])], dim=-1), **kwargs)
 
 
 class FeedForward(nn.Module):
-
-    def __init__(self, configs):
+    def __init__(self, configs, num_hidden):
         super().__init__()
         self.configs = configs
-        self.num_hidden = configs["num_hidden"][-1]
+        self.num_hidden = num_hidden
         self.conv = Conv_Block(self.num_hidden, self.num_hidden, kernel_size=self.configs["kernel_size"],
                                dilation_rate=self.configs["dilation_rate"], num_conv_layers=self.configs["num_conv_layers"])
 
     def forward(self, x):
-        return self.conv(x)
+        return torch.stack([self.conv(x[..., i]) for i in range(x.size()[-1])], dim=-1)
 
 
 class ConvAttention(nn.Module):
-
-    def __init__(self, configs):
+    def __init__(self, configs, num_hidden, enc):
         super(ConvAttention, self).__init__()
         self.configs = configs
-        self.num_hidden = configs["num_hidden"]
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=self.num_hidden[-1], out_channels=3*self.num_hidden[-1], kernel_size=1)
-        )
+        self.enc = enc
+        self.num_hidden = num_hidden
+        # important note: shared convolution is intentional here
+        if self.enc:
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(in_channels=self.num_hidden, out_channels=3 * self.num_hidden, kernel_size=1)
+            )
+        else:
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(in_channels=self.num_hidden, out_channels=2 * self.num_hidden, kernel_size=1)
+            )
+        #TODO: (optional) make this have multiple layers
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=self.num_hidden[-1], out_channels=self.num_hidden[-1], kernel_size=5, padding=2)
+            nn.Conv2d(in_channels=self.num_hidden*2, out_channels=1, kernel_size=5, padding=2)
         )
 
-    def forward(self, x, enc_out= None, dec=False):
+    def forward(self, x, enc_out=None):
         b, c, h, w, t = x.shape
         qkv_setlist = []
-        Vout_list = []
-        for i in range(t):
-            qkv_setlist.append(self.conv1(x[..., i]))
-        qkv_set = torch.stack(qkv_setlist, dim=-1)
-        if dec:
-            Q, K, V = torch.split(qkv_set, self.num_hidden[-1], dim=1)
+        if not self.enc:
+            s = enc_out.size()[-1]
+            for i in range(s):
+                qkv_setlist.append(self.conv1(enc_out[..., i]))
         else:
-            Q, K, _ = torch.split(qkv_set, self.num_hidden[-1], dim=1)
-            V = enc_out
+            s = t
+            for i in range(t):
+                qkv_setlist.append(self.conv1(x[..., i]))
 
-        for i in range(t):
-            Qi = rearrange([Q[..., i]] * t + K, 'b n h w l -> (b l) n h w')
-            tmp = rearrange(self.conv2(Qi), '(b l) n h w -> b n h w l', l=t)
-            tmp = F.softmax(tmp, dim=4)                                       #(b, c, w, h, t)
-            tmp = np.multiply(tmp, torch.stack([V[i]] * t, dim=-1))
-            Vout_list.append(torch.sum(tmp, dim=4))                           #(b, c, w, h)
-        Vout = torch.stack(Vout_list, dim=-1)
-        return Vout                                                           #(b, c, w, h, t)
+        qkv_set = torch.stack(qkv_setlist, dim=-1)
+        if not self.enc:
+            K, V = torch.split(qkv_set, self.num_hidden, dim=1)
+            Q = x
+        else:
+            Q, K, V = torch.split(qkv_set, self.num_hidden, dim=1)
+
+        K_rep = torch.stack([K] * t, dim=-1)
+        V_rep = torch.stack([V] * t, dim=-1)
+        Q_rep = torch.stack([Q] * s, dim=-1)
+        K_flip = rearrange(K_rep, 'b c h w s t -> b c h w t s')
+        Q_K = rearrange(torch.concat((Q_rep, K_flip), dim=1), 'b c h w t s -> (b t s) c h w') # no convolution across time dim!
+        extr_feat = rearrange(torch.squeeze(self.conv2(Q_K)), '(b t s) h w -> b h w s t', b=b, t=t)
+        attn_mask = F.softmax(extr_feat, dim=-2)
+        V_pre = torch.stack([torch.mul(attn_mask, V_rep[:, c, ...]) for c in range(V_rep.size()[1])], dim=1)
+        V_out = torch.squeeze(torch.sum(V_pre, dim=-2))
+
+        return V_out
 
 
 class PositionalEncoding(nn.Module):
-
     def __init__(self, configs):
         super(PositionalEncoding, self).__init__()
         self.configs = configs
         self.num_hidden = self.configs["num_hidden"]
-        # Not a parameter
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table())
 
     def _get_sinusoid_encoding_table(self):
         ''' Sinusoid position encoding table '''
+        # no differentiation should happen with the params in here!
         # TODO: make it with torch instead of numpy
 
         def get_position_angle_vec(position):
-
             return_list = [torch.ones((self.configs["batch_size"],
                                        self.configs["img_width"],
                                        self.configs["img_width"])).to(self.configs["device"])*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
@@ -106,15 +117,10 @@ class PositionalEncoding(nn.Module):
         return torch.moveaxis(sinusoid_table, 0, -1)
 
     def forward(self, x):
-        '''
-        :param x: (b, channel, h, w, seqlen)
-        :return:
-        '''
         return x + self.pos_table.clone().detach()
 
 
 class Encoder(nn.Module):
-
     def __init__(self, configs):
         super().__init__()
         self.configs = configs
@@ -122,10 +128,10 @@ class Encoder(nn.Module):
         self.num_hidden = self.configs["num_hidden"]
         for _ in range(self.configs["depth"]):
             self.layers.append(nn.ModuleList([
-                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"],
-                                  self.configs["input_length"]], ConvAttention(self.configs))),
-                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"],
-                                  self.configs["input_length"]], FeedForward(self.configs)))
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
+                                 ConvAttention(self.configs, self.num_hidden[-1], enc=True))),
+                Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
+                                 FeedForward(self.configs, self.num_hidden[-1])))
             ]))
 
     def forward(self, x):
@@ -136,23 +142,33 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-
     def __init__(self, configs):
         super().__init__()
         self.layers = nn.ModuleList([])
         self.configs = configs
         self.num_hidden = self.configs["num_hidden"]
+        self.num_non_pred_feat = self.configs["num_non_pred_feat"]
         for _ in range(self.configs["depth"]):
             self.layers.append(nn.ModuleList([
+                # query self attention
+                Residual(PreNorm([self.num_hidden[-1] + self.num_non_pred_feat, self.configs["img_width"],
+                                  self.configs["img_width"]], ConvAttention(self.configs, self.num_hidden[-1] + self.num_non_pred_feat, enc=True))),
+                # 1x1 conv for dimensionality reduction
+                Conv_Block(in_channels=(self.num_hidden[-1] + self.num_non_pred_feat), out_channels=self.num_hidden[-1],
+                           kernel_size=1, num_conv_layers=1),
+                # convolutional attention
                 Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
-                                 ConvAttention(self.configs))),
+                                 ConvAttention(self.configs, self.num_hidden[-1], enc=False))),
+                # feed forward
                 Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
-                                 FeedForward(self.configs)))
+                                 FeedForward(self.configs, self.num_hidden[-1])))
             ]))
 
-    def forward(self, x, enc_out):
-        for attn, ff in (self.layers):
-            x = attn(x, enc_out=enc_out, dec=True)
+    def forward(self, queries, enc_out):
+        for query_attn, dim_red, attn, ff in (self.layers):
+            queries = query_attn(queries)
+            queries = torch.stack([dim_red(queries[..., i]) for i in range(queries.size()[-1])], dim=-1)
+            x = attn(queries, enc_out=enc_out)
             x = ff(x)
         return x
 
@@ -166,22 +182,22 @@ class Feature_Generator(nn.Module):
                                out_channels=self.num_hidden[0],
                                kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs["kernel_size"]-1)//2)
+                               padding="same")
         self.conv2 = nn.Conv2d(in_channels=self.num_hidden[0],
                                out_channels=self.num_hidden[1],
                                kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs["kernel_size"]-1)//2)
+                               padding="same")
         self.conv3 = nn.Conv2d(in_channels=self.num_hidden[1],
                                out_channels=self.num_hidden[2],
                                kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs["kernel_size"]-1)//2)
+                               padding="same")
         self.conv4 = nn.Conv2d(in_channels=self.num_hidden[2],
                                out_channels=self.num_hidden[3],
                                kernel_size=self.configs["kernel_size"],
                                stride=1,
-                               padding=(self.configs["kernel_size"]-1)//2)
+                               padding="same")
         self.bn1 = nn.BatchNorm2d(self.num_hidden[0])
         self.bn2 = nn.BatchNorm2d(self.num_hidden[1])
         self.bn3 = nn.BatchNorm2d(self.num_hidden[2])
@@ -196,7 +212,6 @@ class Feature_Generator(nn.Module):
 
 
 class Conv_Transformer(nn.Module):
-
     def __init__(self, configs):
         super().__init__()
         self.configs = configs
@@ -204,8 +219,12 @@ class Conv_Transformer(nn.Module):
         self.pos_embedding = PositionalEncoding(self.configs)
         self.Encoder = Encoder(self.configs)
         self.Decoder = Decoder(self.configs)
+        # last predictions needs a dummy input
+        self.blank = torch.stack([torch.zeros(size=(configs["batch_size"], configs["num_non_pred_feat"],
+                                                    self.configs["img_width"], self.configs["img_width"]))], dim=-1)
+        #TODO: replace this by SFFN
         self.back_to_pixel = nn.Sequential(
-            nn.Conv2d(self.num_hidden[-1], 1, kernel_size=1)
+            nn.Conv2d(self.num_hidden[-1], 4, kernel_size=1)
         )
 
     def forward(self, frames, prediction_count, non_pred_feat = None):
@@ -213,10 +232,15 @@ class Conv_Transformer(nn.Module):
         feature_map = self.feature_embedding(img=frames, configs=self.configs)
         enc_in = self.pos_embedding(feature_map)
         enc_out = self.Encoder(enc_in)
-        # queries correspond to num_pred * (last embedding)
-        dec_out = self.Decoder(enc_in[..., -1].repeat(prediction_count), enc_out)
+        # queries correspond to num_pred * (last embedding) concatenated with non_pred_feat
+        if non_pred_feat is not None:
+            non_pred_feat = torch.concat((self.blank, non_pred_feat), dim=-1)
+        else:
+            non_pred_feat = self.blank
+        dec_V = torch.concat((torch.stack(([enc_in[..., -1]] * prediction_count), dim=-1), non_pred_feat), dim=1)
+        dec_out = self.Decoder(dec_V, enc_out)
         out_list = []
-        for i in t:
+        for i in range(prediction_count):
             out_list.append(self.back_to_pixel(dec_out[..., i]))
         x = torch.stack(out_list, dim=-1)
 
