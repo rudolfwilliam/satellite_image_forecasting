@@ -72,11 +72,11 @@ def main():
     #setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval()
     elif args.model_name == "Conv_model":
         model = Conv_model(cfg)
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval()
     else:
         raise ValueError("The specified model name is invalid.")
