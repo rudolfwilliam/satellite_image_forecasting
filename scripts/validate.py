@@ -32,11 +32,12 @@ def main():
     #filepath = os.getcwd() + cfg["project"]["model_path"]
     model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
     models = listdir(model_path)
-    model_path = os.path.join(model_path , models[-1])
+    models.sort()
+    model_path = os.path.join(model_path , models[args.me])
     # to check that it's the last model
 
     print("validating experiment {0}".format(args.rn))
-    print("validating model {0}".format(models[-1]))
+    print("validating model at epoch {0}".format(args.me))
 
     if not cfg["training"]["offline"]:
         wandb.login()

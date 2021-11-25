@@ -28,6 +28,7 @@ def command_line_parser(mode = "train"):
         parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
         parser.add_argument('--rn', type=str, help='wandb run name to validate')
+        parser.add_argument('--me', type=int, default=-1, help='model epoch to test/validate')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         try:
