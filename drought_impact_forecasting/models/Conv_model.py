@@ -206,11 +206,11 @@ class Conv_model(pl.LightningModule):
         x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
         
         score, part_scores = ENS(prediction = x_preds, target = target)
-        
+        '''
         # store to file the scores
         with open(os.getcwd() + "/model_instances/model_" + self.timestamp + "/scores.csv", 'a') as filehandle:
             for i in range(len(score)):
                 filehandle.write(str(part_scores[i,0]) + "," +str(part_scores[i,1]) + "," + str(part_scores[i,2]) + "," + str(part_scores[i,3])+ "," + str(score[i]) + '\n')
-
+        '''
         return part_scores
 

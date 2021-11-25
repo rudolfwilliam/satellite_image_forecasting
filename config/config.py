@@ -26,15 +26,32 @@ def command_line_parser(mode = "train"):
     
     if mode == 'validate':
         parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
-        parser.add_argument('--ts', type=str, help='timestamp of the model to validate')
+        parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
+        parser.add_argument('--rn', type=str, help='wandb run name to validate')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         try:
-            cfg = json.load(open(os.getcwd() + "/model_instances/model_" + args.ts + "/" + args.model_name + ".json", 'r'))
+            dir_path = find_dir_path(args.rn)
+            cfg = json.load(open(os.path.join(dir_path, "files",  args.model_name + ".json"), 'r'))
+            cfg['path_dir'] = dir_path
         except:
             raise ValueError("The timestamp doesn't exist.")
 
     return args, cfg
+
+def find_dir_path(wandb_name):
+    dir_path = os.path.join(os.getcwd(), "wandb")
+
+    runs = []
+    for path, subdirs, files in os.walk(dir_path):
+        for dir_ in subdirs:
+            # Ignore any licence, progress, etc. files
+            if os.path.isfile(os.path.join(dir_path,dir_, "files", "run_name.txt")):
+                with open(os.path.join(dir_path,dir_, "files",  "run_name.txt"),'r') as f:
+                    if (f.read() == wandb_name):
+                        return os.path.join(dir_path,dir_)
+    raise ValueError("The name doesn't exist.")
+
 
 def read_config(path):
     cfg = json.load(open(path, 'r'))

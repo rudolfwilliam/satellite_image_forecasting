@@ -35,7 +35,7 @@
         "test_batch_size": 1,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 20,
+        "training_samples": 10,
         "val_1_samples": 2,
         "val_2_samples": 4,
         "num_workers": 0,

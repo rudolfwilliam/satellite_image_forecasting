@@ -78,6 +78,7 @@ class WandbTrain_callback(pl.Callback):
             if self.print_sample is None:
                 self.print_sample = batch[0:,...]
                 self.log_groundtruth(trainer.model, self.print_sample)
+        
         return super().on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
 
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
@@ -144,9 +145,15 @@ class WandbTrain_callback(pl.Callback):
         
 
 class WandbTest_callback(pl.Callback):
-    def __init__(self) -> None:
+    def __init__(self, wandb_name_model_to_test) -> None:
+        self.wandb_name_model_to_test = wandb_name_model_to_test
         super().__init__()
-    
+    def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
+        with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+".csv"), 'a') as filehandle:
+            for i in range(len(outputs)):
+                filehandle.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3])+ "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
+
+        return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         return super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
     pass

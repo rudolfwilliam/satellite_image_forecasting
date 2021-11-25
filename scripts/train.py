@@ -45,12 +45,15 @@ def main():
 
     wandb.init(entity="eth-ds-lab", project="drought_impact_forecasting-scripts")
     # Store the model to wandb
+    with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
+        f.write(wandb.run.name)
     copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
     #GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group=args.model_name, job_type='train', offline=True)
+    
     
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
