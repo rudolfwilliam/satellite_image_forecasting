@@ -134,8 +134,7 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
             score[i] = partial_score[i, 0] = 0
         else:
             score[i] = partial_score[i, 0] = 4 / (
-                        1 / partial_score[i, 0] + 1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[
-                    i, 3])
+                        1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])
 
     return score, partial_score
     # score is a np array with all the scores
