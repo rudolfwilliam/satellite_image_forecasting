@@ -7,7 +7,7 @@ import random
 
 from torch._C import device
  
-def prepare_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None):
+def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None):
     
     if training_samples is not None:
         train_files = []
@@ -22,8 +22,12 @@ def prepare_data(ms_cut, data_dir, device, training_samples = None, val_1_sample
         val_set = [x for x in train_files if x not in train_set]
         val_1_set = random.sample(val_set, val_1_samples)
         val_2_set = [x for x in val_set if x not in val_1_set]
-        return Earthnet_Dataset(train_set, ms_cut, device=device), Earthnet_Dataset(val_1_set, ms_cut, device=device), Earthnet_Dataset(val_2_set, ms_cut, device=device)
+        return Earthnet_Dataset(train_set, ms_cut, device=device), \
+               Earthnet_Dataset(val_1_set, ms_cut, device=device), \
+               Earthnet_Dataset(val_2_set, ms_cut, device=device)
+
 def prepare_test_data(ms_cut, data_dir, device):
+    
     test_context_files = []
     test_target_files = []
     for path, subdirs, files in os.walk(os.getcwd() + data_dir):
@@ -39,7 +43,7 @@ def prepare_test_data(ms_cut, data_dir, device):
     test_context_files.sort()
     test_target_files.sort()
 
-    return Earthnet_Test_Dataset(test_context_files,  test_target_files, ms_cut=ms_cut, device=device)
+    return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut, device=device)
 
 class Earthnet_Test_Dataset(torch.utils.data.Dataset):
     def __init__(self, context_paths, target_paths, ms_cut, device) -> None:
@@ -84,7 +88,50 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
         all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
         
         return all_data
+
+class Earthnet_Context_Dataset(torch.utils.data.Dataset):
+    def __init__(self, context_paths, ms_cut, device) -> None:
+        self.device = device
+        self.context_paths = context_paths
+        self.ms_cut = ms_cut
+        super().__init__()
+
+    def __len__(self):
+        return len(self.context_paths)
+
+    def __getitem__(self, index):
+        # Load the item from data
+        context = np.load(self.context_paths[index], allow_pickle=True)
+        highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
+        if (highres_dynamic.shape[2] != 5):
+            highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
+            # Ignore Cloud mask and ESA scene Classification channels
+            highres_dynamic = highres_dynamic[:,:,0:5,:]
+
+        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
+        # For mesoscale data cut out overlapping section of interest
+        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
+
+        # Stick all data together
+        all_data = np.append(highres_dynamic, highres_static,axis=-2)
+
+        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
+                                                            all_data.shape[1],
+                                                            meso_dynamic.shape[2],
+                                                            all_data.shape[3]]))
+        all_data = np.append(all_data, meso_dynamic, axis=-2)
         
+        ''' 
+            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
+            w = width
+            h = height
+            c = channel
+            t = time
+        '''
+        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
+        all_data = all_data[:,:,:,:10] # Take only context data
+
+        return all_data        
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, paths, ms_cut, device):
@@ -110,6 +157,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         self.device = device
         self.paths = paths
         self.ms_cut = ms_cut
+        
     def __getstate__(self):
         return { 
             "device": self.device.__str__(), 

@@ -187,9 +187,7 @@ class Conv_model(pl.LightningModule):
             The test step takes the test data and makes predictions.
             They are then evaluated using the ENS score.
         '''
-        #starting_time = time.time()
         all_data = batch
-
 
         T = all_data.size()[4]
 
@@ -203,14 +201,9 @@ class Conv_model(pl.LightningModule):
                                             prediction_count = T-t0, 
                                             non_pred_feat = npf)
         
-        x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
+        x_preds = torch.stack(x_preds, axis = -1) # b, c, h, w, t
         
         score, part_scores = ENS(prediction = x_preds, target = target)
-        '''
-        # store to file the scores
-        with open(os.getcwd() + "/model_instances/model_" + self.timestamp + "/scores.csv", 'a') as filehandle:
-            for i in range(len(score)):
-                filehandle.write(str(part_scores[i,0]) + "," +str(part_scores[i,1]) + "," + str(part_scores[i,2]) + "," + str(part_scores[i,3])+ "," + str(score[i]) + '\n')
-        '''
+
         return part_scores
 
