@@ -23,7 +23,7 @@ from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Transformer_model import Transformer_model
 from drought_impact_forecasting.models.Baseline_model import Last_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Context_Dataset, prepare_train_data
+from Data.data_preparation import Earthnet_Context_Dataset, prepare_train_data, prepare_test_data
 from callbacks import Prediction_Callback
 from callbacks import WandbTrain_callback
 
@@ -112,21 +112,19 @@ def main():
     
     # Train on context frames of val2/test data
     if cfg["training"]["use_context"]:
-        # Reset trainer
-        trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
-                      logger=wandb_logger,
-                      log_every_n_steps = min(cfg["training"]["log_steps"],
-                                            cfg["training"]["training_samples"] / cfg["training"]["train_batch_size"]),
-                      devices = cfg["training"]["devices"],
-                      accelerator=cfg["training"]["accelerator"],
-                      callbacks=[wd_callbacks])
 
+        test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
+        context_data = Earthnet_Context_Dataset(test_data.context_paths, cfg["data"]["mesoscale_cut"], device)
         context_data = Earthnet_Context_Dataset(val_2_data.paths, cfg["data"]["mesoscale_cut"], device)
         context_dataloader = DataLoader(context_data, 
                              num_workers=cfg["training"]["num_workers"],
                              batch_size=cfg["training"]["train_batch_size"], 
                              drop_last=False)
-        trainer.fit(model, context_dataloader)
+        
+        # This is ugly, but I couldn't find a better solution yet
+        for i in range(cfg["training"]["epochs"]):
+            trainer.fit(model, context_dataloader)
+            torch.save(trainer.model.state_dict(), os.path.join(os.path.join(wandb.run.dir,"runtime_model"), "model_"+str(trainer.max_epochs+i)+".torch"))
 
     if not cfg["training"]["offline"]:
         wandb.finish()
