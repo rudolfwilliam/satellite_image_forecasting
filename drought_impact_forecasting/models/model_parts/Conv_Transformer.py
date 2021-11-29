@@ -86,7 +86,7 @@ class ConvAttention(nn.Module):
         extr_feat = rearrange(torch.squeeze(self.conv2(Q_K)), '(b t s) h w -> b h w s t', b=b, t=t)
         attn_mask = F.softmax(extr_feat, dim=-2)
         V_pre = torch.stack([torch.mul(attn_mask, V_rep[:, c, ...]) for c in range(V_rep.size()[1])], dim=1)
-        V_out = torch.squeeze(torch.sum(V_pre, dim=-2))
+        V_out = torch.sum(V_pre, dim=-2)
 
         return V_out
 
@@ -96,9 +96,8 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
         self.configs = configs
         self.num_hidden = self.configs["num_hidden"]
-        self.register_buffer('pos_table', self._get_sinusoid_encoding_table())
 
-    def _get_sinusoid_encoding_table(self):
+    def _get_sinusoid_encoding_table(self, t):
         ''' Sinusoid position encoding table '''
         # no differentiation should happen with the params in here!
         # TODO: make it with torch instead of numpy
@@ -109,14 +108,15 @@ class PositionalEncoding(nn.Module):
                                        self.configs["img_width"])).to(self.configs["device"])*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
             return torch.stack(return_list, dim=1)
 
-        sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(self.configs["input_length"])]
+        sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(t)]
         sinusoid_table = torch.stack(sinusoid_table, dim=0)
         sinusoid_table[:, :, 0::2] = np.sin(sinusoid_table[:, :, 0::2])  # dim 2i
         sinusoid_table[:, :, 1::2] = np.cos(sinusoid_table[:, :, 1::2])  # dim 2i+1
 
         return torch.moveaxis(sinusoid_table, 0, -1)
 
-    def forward(self, x):
+    def forward(self, x, t):
+        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t))
         return x + self.pos_table.clone().detach()
 
 
@@ -147,15 +147,12 @@ class Decoder(nn.Module):
         self.layers = nn.ModuleList([])
         self.configs = configs
         self.num_hidden = self.configs["num_hidden"]
-        self.num_non_pred_feat = self.configs["num_non_pred_feat"]
+        self.num_non_pred_feat = self.configs["non_pred_channels"]
         for _ in range(self.configs["depth"]):
+            if self.configs["query_self_attention"]:
+                self.layers.append(nn.ModuleList([Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
+                                     ConvAttention(self.configs, self.num_hidden[-1], enc=True)))]))
             self.layers.append(nn.ModuleList([
-                # query self attention
-                Residual(PreNorm([self.num_hidden[-1] + self.num_non_pred_feat, self.configs["img_width"],
-                                  self.configs["img_width"]], ConvAttention(self.configs, self.num_hidden[-1] + self.num_non_pred_feat, enc=True))),
-                # 1x1 conv for dimensionality reduction
-                Conv_Block(in_channels=(self.num_hidden[-1] + self.num_non_pred_feat), out_channels=self.num_hidden[-1],
-                           kernel_size=1, num_conv_layers=1),
                 # convolutional attention
                 Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
                                  ConvAttention(self.configs, self.num_hidden[-1], enc=False))),
@@ -165,11 +162,16 @@ class Decoder(nn.Module):
             ]))
 
     def forward(self, queries, enc_out):
-        for query_attn, dim_red, attn, ff in (self.layers):
-            queries = query_attn(queries)
-            queries = torch.stack([dim_red(queries[..., i]) for i in range(queries.size()[-1])], dim=-1)
-            x = attn(queries, enc_out=enc_out)
-            x = ff(x)
+        if self.configs["query_self_attention"]:
+            for query_attn, attn, ff in self.layers:
+                queries = query_attn(queries)
+                x = attn(queries, enc_out=enc_out)
+                x = ff(x)
+        else:
+            for attn, ff in self.layers:
+                x = attn(queries, enc_out=enc_out)
+                x = ff(x)
+
         return x
 
 
@@ -219,8 +221,10 @@ class Conv_Transformer(nn.Module):
         self.pos_embedding = PositionalEncoding(self.configs)
         self.Encoder = Encoder(self.configs)
         self.Decoder = Decoder(self.configs)
+        # make the dimensions of the non_pred features fit
+        self.dim_fit = Conv_Block(self.configs["non_pred_channels"], self.num_hidden[-1], num_conv_layers=1, kernel_size=configs["kernel_size"])
         # last predictions needs a dummy input
-        self.blank = torch.stack([torch.zeros(size=(configs["batch_size"], configs["num_non_pred_feat"],
+        self.blank = torch.stack([torch.zeros(size=(configs["batch_size"], configs["non_pred_channels"],
                                                     self.configs["img_width"], self.configs["img_width"]))], dim=-1)
         #TODO: replace this by SFFN
         self.back_to_pixel = nn.Sequential(
@@ -228,16 +232,17 @@ class Conv_Transformer(nn.Module):
         )
 
     def forward(self, frames, prediction_count, non_pred_feat = None):
-        b, c, w, h, t = frames.shape
+        _, _, _, _, t = frames.size()
         feature_map = self.feature_embedding(img=frames, configs=self.configs)
-        enc_in = self.pos_embedding(feature_map)
+        enc_in = self.pos_embedding(feature_map, t)
         enc_out = self.Encoder(enc_in)
-        # queries correspond to num_pred * (last embedding) concatenated with non_pred_feat
+        # queries correspond to non_pred_feat
         if non_pred_feat is not None:
             non_pred_feat = torch.concat((self.blank, non_pred_feat), dim=-1)
         else:
             non_pred_feat = self.blank
-        dec_V = torch.concat((torch.stack(([enc_in[..., -1]] * prediction_count), dim=-1), non_pred_feat), dim=1)
+
+        dec_V = torch.stack([self.dim_fit(non_pred_feat[..., i]) for i in range(non_pred_feat.size()[-1])], dim=-1)
         dec_out = self.Decoder(dec_V, enc_out)
         out_list = []
         for i in range(prediction_count):
@@ -250,6 +255,6 @@ class Conv_Transformer(nn.Module):
         generator = Feature_Generator(configs).to(configs["device"])
         gen_img = []
         for i in range(img.shape[-1]):
-            gen_img.append(generator(img[:, :, :, :, i]))
+            gen_img.append(generator(img[..., i]))
         gen_img = torch.stack(gen_img, dim=-1)
         return gen_img

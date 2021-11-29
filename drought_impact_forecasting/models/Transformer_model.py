@@ -13,7 +13,7 @@ from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last
 
 
 class Transformer_model(pl.LightningModule):
-    def __init__(self, cfg, timestamp):
+    def __init__(self, cfg):
         """
         State of the art prediction model. It is roughly based on the ConvTransformer architecture.
         (https://arxiv.org/pdf/2011.10185.pdf)
@@ -24,7 +24,6 @@ class Transformer_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
-        self.timestamp = timestamp
 
         self.model = Conv_Transformer(configs=self.cfg["model"])
         self.baseline = self.cfg["model"]["baseline"]
@@ -44,9 +43,9 @@ class Transformer_model(pl.LightningModule):
         # compute the baseline
         # baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
 
-        preds, pred_deltas, baselines = self.model(x, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
+        preds = self.model(x, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
-        return preds, pred_deltas, baselines
+        return preds
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -67,7 +66,7 @@ class Transformer_model(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        all_data, _ = batch
+        all_data = batch
         '''
         all_data of size (b, w, h, c, t)
             b = batch_size
@@ -81,7 +80,7 @@ class Transformer_model(pl.LightningModule):
         T = all_data.size()[4]
         t0 = T - 1  # no. of pics we start with
 
-        _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
+        x_delta = self(all_data[:, :, :, :, :t0])
         delta = all_data[:, :4, :, :, t0] - baseline[0]
         loss = cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel + 1, :, :, t0])
 
@@ -101,12 +100,11 @@ class Transformer_model(pl.LightningModule):
         )
         return loss
 
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
             The validation step also uses the L2 loss, but on a prediction of all non-context images
         '''
-        all_data, _ = batch
+        all_data = batch
         '''
         all_data of size (b, w, h, c, t)
             b = batch_size
@@ -124,11 +122,10 @@ class Transformer_model(pl.LightningModule):
         target = all_data[:, :5, :, :, t0:]  # b, c, h, w, t
         npf = all_data[:, 5:, :, :, t0 + 1:]
 
-        x_preds, x_delta, baselines = self(context, prediction_count=T - t0, non_pred_feat=npf)
+        x_preds = self(context, prediction_count=T - t0, non_pred_feat=npf)
 
         if self.val_metric == "ENS":
             # ENS loss = 1-ENS (ENS==1 would mean perfect prediction)
-            x_preds = torch.stack(x_preds, axis=-1)  # b, c, h, w, t
             score, _ = ENS(prediction=x_preds, target=target)
             loss = 1 - np.mean(score)
         else:  # L2 cloud mask loss
@@ -166,9 +163,7 @@ class Transformer_model(pl.LightningModule):
         target = all_data[:, :5, :, :, t0:]  # b, c, h, w, t
         npf = all_data[:, 5:, :, :, t0 + 1:]
 
-        x_preds, x_deltas, baselines = self(x=context,
-                                            prediction_count=T - t0,
-                                            non_pred_feat=npf)
+        x_preds = self(x=context, prediction_count=T - t0, non_pred_feat=npf)
 
         x_preds = torch.stack(x_preds, axis=-1)  # b, c, h, w, t
 
@@ -214,7 +209,7 @@ class Transformer_model(pl.LightningModule):
                 np.savez(last_pred_dir + str(i), highresdynamic=last_cube)
 
                 # Our model
-                x_preds, x_deltas, baselines = self(all_data[i:i + 1, :, :, :, :t0], prediction_count=T - t0,
+                x_preds = self(all_data[i:i + 1, :, :, :, :t0], prediction_count=T - t0,
                                                     non_pred_feat=all_data[i:i + 1, 4:, :, :, t0 + 1:])
                 x_preds = np.array(torch.cat(x_preds, axis=0).cpu()).transpose(2, 3, 1, 0)
                 np.savez(model_val_pred_dir + str(i), highresdynamic=x_preds)
