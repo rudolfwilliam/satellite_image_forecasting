@@ -13,6 +13,7 @@
         "device": "cpu",
         "baseline": "last_frame",
         "val_metric": "ENS",
+        "non_pred_channels": 6,
         "input_length": 10,
         "batch_size": 2
     },
