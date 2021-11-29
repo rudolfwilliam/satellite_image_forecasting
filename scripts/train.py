@@ -23,7 +23,7 @@ from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Transformer_model import Transformer_model
 from drought_impact_forecasting.models.Baseline_model import Last_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import prepare_data
+from Data.data_preparation import Earthnet_Context_Dataset, prepare_train_data, prepare_test_data
 from callbacks import Prediction_Callback
 from callbacks import WandbTrain_callback
 
@@ -36,7 +36,6 @@ def main():
 
     args, cfg = command_line_parser(mode='train')
     print(args)
-    
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"
@@ -48,7 +47,7 @@ def main():
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
         f.write(wandb.run.name)
     copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
-    #GPU handling
+    # GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
@@ -58,7 +57,7 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    training_data, val_1_data, val_2_data = prepare_data(cfg["data"]["mesoscale_cut"],
+    training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
                                                          cfg["data"]["train_dir"],
                                                          device = device,
                                                          training_samples=cfg["training"]["training_samples"],
@@ -110,8 +109,22 @@ def main():
 
     # Run training
     trainer.fit(model, train_dataloader, val_1_dataloader)
-    # Run validation
-    # trainer.test(model, val_2_dataloader)
+    
+    # Train on context frames of val2/test data
+    if cfg["training"]["use_context"]:
+
+        test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
+        context_data = Earthnet_Context_Dataset(test_data.context_paths, cfg["data"]["mesoscale_cut"], device)
+        context_data = Earthnet_Context_Dataset(val_2_data.paths, cfg["data"]["mesoscale_cut"], device)
+        context_dataloader = DataLoader(context_data, 
+                             num_workers=cfg["training"]["num_workers"],
+                             batch_size=cfg["training"]["train_batch_size"], 
+                             drop_last=False)
+        
+        # This is ugly, but I couldn't find a better solution yet
+        for i in range(cfg["training"]["epochs"]):
+            trainer.fit(model, context_dataloader)
+            torch.save(trainer.model.state_dict(), os.path.join(os.path.join(wandb.run.dir,"runtime_model"), "model_"+str(trainer.max_epochs+i)+".torch"))
 
     if not cfg["training"]["offline"]:
         wandb.finish()

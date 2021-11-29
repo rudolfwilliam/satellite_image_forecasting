@@ -5,7 +5,6 @@ import os
 from os import path
 import numpy as np
 from pathlib import Path
-from Data.data_preparation import prepare_data
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import json
 import wandb

@@ -29,13 +29,13 @@
         "print_predictions": true,
         "epochs": 5,
         "start_learn_rate": 0.1,
-        "train_batch_size": 4,
+        "train_batch_size": 2,
         "val_1_batch_size": 2,
         "val_2_batch_size": 2,
         "test_batch_size": 1,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 10,
+        "training_samples": 4,
         "val_1_samples": 2,
         "val_2_samples": 4,
         "num_workers": 0,
@@ -43,7 +43,8 @@
         "gpus": 1,
         "devices": 1,
         "log_steps": 50,
-        "patience": 5
+        "patience": 5,
+        "use_context": true
     },
     "project":
     {

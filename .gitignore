@@ -232,3 +232,5 @@ Data/*
 *.jpg
 *.npz
 
+# script files
+/drought_impact_forecasting-scripts
