@@ -5,6 +5,9 @@ import numpy as np
 import random
 from shutil import copy2
 import pickle
+import time
+
+from torch.utils import data
 
 #from pytorch_lightning.accelerators import accelerato
 #from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -45,7 +48,10 @@ def main():
     wandb.init(entity="eth-ds-lab", project="drought_impact_forecasting-scripts")
     # Store the model to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
-        f.write(wandb.run.name)
+        try:
+            f.write(wandb.run.name)
+        except:
+            f.write("offline_run_" + str(datetime.now()))
     copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
     # GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
