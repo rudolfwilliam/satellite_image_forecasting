@@ -63,7 +63,7 @@ def main():
         score, part_scores = ENS(prediction = preds, target = target)
 
         with open(instance_folder + "/scores.csv", 'a') as filehandle:
-            filehandle.write(str(part_scores[0,0]) + "," +str(part_scores[0,1]) + "," + str(part_scores[0,2]) + "," + str(part_scores[0,3])+ "," + str(score[0]) + '\n')
+            filehandle.write(str(part_scores[0,1]) + "," +str(part_scores[0,2]) + "," + str(part_scores[0,3]) + "," + str(part_scores[0,4])+ "," + str(score[0]) + '\n')
 
 if __name__ == "__main__":
     main()
