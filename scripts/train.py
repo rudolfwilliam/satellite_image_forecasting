@@ -68,7 +68,8 @@ def main():
                                                          device = device,
                                                          training_samples=cfg["training"]["training_samples"],
                                                          val_1_samples=cfg["training"]["val_1_samples"],
-                                                         val_2_samples=cfg["training"]["val_2_samples"])
+                                                         val_2_samples=cfg["training"]["val_2_samples"],
+                                                         undersample=False)
     
     train_dataloader = DataLoader(training_data, 
                                   num_workers=cfg["training"]["num_workers"],

@@ -4,18 +4,29 @@ import torch
 import os
 from os.path import isfile, join
 import random
+import math
 
 from torch._C import device
  
-def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None):
+def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None, undersample = False):
     
     if training_samples is not None:
         train_files = []
-        for path, subdirs, files in os.walk(os.getcwd() + data_dir):
-            for name in files:
-                # Ignore any licence, progress, etc. files
-                if '.npz' in name:
-                    train_files.append(join(path, name))
+        if not undersample:
+            for path, subdirs, files in os.walk(os.getcwd() + data_dir):    
+                for name in files:
+                    # Ignore any licence, progress, etc. files
+                    if '.npz' in name:
+                        train_files.append(join(path, name))
+        else: # Sample a subset of cube in each tile
+            for dir in os.scandir(os.getcwd() + data_dir):
+                tile_files = []
+                for path, subdirs, files in os.walk(dir.path):
+                    for name in files:
+                        if '.npz' in name:
+                            tile_files.append(join(path, name))
+                tile_files = random.sample(tile_files, math.ceil(len(tile_files)/5))
+                train_files = train_files + tile_files
         
         train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
         train_set = random.sample(train_files, training_samples)
