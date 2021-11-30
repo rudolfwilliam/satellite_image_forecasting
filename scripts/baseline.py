@@ -10,7 +10,7 @@ import torch
 import pytorch_lightning as pl
 
 from config.config import command_line_parser
-from Data.data_preparation import prepare_data
+from Data.data_preparation import prepare_train_data, prepare_test_data
 from drought_impact_forecasting.models.utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 from datetime import datetime
 
@@ -24,7 +24,7 @@ def main():
     args, cfg = command_line_parser(mode='train')
     print(args)
 
-    instance_folder = os.getcwd() + "/model_instances/model_" + timestamp
+    instance_folder = os.getcwd() + "/wandb/model_" + timestamp
     os.mkdir(instance_folder)
     copy2(os.getcwd() + "/config/" + args.model_name + ".json", instance_folder + "/" + cfg["model"]["baseline"] + ".json")
 
@@ -32,25 +32,22 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
-    random.seed(cfg["training"]["seed"])
-    pl.seed_everything(cfg["training"]["seed"], workers=True)
-
-    training_data, val_1_data, val_2_data = prepare_data(cfg["data"]["mesoscale_cut"],
+    training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
                                                          cfg["data"]["train_dir"],
                                                          device = device,
                                                          training_samples=cfg["training"]["training_samples"],
                                                          val_1_samples=cfg["training"]["val_1_samples"],
                                                          val_2_samples=cfg["training"]["val_2_samples"])
    
-    test_data = prepare_data(cfg["data"]["mesoscale_cut"], 
+    test_data = prepare_test_data(cfg["data"]["mesoscale_cut"], 
                              cfg["data"]["test_dir"],
                              device = device)
 
     with open(instance_folder + "/scores.csv", 'w') as filehandle:
                 filehandle.write("mad, ssim, ols, emd, score\n")
 
-    for i in range(len(val_2_data.context_paths)):
-        all_data, _ = val_2_data.__getitem__(i)
+    for i in range(len(val_2_data.paths)):
+        all_data = val_2_data.__getitem__(i)
 
         T = all_data.size()[3]
 
