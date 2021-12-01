@@ -165,11 +165,11 @@ class Conv_LSTM(nn.Module):
             layer_output_list.append(layer_output)
             last_state_list.append(h)
             last_memory_list.append(c)
-
-        pred_deltas = [layer_output_list[-1:][0][:, :, :, :, -1]]
-        baselines = [baseline]
-        predictions = [torch.add(baseline, layer_output_list[-1:][0][:, :, :, :, -1])]
         
+        pred_deltas = layer_output_list[-1:][0][:, :, :, :, -1].unsqueeze(0)
+        baselines = baseline.unsqueeze(0)
+        predictions = torch.add(baseline, layer_output_list[-1:][0][:, :, :, :, -1]).unsqueeze(0)
+
         # allow for multiple pred_deltas in a self feedback manner
         if prediction_count > 1:
             if non_pred_feat is None:
@@ -200,11 +200,11 @@ class Conv_LSTM(nn.Module):
                     last_memory_list[layer_idx] = c
                     # in the last layer, make prediction
                     if layer_idx == (self.num_layers - 1):
-                        pred_deltas.append(h)
-                        baselines.append(baseline)
+                        pred_deltas = torch.cat((pred_deltas, h.unsqueeze(0)), 0)
+                        baselines = torch.cat((baselines, baseline.unsqueeze(0)), 0)
                         # next predicted entire image
                         prediction = baseline + h
-                        predictions.append(prediction)
+                        predictions = torch.cat((predictions, prediction.unsqueeze(0)), 0)
                         # update the baseline & glue together predicted + given channels
                         if self.baseline == "mean_cube":
                             baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) 

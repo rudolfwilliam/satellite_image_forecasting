@@ -18,24 +18,35 @@ def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_
                     # Ignore any licence, progress, etc. files
                     if '.npz' in name:
                         train_files.append(join(path, name))
+            
+            train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
+            train_set = random.sample(train_files, training_samples)
+            val_set = [x for x in train_files if x not in train_set]
+            val_1_set = random.sample(val_set, val_1_samples)
+            val_2_set = [x for x in val_set if x not in val_1_set]
+            return Earthnet_Dataset(train_set, ms_cut, device=device), \
+                Earthnet_Dataset(val_1_set, ms_cut, device=device), \
+                Earthnet_Dataset(val_2_set, ms_cut, device=device)
+        
         else: # Sample a subset of cube in each tile
+            sampling_factor = 5
             for dir in os.scandir(os.getcwd() + data_dir):
                 tile_files = []
                 for path, subdirs, files in os.walk(dir.path):
                     for name in files:
                         if '.npz' in name:
                             tile_files.append(join(path, name))
-                tile_files = random.sample(tile_files, math.ceil(len(tile_files)/5))
+                tile_files = random.sample(tile_files, math.ceil(len(tile_files)/sampling_factor))
                 train_files = train_files + tile_files
         
-        train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
-        train_set = random.sample(train_files, training_samples)
-        val_set = [x for x in train_files if x not in train_set]
-        val_1_set = random.sample(val_set, val_1_samples)
-        val_2_set = [x for x in val_set if x not in val_1_set]
-        return Earthnet_Dataset(train_set, ms_cut, device=device), \
-               Earthnet_Dataset(val_1_set, ms_cut, device=device), \
-               Earthnet_Dataset(val_2_set, ms_cut, device=device)
+            train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
+            train_set = random.sample(train_files, math.ceil(training_samples/sampling_factor))
+            val_set = [x for x in train_files if x not in train_set]
+            val_1_set = random.sample(val_set, math.ceil(val_1_samples/sampling_factor))
+            val_2_set = [x for x in val_set if x not in val_1_set]
+            return Earthnet_Dataset(train_set, ms_cut, device=device), \
+                Earthnet_Dataset(val_1_set, ms_cut, device=device), \
+                Earthnet_Dataset(val_2_set, ms_cut, device=device)
 
 def prepare_test_data(ms_cut, data_dir, device):
     

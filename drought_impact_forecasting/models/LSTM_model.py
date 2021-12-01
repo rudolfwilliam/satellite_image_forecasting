@@ -26,7 +26,6 @@ class LSTM_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
-        self.timestamp = "x"
 
         channels = self.cfg["model"]["channels"]
         hidden_channels = self.cfg["model"]["hidden_channels"]
@@ -91,8 +90,7 @@ class LSTM_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        #t0 = T - 1 # no. of pics we start with
-        t0 = T - 1
+        t0 = T - 1 # no. of pics we start with
 
         _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
         delta = all_data[:, :4, :, :, t0] - baseline[0]
@@ -132,7 +130,8 @@ class LSTM_model(pl.LightningModule):
         
         if self.val_metric=="ENS":
             # ENS loss = -ENS (ENS==1 would mean perfect prediction)
-            x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
+            # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
+            x_preds = x_preds.permute(1,2,3,4,0) # b, c, h, w, t
             score, scores = ENS(prediction = x_preds, target = target)
             loss = - scores
         else: # L2 cloud mask loss
@@ -150,9 +149,7 @@ class LSTM_model(pl.LightningModule):
             The test step takes the test data and makes predictions.
             They are then evaluated using the ENS score.
         '''
-        #starting_time = time.time()
         all_data = batch
-
 
         T = all_data.size()[4]
 
@@ -166,7 +163,8 @@ class LSTM_model(pl.LightningModule):
                                             prediction_count = T-t0, 
                                             non_pred_feat = npf)
         
-        x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
+        # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
+        x_preds = x_preds.permute(1,2,3,4,0) # b, c, h, w, t
         
         score, part_scores = ENS(prediction = x_preds, target = target)
         
