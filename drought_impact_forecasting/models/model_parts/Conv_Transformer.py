@@ -1,5 +1,4 @@
 import numpy as np
-
 import torch
 from einops import rearrange
 from .shared import Conv_Block
