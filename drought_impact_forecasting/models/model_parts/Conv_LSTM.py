@@ -22,7 +22,6 @@ class Conv_LSTM_Cell(nn.Module):
             Number of channels of hidden state.
         kernel_size: (int, int)
             Size of the convolutional kernel.
-
         """
 
         super(Conv_LSTM_Cell, self).__init__()
@@ -186,7 +185,8 @@ class Conv_LSTM(nn.Module):
             prev = predictions[0]
             # update the baseline & glue together predicted + given channels
             if self.baseline == "mean_cube":
-                baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) 
+                baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len))
+                seq_len += 1
             else:
                 baseline = prev # We don't predict image quality, so we just feed in the last prediction
             prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
