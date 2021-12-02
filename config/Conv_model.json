@@ -1,7 +1,7 @@
 {
     "model":
     {
-        "dilation_rate": 2,
+        "dilation_rate": 1,
         "anneal_start": 5,
         "anneal_end": 10,
         "channels": 11,

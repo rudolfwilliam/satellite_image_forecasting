@@ -13,7 +13,8 @@
         "n_layers": 1,
         "kernel": [3, 3],
         "baseline": "last_frame",
-        "val_metric": "ENS"
+        "val_metric": "ENS",
+        "future_training": 20
     },
     "network": 
     [

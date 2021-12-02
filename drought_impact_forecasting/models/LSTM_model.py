@@ -41,6 +41,7 @@ class LSTM_model(pl.LightningModule):
                                baseline=self.cfg["model"]["baseline"])
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]
+        self.future_training = self.cfg["model"]["future_training"]
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -90,17 +91,17 @@ class LSTM_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        t0 = T - 1 # no. of pics we start with
+        t0 = T - self.future_training
 
-        _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
-        delta = all_data[:, :4, :, :, t0] - baseline[0]
-        loss = cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
+        npf = all_data[:, 5:, :, :, t0:]
+        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
+        x_preds, x_delta, baseline = self(all_data[:, :, :, :, :t0], non_pred_feat = npf, prediction_count = T-t0)
 
-        for t_end in range(t0 + 1, T): # this iterates with t_end = t0, ..., T-1
-            _, x_delta, baseline = self(all_data[:, :, :, :, :t_end])
-            delta = all_data[:, :4, :, :, t_end] - baseline[0]
-            loss = loss.add(cloud_mask_loss(x_delta[0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
-        
+        loss = cloud_mask_loss(x_preds[0], target[:,:4,:,:,0], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
+        # 
+        for i, t_end in enumerate(range(t0 + 1, T)): # this iterates with t_end = t0, ..., T-1
+            loss = loss.add(cloud_mask_loss(x_preds[i + 1], target[:,:4,:,:,i + 1], all_data[:, cloud_mask_channel:cloud_mask_channel + 1, :, :, t_end]))
+
         return loss
     
     # We could try early stopping here later on
