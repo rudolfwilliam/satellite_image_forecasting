@@ -94,7 +94,7 @@ def main():
     with open(os.path.join(wandb.run.dir, "val_2_data_paths.pkl"), "wb") as fp:
         pickle.dump(val_2_data.paths, fp)
     # Load model Callbacks
-    wd_callbacks = WandbTrain_callback()
+    wd_callbacks = WandbTrain_callback(val_1_data = val_1_data)
     # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,

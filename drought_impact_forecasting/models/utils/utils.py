@@ -21,9 +21,9 @@ def mean_cube(cube, mask_channel=False):  # dumb one
         # Mask which data is cloudy and shouldn't be used for averaging
         mask = torch.repeat_interleave(1 - cube[:, -1:, :, :, :], channels - 1, axis=1)
 
-        masked_cube = mask * cube[:, :-1, :, :, :]
-        avg_cube = torch.mean(masked_cube, dim=-1)
-        return avg_cube
+        masked_cube = mask * cube[:, :-1, :, :, :] 
+        avg_cube = torch.sum(masked_cube, dim=-1) / torch.sum(mask, dim = -1)
+        return torch.nan_to_num(avg_cube, nan = 0)
 
 
 def last_cube(cube, mask_channel=4):
@@ -58,18 +58,16 @@ def last_frame(cube, mask_channel=4):
         t -= 1
     return new_cube
 
-def mean_prediction(cube, mask_channel=False, timepoints=20):
+def mean_prediction(cube, mask_channel=True, timepoints=20):
     # compute the mean image and make a prediction cube of the correct length
-    avg_cube = np.array(mean_cube(cube[:, 0:5, :, :, :], True)).transpose(2, 3, 1, 0)
-    return np.repeat(avg_cube, timepoints, axis=-1)
-
-
+    avg_cube = mean_cube(cube[:, 0:5, :, :, :], mask_channel).permute(2, 3, 1, 0)
+    return avg_cube.repeat(1,1,1,1,timepoints)
+    
 def last_prediction(cube, mask_channel=4, timepoints=20):
     # find the last cloud free context image and return it as a constant prediction
 
-    new_cube = last_frame(cube, mask_channel)
-    return np.repeat(new_cube.permute(2, 3, 1, 0), timepoints, axis=-1)
-
+    new_cube = last_frame(cube, mask_channel).permute(2, 3, 1, 0)
+    return new_cube.repeat(1,1,1,1,timepoints)
 
 def get_ENS(target, preds):
     # Calculate the ENS score of each prediction in preds

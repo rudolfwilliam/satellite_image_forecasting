@@ -6,11 +6,12 @@ from os import path
 import numpy as np
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from drought_impact_forecasting.models.utils.utils import mean_prediction, last_prediction, ENS
 import json
 import wandb
 
 class WandbTrain_callback(pl.Callback):
-    def __init__(self, print_preds = True):
+    def __init__(self, print_preds = True, val_1_data = None):
         self.print_preds = print_preds
         self.print_sample = None
         self.print_table = None
@@ -41,9 +42,50 @@ class WandbTrain_callback(pl.Callback):
         wandb.define_metric('batch_training_loss', step_metric = "step")
         wandb.define_metric('epoch_training_loss', step_metric = "epoch")
 
-    
+        self.log_ENS_baseline(val_1_data)
+
         # define our custom x axis metric
         pass
+
+    def log_ENS_baseline(self, data):
+        scores_mean = np.zeros((data.__len__(), 5))
+        scores_last = np.zeros((data.__len__(), 5))
+
+        for i in range(data.__len__()):
+            all_data = data.__getitem__(i)
+
+            T = all_data.size()[3]
+
+            t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+
+            # For last/mean baseline we don't need weather
+            context = all_data[:5, :, :, :t0].unsqueeze(0) # b, c, h, w, t
+            target = all_data[:5, :, :, t0:].unsqueeze(0) # b, c, h, w, t
+
+            preds_mean = mean_prediction(context, mask_channel=True).permute(0,3,1,2,4)
+            preds_last = last_prediction(context, mask_channel=4).permute(0,3,1,2,4)
+
+            _, part_scores_mean = ENS(prediction = preds_mean, target = target)
+            _, part_scores_last = ENS(prediction = preds_last, target = target)
+
+            scores_mean[i, :] = part_scores_mean
+            scores_last[i, :] = part_scores_last
+            
+        avg_scores_mean = np.mean(scores_mean, axis = 0)
+        avg_scores_last = np.mean(scores_last, axis = 0)
+        wandb.log({ 
+                                'baseline_ENS_mean':  avg_scores_mean[0],
+                                'baseline_mad_mean':  avg_scores_mean[1],
+                                'baseline_ssim_mean': avg_scores_mean[2],
+                                'baseline_ols_mean':  avg_scores_mean[3],
+                                'baseline_emd_mean':  avg_scores_mean[4],
+                                'baseline_ENS_last':  avg_scores_last[0],
+                                'baseline_mad_last':  avg_scores_last[1],
+                                'baseline_ssim_last': avg_scores_last[2],
+                                'baseline_ols_last':  avg_scores_last[3],
+                                'baseline_emd_last':  avg_scores_last[4]
+                            })
+                
 
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         tr_loss = float(outputs['loss'])
