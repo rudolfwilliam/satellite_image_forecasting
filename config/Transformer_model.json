@@ -2,9 +2,11 @@
     "model":
     {
         "num_hidden": [3, 3, 3, 3],
-        "input_length": 10,
         "depth": 1,
         "decay_point": 10,
+        "in_channels": 11,
+        "num_layers_input_feat": 3,
+        "num_layers_query_feat": 4,
         "kernel_size": 10,
         "num_conv_layers": 3,
         "dilation_rate": 3,
@@ -15,7 +17,6 @@
         "query_self_attention": false,
         "val_metric": "ENS",
         "non_pred_channels": 6,
-        "input_length": 10,
         "batch_size": 2
     },
     "network":
@@ -50,7 +51,7 @@
         "seed": 1,
         "training_samples": 2,
         "val_1_samples": 2,
-        "val_2_samples": 200,
+        "val_2_samples": 2,
         "num_workers": 0,
         "accelerator": "auto",
         "gpus": 1,
