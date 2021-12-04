@@ -46,7 +46,7 @@
         "train_batch_size": 2,
         "val_1_batch_size": 2,
         "val_2_batch_size": 2,
-        "test_batch_size": 1,
+        "test_batch_size": 2,
         "optimizer": "adam",
         "seed": 1,
         "training_samples": 2,

@@ -109,7 +109,7 @@ class PositionalEncoding(nn.Module):
         self.configs = configs
         self.num_hidden = self.configs["num_hidden"]
 
-    def _get_sinusoid_encoding_table(self, t):
+    def _get_sinusoid_encoding_table(self, t, device):
         ''' Sinusoid position encoding table '''
         # no differentiation should happen with the params in here!
         # TODO: make it with torch instead of numpy
@@ -117,7 +117,7 @@ class PositionalEncoding(nn.Module):
         def get_position_angle_vec(position):
             return_list = [torch.ones((self.configs["batch_size"],
                                        self.configs["img_width"],
-                                       self.configs["img_width"])).to(self.configs["device"])*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
+                                       self.configs["img_width"]), device=device)*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
             return torch.stack(return_list, dim=1)
 
         sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(t)]
@@ -128,7 +128,7 @@ class PositionalEncoding(nn.Module):
         return torch.moveaxis(sinusoid_table, 0, -1)
 
     def forward(self, x, t):
-        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t))
+        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t, x.get_device()))
         return x + self.pos_table.clone().detach()
 
 
@@ -200,7 +200,9 @@ class Conv_Transformer(nn.Module):
         self.query_feat_gen = Conv_Block(self.configs["non_pred_channels"], self.num_hidden[-1], num_conv_layers=configs["num_layers_query_feat"], kernel_size=configs["kernel_size"])
         # last predictions needs a dummy input
         self.blank = torch.stack([torch.zeros(size=(configs["batch_size"], configs["non_pred_channels"],
-                                                    self.configs["img_width"], self.configs["img_width"]))], dim=-1)
+                                                    self.configs["img_width"], self.configs["img_width"]),
+                                                    # Quite ugly, maybe fix by passing all configs?
+                                                    device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))], dim=-1)
         #TODO: replace this by SFFN
         self.back_to_pixel = nn.Sequential(
             nn.Conv2d(self.num_hidden[-1], 4, kernel_size=1)
