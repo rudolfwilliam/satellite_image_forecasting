@@ -117,7 +117,8 @@ class PositionalEncoding(nn.Module):
         def get_position_angle_vec(position):
             return_list = [torch.ones((self.configs["batch_size"],
                                        self.configs["img_width"],
-                                       self.configs["img_width"]), device=device)*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
+                                       self.configs["img_width"]),
+                                       device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
             return torch.stack(return_list, dim=1)
 
         sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(t)]
