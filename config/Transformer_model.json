@@ -5,6 +5,7 @@
         "depth": 1,
         "decay_point": 10,
         "in_channels": 11,
+        "u_net_channels": [11, 16, 32, 64, 64, 32, 16, 4],
         "num_layers_input_feat": 3,
         "num_layers_query_feat": 4,
         "kernel_size": 10,
