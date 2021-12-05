@@ -5,6 +5,7 @@
         "anneal_start": 5,
         "anneal_end": 10,
         "channels": 11,
+        "u_net_channels": [11, 8, 5, 5, 8, 11],
         "hidden_channels": [10, 4, 3],
         "n_layers": 5,
         "kernel": [3, 3],

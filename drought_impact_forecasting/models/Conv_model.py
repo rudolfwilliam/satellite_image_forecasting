@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import numpy as np
 import os
 import glob
-from .model_parts.shared import Conv_Block
+from .model_parts.shared import Conv_Block, U_Net
 
 from torchmetrics import metric
 from ..losses import cloud_mask_loss
@@ -30,16 +30,19 @@ class Conv_model(pl.LightningModule):
         self.timestamp = "x"
 
         channels = self.cfg["model"]["channels"]
-        hidden_channels = self.cfg["model"]["hidden_channels"]
         out_channel = 4
         n_layers = self.cfg["model"]["n_layers"]
         kernel_size = self.cfg["model"]["kernel"]
 
         self.model = Conv_Block(in_channels = channels,
                                 out_channels = out_channel,
-                                kernel_size= kernel_size,
-                                num_conv_layers= n_layers,
-                                dilation_rate= self.cfg["model"]["dilation_rate"])
+                                kernel_size = kernel_size,
+                                num_conv_layers = n_layers,
+                                dilation_rate = self.cfg["model"]["dilation_rate"])
+
+        self.model = U_Net(channels = self.cfg["model"]["u_net_channels"],
+                           kernel_size = kernel_size,
+                           dilation_rate = self.cfg["model"]["dilation_rate"])
 
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]

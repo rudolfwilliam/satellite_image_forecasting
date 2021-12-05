@@ -39,7 +39,7 @@
     },
     "training":
     {
-        "offline": true,
+        "offline": false,
         "print_predictions": true,
         "epochs": 1,
         "start_learn_rate": 0.316227,
