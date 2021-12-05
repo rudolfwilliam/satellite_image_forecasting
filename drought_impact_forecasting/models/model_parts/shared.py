@@ -55,7 +55,7 @@ class Expandor(nn.Module):
         cur = x[-1]
         for i in range(len(self.up_convs)):
             cur_features = x[-(i+2)] # Possibly move this cropping inside constructor
-            cur_features = torchvision.transforms.CenterCrop(cur_features.shape[-2:])(cur_features)
+            cur_features = torchvision.transforms.CenterCrop([cur_features.shape[-2],cur_features.shape[-1]])(cur_features)
             cur = self.up_convs[i](cur)
             cur = torch.cat([cur, cur_features], dim=1) # check dim
             cur = self.blocks[i](cur)
