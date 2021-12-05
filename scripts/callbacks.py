@@ -110,7 +110,7 @@ class WandbTrain_callback(pl.Callback):
                                     })
         
         torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
-        return super().on_train_epoch_end(trainer, pl_module, unused=unused)
+        return super().on_train_epoch_end(trainer, pl_module)
     
     def on_validation_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         self.validation_loss.append(outputs)
