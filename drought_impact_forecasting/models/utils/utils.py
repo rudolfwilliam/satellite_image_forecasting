@@ -137,3 +137,4 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
     return score, partial_score
     # score is a np array with all the scores
     # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
+

@@ -162,7 +162,7 @@ class Conv_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+        t0 = round(all_data.shape[-1]/3) # t0 is the length of the context part
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
@@ -171,7 +171,7 @@ class Conv_model(pl.LightningModule):
         x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
         if self.val_metric=="ENS":
-            # ENS loss = -ENS (ENS==1 would mean perfect prediction)
+            # ENS loss = -ENS (ENS==1 would be a perfect prediction)
             x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
             score, scores = ENS(prediction = x_preds, target = target)
             loss = - scores
@@ -194,11 +194,17 @@ class Conv_model(pl.LightningModule):
 
         T = all_data.size()[4]
 
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+        t0 = round(all_data.shape[-1]/3) # t0 is the length of the context part
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
         npf = all_data[:, 5:, :, :, t0+1:]
+
+        '''correct_preds = True
+        if correct_preds:
+            x_preds, x_deltas, baselines = self(x = context[:, :, :, :, :round(t0/2)], 
+                                            prediction_count = round(t0/2), 
+                                            non_pred_feat = npf)'''
 
         x_preds, x_deltas, baselines = self(x = context, 
                                             prediction_count = T-t0, 

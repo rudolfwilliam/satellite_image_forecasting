@@ -72,7 +72,6 @@ class U_Net(nn.Module):
         self.net = nn.ModuleList()
         self.net.append(Conv_Block(channels[0], channels[1], kernel_size, num_conv_layers=2, dilation_rate=dilation_rate))
         self.net.append(Contractor(channels[1:steps+1], kernel_size=kernel_size, dilation_rate=dilation_rate))
-        #self.net.append(Conv_Block(channels[steps-1], channels[steps], kernel_size, num_conv_layers=2, dilation_rate=dilation_rate))
         self.net.append(Expandor(channels[steps:-1], kernel_size=kernel_size, dilation_rate=dilation_rate))
         self.net.append(Conv_Block(channels[-2], channels[-1], kernel_size, num_conv_layers=2, dilation_rate=dilation_rate))
         
