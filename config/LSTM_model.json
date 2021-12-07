@@ -12,7 +12,7 @@
         "hidden_channels": 4,
         "n_layers": 1,
         "kernel": [3, 3],
-        "baseline": "last_frame",
+        "baseline": "mean_cube",
         "val_metric": "ENS",
         "future_training": 20
     },

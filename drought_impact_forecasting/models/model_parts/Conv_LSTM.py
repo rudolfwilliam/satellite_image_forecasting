@@ -207,7 +207,9 @@ class Conv_LSTM(nn.Module):
                         predictions = torch.cat((predictions, prediction.unsqueeze(0)), 0)
                         # update the baseline & glue together predicted + given channels
                         if self.baseline == "mean_cube":
-                            baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len)) #  CHECK THIS ONE TOO!!!!!!!!
+                            baseline = (prediction + (baseline * seq_len))/(seq_len + 1) #  CHECK THIS ONE TOO!!!!!!!!
+                            #baseline = baseline*(seq_len/(seq_len+1)) + prediction/(seq_len+1)
+                            seq_len += 1
                         else:
                             baseline = prediction # We don't predict image quality, so we just feed in the last prediction
                         prev = torch.cat((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)

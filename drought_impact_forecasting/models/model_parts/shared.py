@@ -13,11 +13,11 @@ class Conv_Block(nn.Module):
         ops = []
         for i in range(self.num_conv_layers):
             ops.append(nn.Conv2d(in_channels, in_channels, dilation=dilation_rate, kernel_size=kernel_size,
-                                     bias=False, padding='same'))
+                                     bias=False, padding='same', padding_mode='reflect'))
             ops.append(nn.BatchNorm2d(in_channels))
             ops.append(nn.ReLU())
         ops.append(nn.Conv2d(in_channels, out_channels, dilation=dilation_rate, kernel_size=kernel_size,
-                                     bias=True, padding='same'))
+                                     bias=True, padding='same', padding_mode='reflect'))
         self.seq = nn.Sequential(*ops)
 
     def forward(self, input_tensor): # irrelevant?
