@@ -1,6 +1,7 @@
 from logging import Logger
 import sys
 import os
+import json
 import numpy as np
 import random
 from shutil import copy2
@@ -52,7 +53,10 @@ def main():
             f.write(wandb.run.name)
         except:
             f.write("offline_run_" + str(datetime.now()))
-    copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
+
+    with open(os.path.join(wandb.run.dir, args.model_name + ".json"), 'w') as fp:
+        json.dump(cfg, fp)
+    # copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
     # GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
@@ -107,6 +111,7 @@ def main():
     # setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
+        #trainer.tune(model, train_dataloader)
     elif args.model_name == "Transformer_model":
         model = Transformer_model(cfg)
     elif args.model_name == "Conv_model":

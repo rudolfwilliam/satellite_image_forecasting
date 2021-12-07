@@ -42,6 +42,7 @@ class LSTM_model(pl.LightningModule):
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]
         self.future_training = self.cfg["model"]["future_training"]
+        self.learning_rate = self.cfg["training"]["start_learn_rate"]
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -63,6 +64,8 @@ class LSTM_model(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
+            #self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+            #return self.optimizer
             self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
             
             # Decay learning rate according for last (epochs - decay_point) iterations
@@ -72,10 +75,11 @@ class LSTM_model(pl.LightningModule):
                                 * self.cfg["training"]["start_learn_rate"])
 
             self.scheduler = LambdaLR(self.optimizer, lambda_all)
+
         else:
             raise ValueError("You have specified an invalid optimizer.")
 
-        return [self.optimizer], [self.scheduler]
+        return [self.optimizer]#, [self.scheduler]
 
     def training_step(self, batch, batch_idx):
 

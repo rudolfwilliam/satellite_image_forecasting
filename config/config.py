@@ -19,9 +19,21 @@ def command_line_parser(mode = "train"):
 
     if mode == 'train':
         parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+        parser.add_argument('--nl', type=int, default=None, help='number of layers')
+        parser.add_argument('--ft', type=int, default=None, help='future steps for training')
+        parser.add_argument('--lr', type=float, default=None, help='learining rate')
+        parser.add_argument('--bs', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
+        if args.nl is not None:
+            cfg["model"]["n_layers"] = args.nl
+        if args.ft is not None:
+            cfg["model"]["future_training"] = args.ft
+        if args.lr is not None:
+            cfg["training"]["start_learn_rate"] = args.lr
+        if args.bs is not None:
+            cfg["model"]["baseline"] = args.bs
 
     
     if mode == 'validate':

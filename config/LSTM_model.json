@@ -1,9 +1,9 @@
 {
     "model":
     {
-        "decay_point": 10,
+        "decay_point": 2,
         "dilation_rate": 1,
-        "num_conv_layers": 3,
+        "num_conv_layers": 1,
         "num_conv_layers_mem": 1,
         "classes": 10,
         "anneal_start": 5,

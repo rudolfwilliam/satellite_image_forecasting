@@ -103,12 +103,12 @@ class WandbTrain_callback(pl.Callback):
 
         # resetting the per-batch training loss
         self.step_train_loss = []
-
+        lr = pl_module.optimizer.param_groups[0]['lr']
         trainer.logger.experiment.log({ 
                                         'epoch': trainer.current_epoch,
                                         'epoch_training_loss': e_loss, 
+                                        'learning_rate': lr
                                     })
-        
         torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
         return super().on_train_epoch_end(trainer, pl_module)
     

@@ -49,10 +49,11 @@ def main():
 
     with open(os.path.join(cfg['path_dir'], "files", "val_2_data_paths.pkl"),'rb') as f:
         val_2_path_list = pickle.load(f)
-    
-    val_2_data = Earthnet_Dataset(val_2_path_list, cfg["data"]["mesoscale_cut"], device=device)
 
-    truth = val_2_data.__getitem__(np.random.choice(range(val_2_data.__len__())))
+    test_data = prepare_test_data( cfg["data"]["mesoscale_cut"], "/Data/seasonal", device = device)
+    
+
+    truth = test_data.__getitem__(np.random.choice(range(test_data.__len__())))
 
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
@@ -66,7 +67,7 @@ def main():
         raise ValueError("The specified model name is invalid.")
     truth = truth.unsqueeze(dim=0)
     T = truth.shape[-1]
-    t0 = 20
+    t0 = int(T/3)
     context = truth[:, :, :, :, :t0] # b, c, h, w, t
     target = truth[:, :5, :, :, t0:] # b, c, h, w, t
     npf = truth[:, 5:, :, :, t0+1:]
@@ -78,7 +79,7 @@ def main():
 
 def generate_plot(pred, true):
     T = true.shape[-1]
-    t = 25
+    t = int(T/3)
     channel = 0
 
     im1, im2, im3 = get_image(pred, true, channel, t)
