@@ -50,7 +50,7 @@ def main():
     with open(os.path.join(cfg['path_dir'], "files", "val_2_data_paths.pkl"),'rb') as f:
         val_2_path_list = pickle.load(f)
 
-    test_data = prepare_test_data( cfg["data"]["mesoscale_cut"], "/Data/seasonal", device = device)
+    test_data = prepare_test_data( cfg["data"]["mesoscale_cut"], "/Data/test", device = device)
     
 
     truth = test_data.__getitem__(np.random.choice(range(test_data.__len__())))
@@ -83,7 +83,7 @@ def generate_plot(pred, true):
     channel = 0
 
     im1, im2, im3 = get_image(pred, true, channel, t)
-    fig, ax = plt.subplots(ncols=5,nrows=1, gridspec_kw={'width_ratios': [1, 1, 1,.2,.2]})
+    fig, ax = plt.subplots(ncols=5,nrows=1, gridspec_kw={'width_ratios': [1, 1, 1,.8,.2]})
     ax[0].set_title('Truth')
     ax[1].set_title('Prediction')
     ax[2].set_title('Delta')
@@ -102,7 +102,7 @@ def generate_plot(pred, true):
         cax3 = divider3.append_axes("bottom", size="10%", pad=0.05)
         cbar3 = plt.colorbar(ims3, cax=cax3, orientation='horizontal')
     
-    radio = RadioButtons(ax[3], ('G', 'B', 'R', 'I', 'mask', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6'))
+    radio = RadioButtons(ax[3], ('G', 'B', 'R', 'I', 'mask', 'elev', 'prec', 'pres', 'mean T', 'min T', 'max T'))
     time_silder = Slider(
         ax=ax[4],
         label='time',
@@ -127,18 +127,21 @@ def generate_plot(pred, true):
         fig.canvas.draw_idle()
         
     def update_radio(val):
-        channel_dict = {'G':0, 'B':1, 'R':2, 'I':3, 'mask':4, 'w1':5, 'w2':6, 'w3':7, 'w4':8, 'w5':9, 'w6':10}
+        channel_dict = {'G':0, 'B':1, 'R':2, 'I':3, 'mask':4,'elev':5, 'prec':6, 'pres':7, 'mean T':8, 'min T':9, 'max T':10}
         nonlocal channel
         channel = channel_dict[val]
         #print("channel: {0} - time: {1}".format(channel,t))
         im1, im2, im3 = get_image(pred, true, channel, t)
         ims1.set_data(im1)
+        ims1.set_clim(im1.min(),im1.max())
         cbar1.update_normal(ims1)
         if im2 is not None:
             ims2.set_data(im2)  
+            ims2.set_clim(im2.min(),im2.max())
             cbar2.update_normal(ims2)
         if im3 is not None:
             ims3.set_data(im3)
+            ims3.set_clim(im3.min(),im3.max())
             cbar3.update_normal(ims3)
         fig.canvas.draw_idle()
 
