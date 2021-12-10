@@ -20,7 +20,7 @@ def command_line_parser(mode = "train"):
 
     if mode == 'train':
         parser.add_argument('--batch_size', type=int, default=None, help='batch size')
-        parser.add_argument('--bm', type=bool, default=None, help='big memory or small')
+        parser.add_argument('--bm', type=str, default=None, help='big memory or small') # y = ture, n = false
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
         parser.add_argument('--ft', type=int, default=None, help='future steps for training')
         parser.add_argument('--lr', type=float, default=None, help='learining rate')
@@ -34,9 +34,10 @@ def command_line_parser(mode = "train"):
             cfg["training"]["val_2_batch_size"] = args.batch_size
             cfg["training"]["test_batch_size"] = args.batch_size        
         if args.bm is not None:
-            cfg["model"]["big_mem"] = args.bm
-        if args.bm is not None:
-            cfg["model"]["n_layers"] = args.nl
+            if args.bm == "y" or args.bm == "Y" or args.bm == "T" or args.bm == "t":
+                cfg["model"]["big_mem"] = True
+            elif args.bm == "n" or args.bm == "N" or args.bm == "f" or args.bm == "F":
+                cfg["model"]["big_mem"] = False
         if args.nl is not None:
             cfg["model"]["n_layers"] = args.nl
         if args.ft is not None:
