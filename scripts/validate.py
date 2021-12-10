@@ -19,6 +19,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
 from Data.data_preparation import Earthnet_Dataset
 from scripts.callbacks import WandbTest_callback
@@ -73,6 +74,10 @@ def main():
     #setup Model
     if args.model_name == "LSTM_model":
         model = LSTM_model(cfg)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.eval()
+    elif args.model_name == "Peephole_LSTM_model":
+        model = Peephole_LSTM_model(cfg)
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval()
     elif args.model_name == "Conv_model":

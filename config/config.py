@@ -3,7 +3,7 @@ import os
 import json
 
 def check_model_exists(name):
-    if name not in ["LSTM_model", "Transformer_model", 'Conv_model']:
+    if name not in ["LSTM_model", "Transformer_model", 'Conv_model', 'Peephole_LSTM_model']:
         raise ValueError("The specified model name is invalid.")
 
 def command_line_parser(mode = "train"):
@@ -16,9 +16,9 @@ def command_line_parser(mode = "train"):
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
+    parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
 
     if mode == 'train':
-        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
         parser.add_argument('--ft', type=int, default=None, help='future steps for training')
         parser.add_argument('--lr', type=float, default=None, help='learining rate')
@@ -37,7 +37,6 @@ def command_line_parser(mode = "train"):
 
     
     if mode == 'validate':
-        parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
         parser.add_argument('--rn', type=str, help='wandb run name to validate')
         parser.add_argument('--me', type=int, default=-1, help='model epoch to test/validate')
