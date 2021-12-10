@@ -19,6 +19,8 @@ def command_line_parser(mode = "train"):
     parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
 
     if mode == 'train':
+        parser.add_argument('--batch_size', type=int, default=None, help='batch size')
+        parser.add_argument('--bm', type=bool, default=None, help='big memory or small')
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
         parser.add_argument('--ft', type=int, default=None, help='future steps for training')
         parser.add_argument('--lr', type=float, default=None, help='learining rate')
@@ -26,6 +28,15 @@ def command_line_parser(mode = "train"):
         args = parser.parse_args()
         check_model_exists(args.model_name)
         cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
+        if args.batch_size is not None:
+            cfg["training"]["train_batch_size"] = args.batch_size
+            cfg["training"]["val_1_batch_size"] = args.batch_size
+            cfg["training"]["val_2_batch_size"] = args.batch_size
+            cfg["training"]["test_batch_size"] = args.batch_size        
+        if args.bm is not None:
+            cfg["model"]["big_mem"] = args.bm
+        if args.bm is not None:
+            cfg["model"]["n_layers"] = args.nl
         if args.nl is not None:
             cfg["model"]["n_layers"] = args.nl
         if args.ft is not None:
