@@ -47,7 +47,7 @@ class ConvAttention(nn.Module):
         self.num_hidden = num_hidden
         # important note: shared convolution is intentional here
         if self.enc:
-            self.conv1 = nn.Sequential(
+            self.conv1 = nn.Sequential( # Maybe padding mode = 'reflect'
                 nn.Conv2d(in_channels=self.num_hidden, out_channels=3 * self.num_hidden, kernel_size=1, padding="same")
             )
         else:

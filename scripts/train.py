@@ -10,8 +10,8 @@ import time
 
 from torch.utils import data
 
-#from pytorch_lightning.accelerators import accelerato
-#from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+# from pytorch_lightning.accelerators import accelerator
+# from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
@@ -28,7 +28,7 @@ from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_
 from drought_impact_forecasting.models.Transformer_model import Transformer_model
 from drought_impact_forecasting.models.Baseline_model import Last_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Context_Dataset, prepare_train_data, prepare_test_data
+from Data.data_preparation import Earthnet_Dataset, Earthnet_Context_Dataset, prepare_train_data, prepare_test_data
 from callbacks import Prediction_Callback
 from callbacks import WandbTrain_callback
 
@@ -57,18 +57,28 @@ def main():
 
     with open(os.path.join(wandb.run.dir, args.model_name + ".json"), 'w') as fp:
         json.dump(cfg, fp)
-    # copy2(os.getcwd() + "/config/" + args.model_name + ".json", os.path.join(wandb.run.dir, args.model_name + ".json"))
+    
     # GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group=args.model_name, job_type='train', offline=True)
-    
     
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
+    try:
+        # Try to load data paths quickly from pickle file
+        with open(os.path.join(os.getcwd(), "Data", "train_data_paths.pkl"),'rb') as f:
+            training_data = pickle.load(f)
+        training_data = Earthnet_Dataset(training_data, cfg["data"]["mesoscale_cut"], device=device)
+        with open(os.path.join(os.getcwd(), "Data", "val_1_data_paths.pkl"),'rb') as f:
+            val_1_data = pickle.load(f)
+        val_1_data = Earthnet_Dataset(val_1_data, cfg["data"]["mesoscale_cut"], device=device)
+        with open(os.path.join(os.getcwd(), "Data", "val_2_data_paths.pkl"),'rb') as f:
+            val_2_data = pickle.load(f)
+        val_2_data = Earthnet_Dataset(val_2_data, cfg["data"]["mesoscale_cut"], device=device)
+    except:
+        training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
                                                          cfg["data"]["train_dir"],
                                                          device = device,
                                                          training_samples=cfg["training"]["training_samples"],
@@ -87,10 +97,11 @@ def main():
                                   batch_size=cfg["training"]["val_1_batch_size"], 
                                   drop_last=False)
 
-    val_2_dataloader = DataLoader(val_2_data, 
+    '''val_2_dataloader = DataLoader(val_2_data, 
                                   num_workers=cfg["training"]["num_workers"],
                                   batch_size=cfg["training"]["val_2_batch_size"], 
-                                  drop_last=False)
+                                  drop_last=False)'''
+
     # To build back the datasets
     with open(os.path.join(wandb.run.dir, "train_data_paths.pkl"), "wb") as fp:
         pickle.dump(training_data.paths, fp)
@@ -98,6 +109,7 @@ def main():
         pickle.dump(val_1_data.paths, fp)
     with open(os.path.join(wandb.run.dir, "val_2_data_paths.pkl"), "wb") as fp:
         pickle.dump(val_2_data.paths, fp)
+    
     # Load model Callbacks
     wd_callbacks = WandbTrain_callback(val_1_data = val_1_data)
     # setup Trainer

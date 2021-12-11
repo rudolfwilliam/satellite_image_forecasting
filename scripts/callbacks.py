@@ -149,7 +149,7 @@ class WandbTrain_callback(pl.Callback):
     
     def log_predictions(self, model, sample, epoch):
         preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
-        delta = np.flip(delta_preds[0, :4, :, :, 0].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+        delta = np.flip(delta_preds[0, 0, :4, :, :].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
         #delta_gt = np.flip(((self.sample[:4, :, :, 9] - means[0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
      
         figs = []
@@ -169,7 +169,7 @@ class WandbTrain_callback(pl.Callback):
 
     def log_groundtruth(self, model, sample):
         preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
-        delta_gt = np.flip(((sample[:1,:4, :, :, 9] - baselines[...,0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
+        delta_gt = np.flip(((sample[:1,:4, :, :, 9] - baselines[0,...])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
         figs = []
         for i, c in enumerate(self.channel_list):
             fig, ax = plt.subplots()

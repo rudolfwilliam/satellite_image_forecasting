@@ -6,7 +6,8 @@ import random
 from shutil import copy2
 from os import listdir
 import pickle
-#from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
+# from pytorch_lightning.accelerators import accelerator
+# from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
@@ -21,7 +22,7 @@ from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
-from Data.data_preparation import Earthnet_Dataset, prepare_test_data
+from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset, prepare_test_data
 from scripts.callbacks import WandbTest_callback
 
 import wandb
@@ -30,7 +31,6 @@ from datetime import datetime
 def main():
     args, cfg = command_line_parser(mode = 'validate')
 
-    #filepath = os.getcwd() + cfg["project"]["model_path"]
     model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
     models = listdir(model_path)
     models.sort()
@@ -43,9 +43,8 @@ def main():
     if not cfg["training"]["offline"]:
         wandb.login()
 
-    #GPU handling
+    # GPU handling
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='test', offline=True)
     random.seed(cfg["training"]["seed"])
@@ -54,7 +53,14 @@ def main():
     with open(os.path.join(cfg['path_dir'], "files", "val_2_data_paths.pkl"),'rb') as f:
         val_2_path_list = pickle.load(f)
 
-    test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
+    try:
+        with open(os.path.join(os.getcwd(), "Data", "test_context_data_paths.pkl"),'rb') as f:
+            test_context_data = pickle.load(f)
+        with open(os.path.join(os.getcwd(), "Data", "test_target_data_paths.pkl"),'rb') as f:
+            test_target_data = pickle.load(f)
+        test_data = Earthnet_Test_Dataset(test_context_data, test_target_data, cfg["data"]["mesoscale_cut"], device=device)
+    except:
+        test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
 
     test_data_loader = DataLoader(test_data, 
                                   num_workers=cfg["training"]["num_workers"],

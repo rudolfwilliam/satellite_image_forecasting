@@ -6,7 +6,8 @@ import random
 from shutil import copy2
 from os import listdir
 import pickle
-#from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
+# from pytorch_lightning.accelerators import accelerato
+# from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
@@ -30,7 +31,6 @@ from datetime import datetime
 def main():
     args, cfg = command_line_parser(mode = 'validate')
 
-    #filepath = os.getcwd() + cfg["project"]["model_path"]
     model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
     models = listdir(model_path)
     models.sort()
