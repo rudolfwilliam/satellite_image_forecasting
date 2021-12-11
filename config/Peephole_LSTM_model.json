@@ -8,7 +8,8 @@
         "kernel": 3,
         "memory_kernel": 3,
         "baseline": "last_frame",
-        "future_training": 20
+        "future_training": 20,
+        "num_layers":3
     },
     "data":
     {
@@ -38,7 +39,7 @@
         "gpus": 1,
         "devices": 1,
         "log_steps": 50,
-        "patience": 1,
+        "patience": 0,
         "lr_factor": 0.3,
         "use_context": false
     },

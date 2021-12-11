@@ -151,7 +151,7 @@ class Peephole_Conv_LSTM(nn.Module):
         The residual from the mean cube
     """
 
-    def __init__(self, input_dim, output_dim, c_channels, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame"):
+    def __init__(self, input_dim, output_dim, c_channels, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame",num_layers = 1):
         super(Peephole_Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -160,7 +160,8 @@ class Peephole_Conv_LSTM(nn.Module):
 
         self.input_dim = input_dim                  # n of channels in input pics
         self.h_channels = output_dim                 # n of channels in input pics
-        self.c_channels = c_channels                # n of channels that go through hidden layers
+        self.c_channels = c_channels                 # n of channels in input pics
+        self.num_layers = num_layers                # n of channels that go through hidden layers
         self.kernel_size = kernel_size     
         self.memory_kernel_size = memory_kernel_size              # n kernel size (no magic here)
         self.dilation_rate = dilation_rate
@@ -172,8 +173,20 @@ class Peephole_Conv_LSTM(nn.Module):
                                             kernel_size= kernel_size,
                                             memory_kernel_size=memory_kernel_size,
                                             dilation_rate=dilation_rate)
+        cell_list = []
+        for i in range(0, self.num_layers):
+            cur_input_dim = self.input_dim if i == 0 else self.h_channels
 
-    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
+            cell_list.append(Peephole_Conv_LSTM_Cell(input_dim= cur_input_dim,
+                                                        h_channels= output_dim,
+                                                        c_channels= c_channels,
+                                                        kernel_size= kernel_size,
+                                                        memory_kernel_size=memory_kernel_size,
+                                                        dilation_rate=dilation_rate))
+
+        self.cell_list = nn.ModuleList(cell_list)
+
+    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1, num_layer = 1):
         """
         Parameters
         ----------
@@ -190,8 +203,13 @@ class Peephole_Conv_LSTM(nn.Module):
         """
 
         b, _, width, height, T = input_tensor.size()
+        hs = []
+        cs = []
 
-        h, c = self.Cell.init_hidden(b,(height,width))
+        for i in range(self.num_layers):
+            h, c = self.cell_list[i].init_hidden(b,(height,width))
+            hs.append(h)
+            cs.append(c)
 
         pred_deltas = torch.zeros((b, self.h_channels, height, width, prediction_count), device = self._get_device())
         preds = torch.zeros((b, self.h_channels, height, width, prediction_count), device = self._get_device())
@@ -199,12 +217,15 @@ class Peephole_Conv_LSTM(nn.Module):
         
         #Iterate over the past
         for t in range(T):
-            h, c = self.Cell(input_tensor=input_tensor[:, :, :, :, t], cur_state=[h, c])
-        #Iterate over the future
+            hs[0], cs[0] = self.cell_list[0](input_tensor=input_tensor[..., t], cur_state=[hs[0], cs[0]])
+            for i in range(1, self.num_layers):
+                hs[i], cs[i] = self.cell_list[i](input_tensor=hs[i-1], cur_state=[hs[i], cs[i]])
+
         baselines[...,0] = baseline
-        pred_deltas[..., 0] = h
+        pred_deltas[..., 0] = hs[-1]
         preds[...,0] = pred_deltas[...,0] + baselines[...,0]
 
+        
 
         #Add a mask to our prediction
         if prediction_count > 1:
@@ -219,8 +240,11 @@ class Peephole_Conv_LSTM(nn.Module):
                 #Gluiong with non_pred_data
                 prev = torch.cat((preds[..., t - 1], non_pred_feat[..., t - 1]), axis=1)
 
-                h, c = self.Cell(input_tensor=prev, cur_state=[h, c])
-                pred_deltas[..., t] = h
+                hs[0], cs[0] = self.cell_list[0](input_tensor=prev, cur_state=[hs[0], cs[0]])
+                for i in range(1, self.num_layers):
+                    hs[i], cs[i] = self.cell_list[i](input_tensor=hs[i-1], cur_state=[hs[i], cs[i]])
+
+                pred_deltas[..., t] = hs[-1]
 
                 if self.baseline == "mean_cube":
                     baselines[..., t] = (preds[..., t-1] + (baselines[..., t - 1] * (T + t)))/(T + t + 1)
