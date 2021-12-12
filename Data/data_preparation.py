@@ -264,7 +264,7 @@ def process_md(md, target_shape):
     return md_reshaped
 
 class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
-    def __init__(self, paths, ms_cut, device, veg_threshold=0.8):
+    def __init__(self, paths, ms_cut, device):
         
         '''
             The NDVI Dataset will only consider heavilly vegetated areas of the training dataset
@@ -275,7 +275,6 @@ class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
         self.device = device
         self.paths = paths
         self.ms_cut = ms_cut
-        self.veg_threshold = veg_threshold
         
     def __getstate__(self):
         return { 
@@ -296,11 +295,12 @@ class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
         # Load the item from data
         context = np.load(self.paths[index], allow_pickle=True)
         
-        highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
-        highres_dynamic = np.append(np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,5:6,:], axis=2), highres_dynamic[:,:,4:5,:], axis=2)
+        hrd = np.nan_to_num(context['highresdynamic'], nan = 0.0)
+        ndvi = ((hrd[:, :, 3, :] - hrd[ :, :, 2, :]) / (
+                    hrd[ :, :, 3, :] + hrd[ :, :, 2, :] + 1e-6))[:, :, np.newaxis, :]
+        highres_dynamic = np.append(ndvi, hrd[:,:,6:7,:], axis=2)
         # Maybe we also want the sencor cloud mask in here?
-        highres_dynamic = highres_dynamic[:,:,0:6,:]
-
+        
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
         # For mesoscale data cut out overlapping section of interest
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
@@ -323,20 +323,8 @@ class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
         '''
         all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
         
-        return all_data
+        return all_data 
 
-    def filter_non_vegetated(self):
-        datapoints = np.load(self.paths[0], allow_pickle=True)['highresdynamic'][:,:,5,:].size
-        print("Before filtering: " + str(self.__len__()))
-        for i in range(len(self.paths)-1,-1,-1):
-            data = np.load(self.paths[i], allow_pickle=True)
-            hrs = np.nan_to_num(data['highresdynamic'], nan = 0.0)
-            esa = hrs[:,:,5,:]
-            veg_points = np.sum(esa == 4) + np.sum(esa == 5)
-            if (veg_points/datapoints < self.veg_threshold): # Discard low vegetated cubes
-                del self.paths[i]
-        print("After filtering: " + str(self.__len__()))
-        
 def process_md(md, target_shape):
     '''
         Channels: Precipitation (RR), Sea pressure (PP), Mean temperature (TG), Minimum temperature (TN), Maximum temperature (TX)

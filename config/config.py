@@ -3,7 +3,7 @@ import os
 import json
 
 def check_model_exists(name):
-    if name not in ["LSTM_model", "Transformer_model", 'Conv_model', 'Peephole_LSTM_model']:
+    if name not in ["LSTM_model", "Transformer_model", 'Conv_model','Peephole_LSTM_model', 'NDVI_Peephole_LSTM_model']:
         raise ValueError("The specified model name is invalid.")
 
 def command_line_parser(mode = "train"):
@@ -16,7 +16,7 @@ def command_line_parser(mode = "train"):
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+    parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
 
     if mode == 'train':
         parser.add_argument('--batch_size', type=int, default=None, help='batch size')
@@ -60,7 +60,7 @@ def command_line_parser(mode = "train"):
             cfg['path_dir'] = dir_path
         except:
             raise ValueError("The timestamp doesn't exist.")
-
+            
     return args, cfg
 
 def find_dir_path(wandb_name):

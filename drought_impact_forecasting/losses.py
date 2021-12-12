@@ -3,6 +3,27 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import tqdm
 
+def get_loss_from_name(loss_name):
+    if loss_name == "l2":
+        return L2_cube_loss()
+    elif loss_name == "l2_discounted":
+        return L2_disc_cube_loss()
+
+class L2_cube_loss(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, outputs, labels):
+        mask = 1 - labels[:,0:1]
+        masked_outputs = outputs * mask
+        masked_labels = labels * mask
+        l2_loss = nn.MSELoss()
+        return l2_loss(masked_outputs, masked_labels)
+
+class L2_disc_cube_loss(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, outputs, labels):
+        return 1
 
 # Linearly anneal the LK loss weight for certain epochs
 def kl_weight(epoch, finalWeight, annealStart, annealEnd):

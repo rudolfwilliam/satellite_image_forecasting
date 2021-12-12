@@ -10,6 +10,18 @@ from drought_impact_forecasting.models.utils.utils import mean_prediction, last_
 import json
 import wandb
 
+class SDVI_Train_callback(pl.Callback):
+    def __init__(self):
+        self.runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
+        os.mkdir(os.path.join(wandb.run.dir,"runtime_model"))
+    
+    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused = None) -> None:
+        
+        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
+        return super().on_train_epoch_end(trainer, pl_module)
+    
+
+
 class WandbTrain_callback(pl.Callback):
     def __init__(self, print_preds = True, val_1_data = None):
         self.print_preds = print_preds
