@@ -63,14 +63,14 @@ class Peephole_LSTM_model(pl.LightningModule):
         if self.cfg["training"]["optimizer"] == "adam":
             #self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
             #return self.optimizer
-            self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
+            optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
 
-            self.scheduler = ReduceLROnPlateau(self.optimizer, 
-                                               mode='min', 
-                                               factor=self.cfg["training"]["lr_factor"], 
-                                               patience= self.cfg["training"]["patience"],
-                                               threshold=0.001,
-                                               verbose=True)
+            scheduler = ReduceLROnPlateau(  optimizer, 
+                                            mode='min', 
+                                            factor=self.cfg["training"]["lr_factor"], 
+                                            patience= self.cfg["training"]["patience"],
+                                            threshold=0.001,
+                                            verbose=True)
 
         else:
             raise ValueError("You have specified an invalid optimizer.")
@@ -91,11 +91,17 @@ class Peephole_LSTM_model(pl.LightningModule):
         else:
             raise ValueError("You have specified an invalid optimizer.")'''
 
-        return {
-           'optimizer': self.optimizer,
-           'scheduler': self.scheduler,
-           'monitor': 'epoch_validation_ENS'
+        lr_sc = {
+            'scheduler': scheduler,
+            'monitor': 'epoch_training_loss'
         }
+        return [optimizer] , [lr_sc]
+        
+        '''
+    def validation_epoch_end(self, outputs) -> None:
+        v_loss = np.mean(np.vstack(outputs), axis = 0)
+        self.log("ENS_score", v_loss[0])
+        return super().validation_epoch_end(outputs)'''
 
     def training_step(self, batch, batch_idx):
 

@@ -100,15 +100,13 @@ class WandbTrain_callback(pl.Callback):
         # compute the avg training loss
         e_loss = sum(self.step_train_loss)/len(self.step_train_loss)
         self.epoch_train_loss.append(e_loss)
-
         # resetting the per-batch training loss
         self.step_train_loss = []
-        lr = pl_module.optimizer.param_groups[0]['lr']
-        trainer.logger.experiment.log({ 
-                                        'epoch': trainer.current_epoch,
-                                        'epoch_training_loss': e_loss, 
-                                        'learning_rate': lr
-                                    })
+        lr = trainer.lr_schedulers[0]['scheduler'].optimizer.param_groups[0]['lr']
+
+        pl_module.log('epoch_training_loss', e_loss, on_epoch=True, on_step=False)
+        pl_module.log('lr', lr, on_epoch=True, on_step=False)
+
         torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
         return super().on_train_epoch_end(trainer, pl_module)
     
@@ -123,25 +121,24 @@ class WandbTrain_callback(pl.Callback):
         return super().on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
 
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+
         v_loss = np.mean(np.vstack(self.validation_loss), axis = 0)
 
         # resetting the per-batch validation loss
         self.validation_loss = []
-
-        trainer.logger.experiment.log({ 
-                                'epoch': trainer.current_epoch,
-                                'epoch_validation_ENS':  v_loss[0],
-                                'epoch_validation_mad':  v_loss[1],
-                                'epoch_validation_ssim': v_loss[2],
-                                'epoch_validation_ols':  v_loss[3],
-                                'epoch_validation_emd':  v_loss[4]
-                            })
-        sch = pl_module.scheduler
-        if isinstance(sch, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            pl_module.scheduler.step(v_loss[0])
-        if self.print_preds:
-            self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
-        return super().on_validation_end(trainer, pl_module)
+        if not trainer.running_sanity_check:
+            trainer.logger.experiment.log({ 
+                                    'epoch': trainer.current_epoch,
+                                    'epoch_validation_ENS':  v_loss[0],
+                                    'epoch_validation_mad':  v_loss[1],
+                                    'epoch_validation_ssim': v_loss[2],
+                                    'epoch_validation_ols':  v_loss[3],
+                                    'epoch_validation_emd':  v_loss[4]
+                                })
+                            
+            if self.print_preds:
+                self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
+            return {"epoch_validation_ENS" : v_loss[0]}
 
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
 
