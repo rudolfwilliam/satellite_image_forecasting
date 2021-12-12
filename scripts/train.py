@@ -68,13 +68,13 @@ def main():
 
     try:
         # Try to load data paths quickly from pickle file
-        with open(os.path.join(os.getcwd(), "Data", "train_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "train_data_paths.pkl"),'rb') as f:
             training_data = pickle.load(f)
         training_data = Earthnet_Dataset(training_data, cfg["data"]["mesoscale_cut"], device=device)
-        with open(os.path.join(os.getcwd(), "Data", "val_1_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "val_1_data_paths.pkl"),'rb') as f:
             val_1_data = pickle.load(f)
         val_1_data = Earthnet_Dataset(val_1_data, cfg["data"]["mesoscale_cut"], device=device)
-        with open(os.path.join(os.getcwd(), "Data", "val_2_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "val_2_data_paths.pkl"),'rb') as f:
             val_2_data = pickle.load(f)
         val_2_data = Earthnet_Dataset(val_2_data, cfg["data"]["mesoscale_cut"], device=device)
     except:

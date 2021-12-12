@@ -32,6 +32,7 @@
     {
         "train_dir": "/Data/train/",
         "test_dir": "/Data/test/",
+        "pickle_dir": "all_data",
         "mesoscale_cut": [39, 41]
     },
     "training":

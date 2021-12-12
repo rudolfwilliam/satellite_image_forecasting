@@ -198,8 +198,6 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         # Load the item from data
         context = np.load(self.paths[index], allow_pickle=True)
-
-        # For test samples glue together context & target
         
         highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
         # Make data quality mask the 5th channel
@@ -230,6 +228,114 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
         
         return all_data
+        
+def process_md(md, target_shape):
+    '''
+        Channels: Precipitation (RR), Sea pressure (PP), Mean temperature (TG), Minimum temperature (TN), Maximum temperature (TX)
+    '''
+    interval = round(md.shape[3] / target_shape[3])
+
+    md_new = np.empty((tuple([md.shape[0], md.shape[1], md.shape[2], target_shape[3]])))
+    # Make avg, min, max vals over 5 day intervals
+    for i in range(target_shape[3]):
+        days = [d for d in range(i*interval, i*interval + interval)]
+        for j in range(md.shape[0]):
+            for k in range(md.shape[1]):
+                md_new[j,k,0,i] = np.mean(md[j,k,0,days])   # mean precipitation
+                md_new[j,k,1,i] = np.mean(md[j,k,1,days])   # mean pressure
+                md_new[j,k,2,i] = np.mean(md[j,k,2,days])   # mean temp
+                md_new[j,k,3,i] = np.min(md[j,k,3,days])    # min temp
+                md_new[j,k,4,i] = np.max(md[j,k,4,days])    # max temp
+
+    # Move weather data 1 image forward
+    # => the nth image is predicted based on the (n-1)th image and nth weather data
+    # the last weather inputed will hence be a null prediction (this should never be used by the model!)
+    null_weather = md_new[:,:,:,-1:] * 0
+    md_new = np.append(md_new[:,:,:,1:], null_weather, axis=-1)
+
+    # Reshape to 128 x 128
+    md_reshaped = np.empty((tuple([target_shape[0], target_shape[1], md.shape[2], md_new.shape[3]])))
+    for i in range(target_shape[0]):
+        for j in range(target_shape[1]):
+            row = round(i//(target_shape[0]/md.shape[0]))
+            col = round(j//(target_shape[1]/md.shape[1]))
+            md_reshaped[i,j,:,:] = md_new[row, col,:,:]
+
+    return md_reshaped
+
+class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
+    def __init__(self, paths, ms_cut, device, veg_threshold=0.8):
+        
+        '''
+            The NDVI Dataset will only consider heavilly vegetated areas of the training dataset
+            (since we have access to the ESA Scene Classification)
+            We will discard any cubes with a low percetage of vegetated pixels
+        '''
+
+        self.device = device
+        self.paths = paths
+        self.ms_cut = ms_cut
+        self.veg_threshold = veg_threshold
+        
+    def __getstate__(self):
+        return { 
+            "device": self.device.__str__(), 
+            "paths": self.paths, 
+            "ms_cut": self.ms_cut
+        }
+        
+    def __setstate__(self, d):
+        self.device = torch.device(d["device"])
+        self.paths = d["paths"]
+        self.ms_cut = d["ms_cut"]
+
+    def __len__(self):
+        return len(self.paths)
+ 
+    def __getitem__(self, index):
+        # Load the item from data
+        context = np.load(self.paths[index], allow_pickle=True)
+        
+        highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
+        highres_dynamic = np.append(np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,5:6,:], axis=2), highres_dynamic[:,:,4:5,:], axis=2)
+        # Maybe we also want the sencor cloud mask in here?
+        highres_dynamic = highres_dynamic[:,:,0:6,:]
+
+        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
+        # For mesoscale data cut out overlapping section of interest
+        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
+
+        # Stick all data together
+        all_data = np.append(highres_dynamic, highres_static,axis=-2)
+
+        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
+                                                            all_data.shape[1],
+                                                            meso_dynamic.shape[2],
+                                                            all_data.shape[3]]))
+        all_data = np.append(all_data, meso_dynamic, axis=-2)
+        
+        ''' 
+            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
+            w = width
+            h = height
+            c = channel
+            t = time
+        '''
+        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
+        
+        return all_data
+
+    def filter_non_vegetated(self):
+        datapoints = np.load(self.paths[0], allow_pickle=True)['highresdynamic'][:,:,5,:].size
+        print("Before filtering: " + str(self.__len__()))
+        for i in range(len(self.paths)-1,-1,-1):
+            data = np.load(self.paths[i], allow_pickle=True)
+            hrs = np.nan_to_num(data['highresdynamic'], nan = 0.0)
+            esa = hrs[:,:,5,:]
+            veg_points = np.sum(esa == 4) + np.sum(esa == 5)
+            if (veg_points/datapoints < self.veg_threshold): # Discard low vegetated cubes
+                del self.paths[i]
+        print("After filtering: " + str(self.__len__()))
         
 def process_md(md, target_shape):
     '''

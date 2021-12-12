@@ -50,13 +50,14 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
+    # Use this also for NDVI
     with open(os.path.join(cfg['path_dir'], "files", "val_2_data_paths.pkl"),'rb') as f:
         val_2_path_list = pickle.load(f)
 
     try:
-        with open(os.path.join(os.getcwd(), "Data", "test_context_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "test_context_data_paths.pkl"),'rb') as f:
             test_context_data = pickle.load(f)
-        with open(os.path.join(os.getcwd(), "Data", "test_target_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "test_target_data_paths.pkl"),'rb') as f:
             test_target_data = pickle.load(f)
         test_data = Earthnet_Test_Dataset(test_context_data, test_target_data, cfg["data"]["mesoscale_cut"], device=device)
     except:

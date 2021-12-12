@@ -15,7 +15,9 @@
     {
         "train_dir": "/Data/train/",
         "test_dir": "/Data/test/",
-        "mesoscale_cut": [39, 41]
+        "pickle_dir": "all_data",
+        "mesoscale_cut": [39, 41],
+        "veg_threshold": 0.7
     },
     "training":
     {
@@ -31,7 +33,7 @@
         "test_batch_size": 1,
         "optimizer": "adam",
         "seed": 1,
-        "training_samples": 4,
+        "training_samples": 24,
         "val_1_samples": 2,
         "val_2_samples": 4,
         "num_workers": 0,
