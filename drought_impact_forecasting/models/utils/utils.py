@@ -48,12 +48,12 @@ def last_frame(cube, mask_channel=4):
     # 1 = good quality, 0 = bad quality (in the flipped version)
     mask = 1 - cube[:, mask_channel:mask_channel + 1, :, :, T - 1]
     missing = cube[:, mask_channel:mask_channel + 1, :, :, T - 1]  # 1 = is missing, 0 = is already assigned
-    new_cube = cube[:, :4, :, :, T - 1] * mask
+    new_cube = cube[:, :-1, :, :, T - 1] * mask
 
     t = T - 1
     while (torch.min(mask) == 0 and t >= 0):
         mask = missing * (1 - cube[:, mask_channel:mask_channel + 1, :, :, t])
-        new_cube += cube[:, :4, :, :, t] * mask
+        new_cube += cube[:, :-1, :, :, t] * mask
         missing = missing * (1 - mask)
         t -= 1
     return new_cube
