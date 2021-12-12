@@ -151,7 +151,7 @@ class Peephole_LSTM_model(pl.LightningModule):
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        npf = all_data[:, 5:, :, :, t0:]
+        npf = all_data[:, 5:, :, :, t0+1:]
 
         x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
@@ -183,7 +183,7 @@ class Peephole_LSTM_model(pl.LightningModule):
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        npf = all_data[:, 5:, :, :, t0:]
+        npf = all_data[:, 5:, :, :, t0+1:]
 
         x_preds, x_deltas, baselines = self(x = context, 
                                             prediction_count = T-t0, 
