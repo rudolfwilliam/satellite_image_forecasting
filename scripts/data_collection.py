@@ -31,6 +31,12 @@ training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscal
                                                         undersample=False)
 test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
 
+# Create dirs if needed
+if not os.path.exists(os.path.join(os.getcwd(), "Data", "all_data")):
+    os.makedirs(os.path.join(os.getcwd(), "Data", "all_data"))
+if not os.path.exists(os.path.join(os.getcwd(), "Data", "NDVI_data")):
+    os.makedirs(os.path.join(os.getcwd(), "Data", "NDVI_data"))
+
 # To build back the datasets
 with open(os.path.join(os.getcwd(), "Data", "all_data", "train_data_paths.pkl"), "wb") as fp:
     pickle.dump(training_data.paths, fp)
