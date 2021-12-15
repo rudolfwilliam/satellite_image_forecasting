@@ -138,7 +138,7 @@ class WandbTrain_callback(pl.Callback):
 
         # resetting the per-batch validation loss
         self.validation_loss = []
-        if not trainer.running_sanity_check:
+        if not trainer.sanity_checking:
             trainer.logger.experiment.log({ 
                                     'epoch': trainer.current_epoch,
                                     'epoch_validation_ENS':  v_loss[0],

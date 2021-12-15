@@ -30,7 +30,7 @@ class Peephole_LSTM_model(pl.LightningModule):
         self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
                                         output_dim=cfg["model"]["output_channels"],
                                         c_channels = c_channels,
-                                        num_layers= cfg["model"]["num_layers"],
+                                        num_layers= cfg["model"]["n_layers"],
                                         kernel_size=(self.cfg["model"]["kernel"], self.cfg["model"]["kernel"]),
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
