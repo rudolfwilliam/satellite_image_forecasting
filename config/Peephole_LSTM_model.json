@@ -25,7 +25,7 @@
         "decay_point": 1,
         "offline": false,
         "print_predictions": true,
-        "epochs": 20,
+        "epochs": 200,
         "start_learn_rate": 0.1,
         "train_batch_size": 4,
         "val_1_batch_size": 2,
@@ -41,7 +41,7 @@
         "gpus": 1,
         "devices": 1,
         "log_steps": 50,
-        "patience": 0,
+        "patience": 2,
         "lr_factor": 0.3,
         "use_context": false
     },

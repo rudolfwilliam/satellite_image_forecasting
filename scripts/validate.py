@@ -29,6 +29,7 @@ import wandb
 from datetime import datetime
 
 def main():
+    
     args, cfg = command_line_parser(mode = 'validate')
 
     model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
@@ -51,7 +52,8 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    with open(os.path.join(cfg['path_dir'], "files", "val_2_data_paths.pkl"),'rb') as f:
+    # Always use same val_2 data from Data folder
+    with open(os.path.join("Data", "all_data", "val_2_data_paths.pkl"),'rb') as f:
         val_2_path_list = pickle.load(f)
 
     val_2_data = Earthnet_Dataset(val_2_path_list, cfg["data"]["mesoscale_cut"], device=device)

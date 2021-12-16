@@ -16,9 +16,9 @@ def command_line_parser(mode = "train"):
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
 
     if mode == 'train':
+        parser.add_argument('-mn', '--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--batch_size', type=int, default=None, help='batch size')
         parser.add_argument('--bm', type=str, default=None, help='big memory or small') # y = ture, n = false
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
@@ -47,8 +47,29 @@ def command_line_parser(mode = "train"):
         if args.bs is not None:
             cfg["model"]["baseline"] = args.bs
 
-    
     if mode == 'validate':
+        '''parser.add_argument('-mn', '--model_name', action='append', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+        parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
+        parser.add_argument('--rn', action='append', help='wandb run name to validate')
+        parser.add_argument('--me', action='append', help='model epoch to test/validate')
+        args = parser.parse_args()
+        #check_model_exists(args.model_name)
+        args.me = [int(epoch) for epoch in args.me]
+        if len(args.model_name) == 0:
+            args.model_name = ['Peephole_LSTM_model' for i in len(args.rn)]
+        if len(args.me) != len(args.rn):
+            args.me = [-1 for i in len(args.rn)]
+        try:
+            for rn in args.rn:
+                dir_path = find_dir_path(args.rn)
+
+            dir_path = find_dir_path(args.rn)
+            cfg = json.load(open(os.path.join(dir_path, "files",  args.model_name + ".json"), 'r'))
+            cfg['path_dir'] = dir_path
+        except:
+            raise ValueError("The timestamp doesn't exist.")'''
+        
+        parser.add_argument('-mn', '--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
         parser.add_argument('--rn', type=str, help='wandb run name to validate')
         parser.add_argument('--me', type=int, default=-1, help='model epoch to test/validate')
