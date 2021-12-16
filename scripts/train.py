@@ -65,7 +65,6 @@ def main():
     
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
-
     try:
         # Try to load data paths quickly from pickle file
         with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "train_data_paths.pkl"),'rb') as f:

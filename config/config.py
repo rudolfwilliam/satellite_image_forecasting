@@ -19,6 +19,7 @@ def command_line_parser(mode = "train"):
 
     if mode == 'train':
         parser.add_argument('-mn', '--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+        parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
         parser.add_argument('--batch_size', type=int, default=None, help='batch size')
         parser.add_argument('--bm', type=str, default=None, help='big memory or small') # y = ture, n = false
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
@@ -46,6 +47,8 @@ def command_line_parser(mode = "train"):
             cfg["training"]["start_learn_rate"] = args.lr
         if args.bs is not None:
             cfg["model"]["baseline"] = args.bs
+        if args.training_loss is not None:
+            cfg["training"]["training_loss"] = args.training_loss
 
     if mode == 'validate':
         '''parser.add_argument('-mn', '--model_name', action='append', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')

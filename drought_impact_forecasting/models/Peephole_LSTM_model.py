@@ -10,7 +10,7 @@ import os
 import glob
 
 from torchmetrics import metric
-from ..losses import cloud_mask_loss
+from ..losses import cloud_mask_loss, get_loss_from_name
 
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
@@ -40,6 +40,8 @@ class Peephole_LSTM_model(pl.LightningModule):
         self.val_metric = self.cfg["training"]["val_metric"]
         self.future_training = self.cfg["model"]["future_training"]
         self.learning_rate = self.cfg["training"]["start_learn_rate"]
+        self.training_loss = get_loss_from_name(self.cfg["training"]["training_loss"])
+        self.test_loss = get_loss_from_name(self.cfg["training"]["test_loss"])
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -58,6 +60,22 @@ class Peephole_LSTM_model(pl.LightningModule):
         preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, baselines
+
+    def batch_loss(self, batch, t_future = 20, loss = None):
+        all_data = batch
+        cmc = 4 #cloud_mask channel
+        T = all_data.size()[4]
+        t0 = T - t_future
+        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
+        target = all_data[:, :cmc + 1, :, :, t0:] # b, c, h, w, t
+        npf = all_data[:, cmc + 1:, :, :, t0:]
+
+        x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
+        
+        if loss is None:
+            return self.training_loss(labels = target, prediction = x_preds)
+        else:
+            return loss(labels = target, prediction = x_preds)
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
@@ -96,16 +114,9 @@ class Peephole_LSTM_model(pl.LightningModule):
             'monitor': 'epoch_training_loss'
         }
         return [optimizer] , [lr_sc]
-        
-        '''
-    def validation_epoch_end(self, outputs) -> None:
-        v_loss = np.mean(np.vstack(outputs), axis = 0)
-        self.log("ENS_score", v_loss[0])
-        return super().validation_epoch_end(outputs)'''
+    
 
     def training_step(self, batch, batch_idx):
-
-        all_data = batch
         '''
         all_data of size (b, w, h, c, t)
             b = batch_size
@@ -114,28 +125,23 @@ class Peephole_LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
-        cloud_mask_channel = 4
-
-        T = all_data.size()[4]
-        t0 = T - self.future_training
-
-        npf = all_data[:, 5:, :, :, t0:]
-        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        x_preds, _, _ = self(all_data[:, :, :, :, :t0], non_pred_feat = npf, prediction_count = T-t0)
-
-        loss = cloud_mask_loss(x_preds[..., 0], target[:,:4,:,:,0], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
-        # 
-        for i, t_end in enumerate(range(t0 + 1, T)): # this iterates with t_end = t0, ..., T-1
-            loss = loss.add(cloud_mask_loss(x_preds[...,i + 1], target[:,:4,:,:,i + 1], all_data[:, cloud_mask_channel:cloud_mask_channel + 1, :, :, t_end]))
-
-        return loss
+        l = self.batch_loss(batch, t_future=self.future_training, loss = self.training_loss)
+        return l
     
     # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
-            The validation step also uses the L2 loss, but on a prediction of all non-context images
+        all_data of size (b, w, h, c, t)
+            b = batch_size
+            c = channels
+            w = width
+            h = height
+            t = time
         '''
-        all_data = batch
+        _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.test_loss)
+        return l
+    
+    def test_step(self, batch, batch_idx):
         '''
         all_data of size (b, w, h, c, t)
             b = batch_size
@@ -144,54 +150,6 @@ class Peephole_LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
-        cloud_mask_channel = 4
-
-        T = all_data.size()[4]
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
-
-        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
-        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        npf = all_data[:, 5:, :, :, t0:]
-
-        x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
-        
-        if self.val_metric=="ENS":
-            # ENS loss = -ENS (ENS==1 would mean perfect prediction)
-            # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
-            score, scores = ENS(prediction = x_preds, target = target)
-            loss = - scores
-        else: # L2 cloud mask loss
-            delta = all_data[:, :4, :, :, t0] - baselines[...,0]
-            loss = cloud_mask_loss(x_delta[...,0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
-            
-            for t_end in range(t0 + 1, T): # this iterates with t_end = t0 + 1, ..., T-1
-                delta = all_data[:, :4, :, :, t_end] - baselines[..., t_end-t0]
-                loss = loss.add(cloud_mask_loss(x_delta[...,t_end-t0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
-            
-        return loss
-    
-    def test_step(self, batch, batch_idx):
-        '''
-            The test step takes the test data and makes predictions.
-            They are then evaluated using the ENS score.
-        '''
-        all_data = batch
-
-        T = all_data.size()[4]
-
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
-
-        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
-        target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        npf = all_data[:, 5:, :, :, t0:]
-
-        x_preds, x_deltas, baselines = self(x = context, 
-                                            prediction_count = T-t0, 
-                                            non_pred_feat = npf)
-        
-        # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
-    
-        score, part_scores = ENS(prediction = x_preds, target = target)
-        
-        return part_scores
+        _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.test_loss)
+        return l
 
