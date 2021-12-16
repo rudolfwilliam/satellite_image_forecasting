@@ -23,7 +23,7 @@ class SDVI_Train_callback(pl.Callback):
 
 
 class WandbTrain_callback(pl.Callback):
-    def __init__(self, print_preds = True, val_1_data = None):
+    def __init__(self, cfg, print_preds = True, val_1_data = None):
         self.print_preds = print_preds
         self.print_sample = None
         self.print_table = None
@@ -46,6 +46,8 @@ class WandbTrain_callback(pl.Callback):
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
         #wandb.init()
+
+        
 
         wandb.define_metric("step")
         wandb.define_metric("epoch")

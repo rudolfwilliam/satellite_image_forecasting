@@ -9,7 +9,7 @@
         "memory_kernel": 3,
         "baseline": "last_frame",
         "future_training": 20,
-        "num_layers":3,
+        "n_layers":3,
         "training_loss":"l2",
         "test_loss":"l2"
     },

@@ -47,7 +47,7 @@ def main():
     else:
         os.environ["WANDB_MODE"]="offline"
 
-    wandb.init(entity="eth-ds-lab", project="drought_impact_forecasting-scripts")
+    wandb.init(entity="eth-ds-lab", project="drought_impact_forecasting-scripts", config=cfg)
     # Store the model to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
         try:
@@ -111,7 +111,7 @@ def main():
         pickle.dump(val_2_data.paths, fp)
     
     # Load model Callbacks
-    wd_callbacks = WandbTrain_callback(val_1_data = val_1_data)
+    wd_callbacks = WandbTrain_callback(val_1_data = val_1_data, cfg = cfg)
     # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
