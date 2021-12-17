@@ -21,6 +21,7 @@ from pytorch_lightning.loggers import WandbLogger
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
+from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from Data.data_preparation import Earthnet_Dataset, prepare_test_data
 from scripts.callbacks import WandbTest_callback
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -63,6 +64,10 @@ def main():
         model = Conv_model(cfg)
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval()
+    elif args.model_name == "Peephole_LSTM_model":
+        model = Peephole_LSTM_model(cfg)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.eval()
     else:
         raise ValueError("The specified model name is invalid.")
     truth = truth.unsqueeze(dim=0)
@@ -70,12 +75,16 @@ def main():
     t0 = int(T/3)
     context = truth[:, :, :, :, :t0] # b, c, h, w, t
     target = truth[:, :5, :, :, t0:] # b, c, h, w, t
-    npf = truth[:, 5:, :, :, t0+1:]
+    npf = truth[:, 5:, :, :, t0:]
 
     x_preds, x_deltas, baselines = model(x = context, 
                                         prediction_count = T-t0, 
                                         non_pred_feat = npf)
-    generate_plot(x_preds.permute(1,2,3,4,0), truth)
+    generate_plot(x_preds, truth)
+    '''real_deltas = target[:, :4, ...] - truth[:,:4,:,:,t0-1:-1]
+    full_mit_baselines = truth
+    full_mit_baselines[:, :4, :, :, t0:] = real_deltas
+    generate_plot(x_deltas, full_mit_baselines)'''
 
 def generate_plot(pred, true):
     T = true.shape[-1]

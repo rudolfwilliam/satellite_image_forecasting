@@ -87,7 +87,7 @@ class Peephole_LSTM_model(pl.LightningModule):
                                             mode='min', 
                                             factor=self.cfg["training"]["lr_factor"], 
                                             patience= self.cfg["training"]["patience"],
-                                            threshold=0.001,
+                                            threshold=self.cfg["training"]["lr_threshold"],
                                             verbose=True)
         elif self.cfg["training"]["optimizer"] == "adamW":
             optimizer = optim.AdamW(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
@@ -96,7 +96,7 @@ class Peephole_LSTM_model(pl.LightningModule):
                                             mode='min', 
                                             factor=self.cfg["training"]["lr_factor"], 
                                             patience= self.cfg["training"]["patience"],
-                                            threshold=0.001,
+                                            threshold=self.cfg["training"]["lr_threshold"],
                                             verbose=True)
         else:
             raise ValueError("You have specified an invalid optimizer.")

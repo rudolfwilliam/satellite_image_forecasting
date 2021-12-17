@@ -72,7 +72,7 @@ def command_line_parser(mode = "train"):
         except:
             raise ValueError("The timestamp doesn't exist.")'''
         
-        parser.add_argument('-mn', '--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+        parser.add_argument('-mn', '--model_name', type=str, default='Peephole_LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
         parser.add_argument('--rn', type=str, help='wandb run name to validate')
         parser.add_argument('--me', type=int, default=-1, help='model epoch to test/validate')
