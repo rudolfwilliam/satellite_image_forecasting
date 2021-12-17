@@ -39,7 +39,7 @@ def en_score(s):
         best_score[i, :5] = s[best,i,:]
         best_score[i, -1] = best
     means = np.mean(best_score[:,:-1], axis=0)
-    return means[-1], hm(means[:4])
+    return means[-1], hm(means[:4]), means[:4]
     
 print("Score of ensemble of ALL models")
 print(en_score(scr))

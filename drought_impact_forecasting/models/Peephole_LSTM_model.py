@@ -89,7 +89,15 @@ class Peephole_LSTM_model(pl.LightningModule):
                                             patience= self.cfg["training"]["patience"],
                                             threshold=0.001,
                                             verbose=True)
+        elif self.cfg["training"]["optimizer"] == "adamW":
+            optimizer = optim.AdamW(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
 
+            scheduler = ReduceLROnPlateau(  optimizer, 
+                                            mode='min', 
+                                            factor=self.cfg["training"]["lr_factor"], 
+                                            patience= self.cfg["training"]["patience"],
+                                            threshold=0.001,
+                                            verbose=True)
         else:
             raise ValueError("You have specified an invalid optimizer.")
         '''

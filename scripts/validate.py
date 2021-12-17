@@ -22,7 +22,7 @@ from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Dataset
+from Data.data_preparation import Earthnet_Dataset, prepare_train_data
 from scripts.callbacks import WandbTest_callback
 
 import wandb
