@@ -3,6 +3,7 @@ import os
 import numpy as np
 import random
 from shutil import copy2
+import pickle
 
 sys.path.append(os.getcwd())
 
@@ -39,12 +40,23 @@ def main():
                                                          val_1_samples=cfg["training"]["val_1_samples"],
                                                          val_2_samples=cfg["training"]["val_2_samples"])
    
-    test_data = prepare_test_data(cfg["data"]["mesoscale_cut"], 
-                             cfg["data"]["test_dir"],
-                             device = device)
+    training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
+                                                         cfg["data"]["train_dir"],
+                                                         device = device,
+                                                         training_samples=2347,
+                                                         val_1_samples=0,
+                                                         val_2_samples=0)
 
-    with open(instance_folder + "/scores.csv", 'w') as filehandle:
-                filehandle.write("mad, ssim, ols, emd, score\n")
+    with open(os.path.join(instance_folder, "train_data_paths.pkl"), "wb") as fp:
+        pickle.dump(training_data.paths, fp)
+
+    val_2_data = training_data
+    '''test_data = prepare_test_data(cfg["data"]["mesoscale_cut"], 
+                             cfg["data"]["test_dir"],
+                             device = device)'''
+
+    #with open(instance_folder + "/scores.csv", 'w') as filehandle:
+    #            filehandle.write("mad, ssim, ols, emd, score\n")
 
     for i in range(len(val_2_data.paths)):
         all_data = val_2_data.__getitem__(i)

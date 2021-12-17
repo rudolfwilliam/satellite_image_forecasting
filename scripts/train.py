@@ -139,7 +139,7 @@ def main():
     # Train on context frames of val2/test data
     if cfg["training"]["use_context"]:
 
-        test_data = prepare_test_data(cfg["data"]["mesoscale_cut"],cfg["data"]["test_dir"],device)
+        test_data = prepare_test_data(cfg["data"]["mesoscale_cut"], cfg["data"]["test_dir"], device)
         context_data = Earthnet_Context_Dataset(test_data.context_paths, cfg["data"]["mesoscale_cut"], device)
         context_data = Earthnet_Context_Dataset(val_2_data.paths, cfg["data"]["mesoscale_cut"], device)
         context_dataloader = DataLoader(context_data, 
