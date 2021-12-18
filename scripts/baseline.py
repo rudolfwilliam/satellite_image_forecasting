@@ -58,6 +58,7 @@ def main():
     #with open(instance_folder + "/scores.csv", 'w') as filehandle:
     #            filehandle.write("mad, ssim, ols, emd, score\n")
 
+    print("Using " + str(len(val_2_data.paths)) + " samples")
     for i in range(len(val_2_data.paths)):
         all_data = val_2_data.__getitem__(i)
 
