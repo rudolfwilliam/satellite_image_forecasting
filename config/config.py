@@ -18,14 +18,16 @@ def command_line_parser(mode = "train"):
     )
 
     if mode == 'train':
-        parser.add_argument('-mn', '--model_name', type=str, default='LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
+        parser.add_argument('-mn', '--model_name', type=str, default='Peephole_LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
         parser.add_argument('--batch_size', type=int, default=None, help='batch size')
         parser.add_argument('--bm', type=str, default=None, help='big memory or small') # y = ture, n = false
         parser.add_argument('--nl', type=int, default=None, help='number of layers')
         parser.add_argument('--ft', type=int, default=None, help='future steps for training')
         parser.add_argument('--lr', type=float, default=None, help='learining rate')
+        parser.add_argument('-e', '--epochs', type=int, default=200, help='learining rate')
         parser.add_argument('--bs', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
+        parser.add_argument('-rn', '--run_name', type=str, default=None, help='wandb name of run you want to restart')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
@@ -45,33 +47,21 @@ def command_line_parser(mode = "train"):
             cfg["model"]["future_training"] = args.ft
         if args.lr is not None:
             cfg["training"]["start_learn_rate"] = args.lr
+        if args.epochs is not None:
+            cfg["training"]["epochs"] = args.epochs
         if args.bs is not None:
             cfg["model"]["baseline"] = args.bs
         if args.training_loss is not None:
             cfg["training"]["training_loss"] = args.training_loss
+        if args.run_name is not None:
+            try:
+                dir_path = find_dir_path(args.run_name)
+                cfg = json.load(open(os.path.join(dir_path, "files",  args.model_name + ".json"), 'r'))
+                cfg['path_dir'] = dir_path
+            except:
+                raise ValueError("The timestamp doesn't exist.")
 
-    if mode == 'validate':
-        '''parser.add_argument('-mn', '--model_name', action='append', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
-        parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
-        parser.add_argument('--rn', action='append', help='wandb run name to validate')
-        parser.add_argument('--me', action='append', help='model epoch to test/validate')
-        args = parser.parse_args()
-        #check_model_exists(args.model_name)
-        args.me = [int(epoch) for epoch in args.me]
-        if len(args.model_name) == 0:
-            args.model_name = ['Peephole_LSTM_model' for i in len(args.rn)]
-        if len(args.me) != len(args.rn):
-            args.me = [-1 for i in len(args.rn)]
-        try:
-            for rn in args.rn:
-                dir_path = find_dir_path(args.rn)
-
-            dir_path = find_dir_path(args.rn)
-            cfg = json.load(open(os.path.join(dir_path, "files",  args.model_name + ".json"), 'r'))
-            cfg['path_dir'] = dir_path
-        except:
-            raise ValueError("The timestamp doesn't exist.")'''
-        
+    if mode == 'validate':        
         parser.add_argument('-mn', '--model_name', type=str, default='Peephole_LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
         parser.add_argument('--ts', type=str, help='timestamp of the model to validate: deprecated')
         parser.add_argument('--rn', type=str, help='wandb run name to validate')

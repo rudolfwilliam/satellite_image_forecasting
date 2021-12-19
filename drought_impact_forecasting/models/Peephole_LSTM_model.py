@@ -11,6 +11,7 @@ import glob
 
 from torchmetrics import metric
 from ..losses import cloud_mask_loss, get_loss_from_name
+from ..optimizers import get_opt_from_name
 
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
@@ -77,46 +78,16 @@ class Peephole_LSTM_model(pl.LightningModule):
         else:
             return loss(labels = target, prediction = x_preds)
 
-    def configure_optimizers(self):
-        if self.cfg["training"]["optimizer"] == "adam":
-            #self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-            #return self.optimizer
-            optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
-
-            scheduler = ReduceLROnPlateau(  optimizer, 
-                                            mode='min', 
-                                            factor=self.cfg["training"]["lr_factor"], 
-                                            patience= self.cfg["training"]["patience"],
-                                            threshold=self.cfg["training"]["lr_threshold"],
-                                            verbose=True)
-        elif self.cfg["training"]["optimizer"] == "adamW":
-            optimizer = optim.AdamW(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
-
-            scheduler = ReduceLROnPlateau(  optimizer, 
-                                            mode='min', 
-                                            factor=self.cfg["training"]["lr_factor"], 
-                                            patience= self.cfg["training"]["patience"],
-                                            threshold=self.cfg["training"]["lr_threshold"],
-                                            verbose=True)
-        else:
-            raise ValueError("You have specified an invalid optimizer.")
-        '''
-        if self.cfg["training"]["optimizer"] == "adam":
-            #self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-            #return self.optimizer
-            self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
-            
-            # Decay learning rate according for last (epochs - decay_point) iterations
-            lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
-                          if epoch <= self.cfg["model"]["decay_point"] \
-                          else ((self.cfg["training"]["epochs"]-epoch) / (self.cfg["training"]["epochs"]-self.cfg["model"]["decay_point"])
-                                * self.cfg["training"]["start_learn_rate"])
-
-            self.scheduler = LambdaLR(self.optimizer, lambda_all)
-
-        else:
-            raise ValueError("You have specified an invalid optimizer.")'''
-
+    def configure_optimizers(self):        
+        optimizer = get_opt_from_name(self.cfg["training"]["optimizer"],
+                                      params=self.parameters(),
+                                      lr=self.cfg["training"]["start_learn_rate"])
+        scheduler = ReduceLROnPlateau(optimizer, 
+                                      mode='min', 
+                                      factor=self.cfg["training"]["lr_factor"], 
+                                      patience= self.cfg["training"]["patience"],
+                                      threshold=self.cfg["training"]["lr_threshold"],
+                                      verbose=True)
         lr_sc = {
             'scheduler': scheduler,
             'monitor': 'epoch_training_loss'
