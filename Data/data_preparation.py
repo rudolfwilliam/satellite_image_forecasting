@@ -70,7 +70,7 @@ def prepare_test_data(ms_cut, data_dir, device):
     test_context_files.sort()
     test_target_files.sort()
 
-    return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut, device=device)
+    return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut)
 
 class Earthnet_Test_Dataset(torch.utils.data.Dataset):
     def __init__(self, context_paths, target_paths, ms_cut) -> None:
