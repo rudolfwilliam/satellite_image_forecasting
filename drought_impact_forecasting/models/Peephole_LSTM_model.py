@@ -123,7 +123,6 @@ class Peephole_LSTM_model(pl.LightningModule):
         }
         return [optimizer] , [lr_sc]
     
-
     def training_step(self, batch, batch_idx):
         '''
         all_data of size (b, w, h, c, t)

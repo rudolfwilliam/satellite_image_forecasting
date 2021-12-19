@@ -1,13 +1,18 @@
 import earthnet as en
 import numpy as np
+import pytorch_lightning as pl
+from torch.utils.data import random_split, DataLoader
 import torch
 import os
 from os.path import isfile, join
 import random
+import pickle
 import math
 
 from torch._C import device
- 
+
+
+
 def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None, undersample = False):
     
     if training_samples is not None:
@@ -358,3 +363,53 @@ def process_md(md, target_shape):
             md_reshaped[i,j,:,:] = md_new[row, col,:,:]
 
     return md_reshaped
+
+
+class Earth_net_DataModule(pl.LightningDataModule):
+    def __init__(self, 
+                 data_dir: str = "./", 
+                 train_batch_size = 16,
+                 val_batch_size = 16,
+                 test_batch_size = 16,
+                 mesoscale_cut = [39, 41]):
+        super().__init__()
+        self.data_dir = data_dir
+        self.mesoscale_cut = mesoscale_cut
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
+        self.test_batch_size = test_batch_size
+        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "train_data_paths.pkl"),'rb') as f:
+            self.training_path_list = pickle.load(f)
+        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
+            self.val_1_path_list = pickle.load(f)
+        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
+            self.test_set_path_list = pickle.load(f)
+
+    def setup(self, stage):
+        # Assign Train/val split(s) for use in Dataloaders
+        if stage in (None, "fit"):
+            #training
+            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, device=device)
+            #validation
+            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, device=device)
+
+        # Assign Test split(s) for use in Dataloaders
+        if stage in (None, "test"):
+            self.test_set = Earthnet_Dataset(self.test_set_path_list, self.mesoscale_cut, device=device)
+
+    def train_dataloader(self):
+        return DataLoader(self.training_data, batch_size=self.train_batch_size)
+
+    def val_dataloader(self):
+        return DataLoader(self.val_1_data, batch_size=self.val_batch_size)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_set, batch_size=self.test_batch_size)
+
+    def serialize_datasets(self, directory):
+        with open(os.path.join(directory, "train_data_paths.pkl"), "wb") as fp:
+            pickle.dump(self.training_path_list, fp)
+        with open(os.path.join(directory, "val_1_data_paths.pkl"), "wb") as fp:
+            pickle.dump(self.val_1_path_list, fp)
+        with open(os.path.join(directory, "val_2_data_paths.pkl"), "wb") as fp:
+            pickle.dump(self.test_set_path_list, fp)

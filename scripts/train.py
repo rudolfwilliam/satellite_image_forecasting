@@ -28,7 +28,7 @@ from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_
 from drought_impact_forecasting.models.Transformer_model import Transformer_model
 from drought_impact_forecasting.models.Baseline_model import Last_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Dataset, Earthnet_Context_Dataset, prepare_train_data, prepare_test_data
+from Data.data_preparation import Earthnet_Dataset, Earthnet_Context_Dataset, prepare_train_data, prepare_test_data, Earth_net_DataModule
 from callbacks import Prediction_Callback
 from callbacks import WandbTrain_callback
 
@@ -65,52 +65,20 @@ def main():
     
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
-    try:
-        # Try to load data paths quickly from pickle file
-        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "train_data_paths.pkl"),'rb') as f:
-            training_data = pickle.load(f)
-        training_data = Earthnet_Dataset(training_data, cfg["data"]["mesoscale_cut"], device=device)
-        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "val_1_data_paths.pkl"),'rb') as f:
-            val_1_data = pickle.load(f)
-        val_1_data = Earthnet_Dataset(val_1_data, cfg["data"]["mesoscale_cut"], device=device)
-        with open(os.path.join(os.getcwd(), "Data", cfg["data"]["pickle_dir"], "val_2_data_paths.pkl"),'rb') as f:
-            val_2_data = pickle.load(f)
-        val_2_data = Earthnet_Dataset(val_2_data, cfg["data"]["mesoscale_cut"], device=device)
-    except:
-        training_data, val_1_data, val_2_data = prepare_train_data(cfg["data"]["mesoscale_cut"],
-                                                         cfg["data"]["train_dir"],
-                                                         device = device,
-                                                         training_samples=cfg["training"]["training_samples"],
-                                                         val_1_samples=cfg["training"]["val_1_samples"],
-                                                         val_2_samples=cfg["training"]["val_2_samples"],
-                                                         undersample=False)
+
+    ENdataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
+                                     train_batch_size = cfg["training"]["train_batch_size"],
+                                     val_batch_size = cfg["training"]["val_1_batch_size"], 
+                                     test_batch_size = cfg["training"]["val_2_batch_size"], 
+                                     mesoscale_cut = cfg["data"]["mesoscale_cut"])
     
-    train_dataloader = DataLoader(training_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["train_batch_size"],
-                                  shuffle=True, 
-                                  drop_last=False)
-
-    val_1_dataloader = DataLoader(val_1_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["val_1_batch_size"], 
-                                  drop_last=False)
-
-    '''val_2_dataloader = DataLoader(val_2_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["val_2_batch_size"], 
-                                  drop_last=False)'''
-
-    # To build back the datasets
-    with open(os.path.join(wandb.run.dir, "train_data_paths.pkl"), "wb") as fp:
-        pickle.dump(training_data.paths, fp)
-    with open(os.path.join(wandb.run.dir, "val_1_data_paths.pkl"), "wb") as fp:
-        pickle.dump(val_1_data.paths, fp)
-    with open(os.path.join(wandb.run.dir, "val_2_data_paths.pkl"), "wb") as fp:
-        pickle.dump(val_2_data.paths, fp)
+    # To build back the datasets for safety
+    ENdataset.serialize_datasets(wandb.run.dir)
     
+
     # Load model Callbacks
-    wd_callbacks = WandbTrain_callback(val_1_data = val_1_data, cfg = cfg)
+    
+    wd_callbacks = WandbTrain_callback(val_1_data = Earthnet_Dataset(ENdataset.val_1_path_list, cfg["data"]["mesoscale_cut"], device=device), cfg = cfg)
     # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
@@ -134,7 +102,7 @@ def main():
         raise ValueError("The specified model name is invalid.")
 
     # Run training
-    trainer.fit(model, train_dataloader, val_1_dataloader)
+    trainer.fit(model, ENdataset)
     
     # Train on context frames of val2/test data
     if cfg["training"]["use_context"]:
