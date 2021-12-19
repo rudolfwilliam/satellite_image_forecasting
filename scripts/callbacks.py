@@ -23,7 +23,7 @@ class SDVI_Train_callback(pl.Callback):
 
 
 class WandbTrain_callback(pl.Callback):
-    def __init__(self, cfg, print_preds = True, val_1_data = None):
+    def __init__(self, cfg, print_preds = True):
         self.print_preds = print_preds
         self.print_sample = None
         self.print_table = None
@@ -56,7 +56,7 @@ class WandbTrain_callback(pl.Callback):
         wandb.define_metric('batch_training_loss', step_metric = "step")
         wandb.define_metric('epoch_training_loss', step_metric = "epoch")
 
-        self.log_ENS_baseline(val_1_data)
+        #self.log_ENS_baseline(val_1_data)
 
         # define our custom x axis metric
         pass

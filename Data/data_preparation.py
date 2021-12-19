@@ -73,8 +73,7 @@ def prepare_test_data(ms_cut, data_dir, device):
     return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut, device=device)
 
 class Earthnet_Test_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_paths, target_paths, ms_cut, device) -> None:
-        self.device = device
+    def __init__(self, context_paths, target_paths, ms_cut) -> None:
         self.context_paths = context_paths
         self.target_paths = target_paths
         self.ms_cut = ms_cut
@@ -112,7 +111,7 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
         return all_data
 
@@ -161,7 +160,7 @@ class Earthnet_Context_Dataset(torch.utils.data.Dataset):
         return all_data        
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, paths, ms_cut, device):
+    def __init__(self, paths, ms_cut):
         '''
             context_file_paths: list of paths of all the context files
             ms_cut: indxs for relevant mesoscale data
@@ -181,19 +180,10 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
                                        | Max temp: take the max
             mesoscale static      - we don't use this data, the relationships are too complex for the model to learn
         '''
-        self.device = device
         self.paths = paths
         self.ms_cut = ms_cut
         
-    def __getstate__(self):
-        return { 
-            "device": self.device.__str__(), 
-            "paths": self.paths, 
-            "ms_cut": self.ms_cut
-        }
-        
     def __setstate__(self, d):
-        self.device = torch.device(d["device"])
         self.paths = d["paths"]
         self.ms_cut = d["ms_cut"]
 
@@ -230,7 +220,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             c = channel
             t = time
         '''
-        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
+        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
         return all_data
         
@@ -371,31 +361,44 @@ class Earth_net_DataModule(pl.LightningDataModule):
                  train_batch_size = 16,
                  val_batch_size = 16,
                  test_batch_size = 16,
-                 mesoscale_cut = [39, 41]):
+                 mesoscale_cut = [39, 41],
+                 use_real_test_set = False):
         super().__init__()
         self.data_dir = data_dir
         self.mesoscale_cut = mesoscale_cut
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
+        self.use_real_test_set = use_real_test_set
+
+
         with open(os.path.join(os.getcwd(), "Data", self.data_dir, "train_data_paths.pkl"),'rb') as f:
             self.training_path_list = pickle.load(f)
         with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
             self.val_1_path_list = pickle.load(f)
-        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
-            self.test_set_path_list = pickle.load(f)
+        if use_real_test_set:
+            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "test_context_data_paths.pkl"),'rb') as f:
+                self.test_context_path_list = pickle.load(f)
+            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "test_target_data_paths.pkl"),'rb') as f:
+                self.test_target_path_list = pickle.load(f)
+        else: 
+            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
+                self.val_2_path_list = pickle.load(f)
 
     def setup(self, stage):
         # Assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
             #training
-            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, device=device)
+            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut)
             #validation
-            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, device=device)
+            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut)
 
         # Assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
-            self.test_set = Earthnet_Dataset(self.test_set_path_list, self.mesoscale_cut, device=device)
+            if self.use_real_test_set:
+                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut)
+            else:
+                self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut)
 
     def train_dataloader(self):
         return DataLoader(self.training_data, batch_size=self.train_batch_size)
@@ -404,7 +407,10 @@ class Earth_net_DataModule(pl.LightningDataModule):
         return DataLoader(self.val_1_data, batch_size=self.val_batch_size)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, batch_size=self.test_batch_size)
+        if self.use_real_test_set:
+            return DataLoader(self.test_data, batch_size=self.test_batch_size)
+        else:
+            return DataLoader(self.val_2_data, batch_size=self.test_batch_size)
 
     def serialize_datasets(self, directory):
         with open(os.path.join(directory, "train_data_paths.pkl"), "wb") as fp:

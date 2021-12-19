@@ -79,7 +79,7 @@ def main():
 
     # Load model Callbacks
     
-    wd_callbacks = WandbTrain_callback(val_1_data = Earthnet_Dataset(ENdataset.val_1_path_list, cfg["data"]["mesoscale_cut"], device=device), cfg = cfg)
+    wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
     # setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
@@ -115,7 +115,7 @@ def main():
     trainer.fit(model, ENdataset)
     
     # Train on context frames of val2/test data
-    if cfg["training"]["use_context"]:
+    '''if cfg["training"]["use_context"]:
 
         test_data = prepare_test_data(cfg["data"]["mesoscale_cut"], cfg["data"]["test_dir"], device)
         context_data = Earthnet_Context_Dataset(test_data.context_paths, cfg["data"]["mesoscale_cut"], device)
@@ -129,6 +129,7 @@ def main():
         for i in range(cfg["training"]["epochs"]):
             trainer.fit(model, context_dataloader)
             torch.save(trainer.model.state_dict(), os.path.join(os.path.join(wandb.run.dir,"runtime_model"), "model_"+str(trainer.max_epochs+i)+".torch"))
+    '''
 
     if not cfg["training"]["offline"]:
         wandb.finish()
