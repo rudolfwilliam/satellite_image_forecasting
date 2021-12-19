@@ -418,4 +418,4 @@ class Earth_net_DataModule(pl.LightningDataModule):
         with open(os.path.join(directory, "val_1_data_paths.pkl"), "wb") as fp:
             pickle.dump(self.val_1_path_list, fp)
         with open(os.path.join(directory, "val_2_data_paths.pkl"), "wb") as fp:
-            pickle.dump(self.test_set_path_list, fp)
+            pickle.dump(self.val_2_path_list, fp)
