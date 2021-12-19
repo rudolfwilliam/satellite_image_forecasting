@@ -66,8 +66,6 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         return (torch.zeros(batch_size, self.h_channels, height, width, device=self.conv_cc.weight.device),  
                 torch.zeros(batch_size, self.c_channels, height, width, device=self.conv_cc.weight.device))
 
-
-
 class Conv_LSTM_Cell(nn.Module):
     def __init__(self, input_dim, num_conv_layers, num_conv_layers_mem, hidden_dim, kernel_size, dilation_rate):
         """
@@ -106,6 +104,7 @@ class Conv_LSTM_Cell(nn.Module):
                                      dilation_rate=self.dilation_rate,
                                      num_conv_layers=self.num_conv_layers_mem,
                                      kernel_size=self.kernel_size)
+
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 

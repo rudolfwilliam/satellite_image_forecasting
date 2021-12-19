@@ -1,6 +1,7 @@
 from logging import Logger
 import sys
 import os
+from os import listdir
 import json
 import numpy as np
 import random
@@ -132,6 +133,15 @@ def main():
         model = Conv_model(cfg)
     else:
         raise ValueError("The specified model name is invalid.")
+    
+    # For training restarts
+    # TODO: implement checkpoint callbacks and load from them
+    if "path_dir" in cfg:
+        model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
+        models = listdir(model_path)
+        models.sort()
+        model_path = os.path.join(model_path , models[-1])
+        model.load_state_dict(torch.load(model_path, map_location=device))
 
     # Run training
     trainer.fit(model, train_dataloader, val_1_dataloader)
