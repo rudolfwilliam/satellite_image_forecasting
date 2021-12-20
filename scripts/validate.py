@@ -22,7 +22,7 @@ from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Dataset, prepare_train_data
+from Data.data_preparation import Earthnet_Dataset, prepare_train_data, Earth_net_DataModule
 from scripts.callbacks import WandbTest_callback
 
 import wandb
@@ -45,7 +45,7 @@ def main():
         wandb.login()
 
     #GPU handling
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='test', offline=True)
@@ -53,14 +53,12 @@ def main():
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
     # Always use same val_2 data from Data folder
-    with open(os.path.join("Data", "all_data", "val_2_data_paths.pkl"),'rb') as f:
-        val_2_path_list = pickle.load(f)
 
-    val_2_data = Earthnet_Dataset(val_2_path_list, cfg["data"]["mesoscale_cut"], device=device)
-    val_2_dataloader = DataLoader(val_2_data, 
-                                  num_workers=cfg["training"]["num_workers"],
-                                  batch_size=cfg["training"]["val_2_batch_size"], 
-                                  drop_last=False)
+    ENdataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
+                                     train_batch_size = cfg["training"]["train_batch_size"],
+                                     val_batch_size = cfg["training"]["val_1_batch_size"], 
+                                     test_batch_size = cfg["training"]["val_2_batch_size"], 
+                                     mesoscale_cut = cfg["data"]["mesoscale_cut"])
     
     callbacks = WandbTest_callback(args.rn)
 
@@ -90,7 +88,7 @@ def main():
         raise ValueError("The specified model name is invalid.")
 
     # Run validation
-    trainer.test(model, val_2_dataloader)
+    trainer.test(model, ENdataset)
 
     if not cfg["training"]["offline"]:
         wandb.finish()
