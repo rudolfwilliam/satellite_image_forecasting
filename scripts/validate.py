@@ -6,7 +6,7 @@ import random
 from shutil import copy2
 from os import listdir
 import pickle
-# from pytorch_lightning.accelerators import accelerato
+# from pytorch_lightning.accelerators import accelerator
 # from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
@@ -45,7 +45,7 @@ def main():
         wandb.login()
 
     #GPU handling
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
     wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='test', offline=True)
