@@ -31,6 +31,7 @@ for i in range(nm):
     print(names[i])
     print("    Old ENS " + str(components[-1]))
     print("    Lazy ENS " + str(hm(components[:4])))
+    print("    MAD: {0} OLS: {1} EMD: {2} SSIM: {3}".format(components[0], components[2], components[3], components[1]))
 
 def en_score(s):
     best_score = np.zeros((s.shape[1], 6))
