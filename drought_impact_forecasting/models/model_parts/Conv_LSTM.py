@@ -131,35 +131,31 @@ class Conv_LSTM_Cell(nn.Module):
                 torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device))
 
 class Peephole_Conv_LSTM(nn.Module):
-
-    """
-    Parameters:
-        input_dim: Number of channels in input
-        hidden_dim: Number of hidden channels
-        kernel_size: Size of kernel in convolutions
-        num_conv_layers: Number of convolutional layers within the cell
-        num_conv_layers_mem: Number of convolutional blocks for the weight matrices that perform a
-                                 hadamard product with current memory (should be much lower than num_conv_layers)
-        dilation_rate: Size of holes in convolutions
-        num_layers: Number of LSTM layers stacked on each other
-        batch_first: Whether or not dimension 0 is the batch or not
-        Note: Will do same padding.
-    Input:
-        A tensor of shape (b, c, w, h, t)
-    Output:
-        The residual from the mean cube
-    """
-
-    def __init__(self, input_dim, output_dim, big_mem, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame",num_layers = 1):
+    def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame",num_layers = 1):
+        """
+        Parameters:
+            input_dim: Number of channels in input
+            output_dim: Number of channels in the output
+            hidden_dim: Number of channels in the hidden outputs (should be a number or a list of num_layers - 1)
+            kernel_size: Size of kernel in convolutions
+            memory_kernel_size: Size of kernel in convolutions when the memory influences the output
+            dilation_rate: Size of holes in convolutions
+            num_layers: Number of LSTM layers stacked on each other
+            Note: Will do same padding.
+        Input:
+            A tensor of shape (b, c, w, h, t)
+        Output:
+            The residual from the mean cube
+        """
         super(Peephole_Conv_LSTM, self).__init__()
-
         self._check_kernel_size_consistency(kernel_size)
 
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
 
         self.input_dim = input_dim                  # n of channels in input pics
-        self.h_channels = self._extend_for_multilayer(output_dim, num_layers)        # n of channels in input pics
-        self.big_mem = big_mem                 # n of channels in input pics
+        self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1)    
+        self.h_channels.append(output_dim)    # n of channels in output pics
+        self.big_mem = big_mem                 # true means c = h, false c = 1. 
         self.num_layers = num_layers                # n of channels that go through hidden layers
         self.kernel_size = kernel_size     
         self.memory_kernel_size = memory_kernel_size              # n kernel size (no magic here)
@@ -265,9 +261,12 @@ class Peephole_Conv_LSTM(nn.Module):
             raise ValueError('`kernel_size` must be tuple or list of tuples')
 
     @staticmethod
-    def _extend_for_multilayer(param, num_layers):
+    def _extend_for_multilayer(param, rep):
         if not isinstance(param, list):
-            param = [param] * num_layers
+            if rep > 0:
+                param = [param] * rep
+            else:
+                return []
         return param
 
 class Conv_LSTM(nn.Module):
