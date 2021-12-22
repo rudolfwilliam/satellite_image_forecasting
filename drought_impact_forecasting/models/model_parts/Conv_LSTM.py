@@ -5,7 +5,7 @@ from .shared import Conv_Block
 from collections import OrderedDict
 
 class Peephole_Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, h_channels, c_channels, kernel_size, memory_kernel_size, dilation_rate):
+    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate):
         """
         Initialize ConvLSTM cell.
         Parameters
@@ -27,7 +27,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
 
         self.input_dim = input_dim
         self.h_channels = h_channels
-        self.c_channels = c_channels
+        self.c_channels = h_channels if big_mem else 1
         self.dilation_rate = dilation_rate
         self.kernel_size = kernel_size
 
@@ -150,7 +150,7 @@ class Peephole_Conv_LSTM(nn.Module):
         The residual from the mean cube
     """
 
-    def __init__(self, input_dim, output_dim, c_channels, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame",num_layers = 1):
+    def __init__(self, input_dim, output_dim, big_mem, kernel_size,memory_kernel_size, dilation_rate, baseline="last_frame",num_layers = 1):
         super(Peephole_Conv_LSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -158,8 +158,8 @@ class Peephole_Conv_LSTM(nn.Module):
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
 
         self.input_dim = input_dim                  # n of channels in input pics
-        self.h_channels = output_dim                 # n of channels in input pics
-        self.c_channels = c_channels                 # n of channels in input pics
+        self.h_channels = self._extend_for_multilayer(output_dim, num_layers)        # n of channels in input pics
+        self.big_mem = big_mem                 # n of channels in input pics
         self.num_layers = num_layers                # n of channels that go through hidden layers
         self.kernel_size = kernel_size     
         self.memory_kernel_size = memory_kernel_size              # n kernel size (no magic here)
@@ -167,18 +167,18 @@ class Peephole_Conv_LSTM(nn.Module):
         self.baseline = baseline
 
         self.Cell = Peephole_Conv_LSTM_Cell(input_dim= input_dim,
-                                            h_channels= output_dim,
-                                            c_channels= c_channels,
+                                            h_channels= self.h_channels[0],
+                                            big_mem= big_mem,
                                             kernel_size= kernel_size,
                                             memory_kernel_size=memory_kernel_size,
                                             dilation_rate=dilation_rate)
         cell_list = []
         for i in range(0, self.num_layers):
-            cur_input_dim = self.input_dim if i == 0 else self.h_channels
+            cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
 
             cell_list.append(Peephole_Conv_LSTM_Cell(input_dim= cur_input_dim,
-                                                        h_channels= output_dim,
-                                                        c_channels= c_channels,
+                                                        h_channels= self.h_channels[i],
+                                                        big_mem= self.big_mem,
                                                         kernel_size= kernel_size,
                                                         memory_kernel_size=memory_kernel_size,
                                                         dilation_rate=dilation_rate))
@@ -210,9 +210,9 @@ class Peephole_Conv_LSTM(nn.Module):
             hs.append(h)
             cs.append(c)
 
-        pred_deltas = torch.zeros((b, self.h_channels, height, width, prediction_count), device = self._get_device())
-        preds = torch.zeros((b, self.h_channels, height, width, prediction_count), device = self._get_device())
-        baselines = torch.zeros((b, self.h_channels, height, width, prediction_count), device = self._get_device())
+        pred_deltas = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
+        preds = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
+        baselines = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
         
         #Iterate over the past
         for t in range(T):
