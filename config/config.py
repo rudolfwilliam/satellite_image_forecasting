@@ -28,6 +28,7 @@ def command_line_parser(mode = "train"):
         parser.add_argument('-e', '--epochs', type=int, default=200, help='learining rate')
         parser.add_argument('--bs', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
         parser.add_argument('-rn', '--run_name', type=str, default=None, help='wandb name of run you want to restart')
+        parser.add_argument('-pd', '--pickle_dir', type=str, default='all_data', help='directory with the desired pickle files')
         args = parser.parse_args()
         check_model_exists(args.model_name)
         cfg = json.load(open(os.getcwd() + "/config/" + args.model_name + ".json", 'r'))
