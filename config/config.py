@@ -61,6 +61,8 @@ def command_line_parser(mode = "train"):
                 cfg['path_dir'] = dir_path
             except:
                 raise ValueError("The timestamp doesn't exist.")
+        if args.pickle_dir is not None:
+            cfg["data"]["pickle_dir"] = args.pickle_dir
 
     if mode == 'validate':        
         parser.add_argument('-mn', '--model_name', type=str, default='Peephole_LSTM_model', choices=['LSTM_model','Peephole_LSTM_model','NDVI_Peephole_LSTM_model', 'Transformer_model', 'Conv_model'], help='frame prediction architecture')
