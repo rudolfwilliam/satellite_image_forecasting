@@ -19,7 +19,7 @@ from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last
 class Peephole_LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
         """
-        Base prediction model. It is roughly based on the convolutional LSTM architecture.
+        This architecture is roughly based on the convolutional LSTM architecture, with an additional peephole.
         (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
 
         Parameters:
@@ -36,7 +36,11 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         kernel_size=(self.cfg["model"]["kernel"], self.cfg["model"]["kernel"]),
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
-                                        baseline=self.cfg["model"]["baseline"])
+                                        baseline=self.cfg["model"]["baseline"],
+                                        layer_norm=cfg["model"]["layer_norm"],
+                                        img_width=cfg["model"]["img_width"],
+                                        img_height=cfg["model"]["img_height"]
+                                        )
 
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["training"]["val_metric"]
