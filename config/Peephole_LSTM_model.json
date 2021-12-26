@@ -10,7 +10,7 @@
         "memory_kernel": 5,
         "baseline": "last_frame",
         "future_training": 20,
-        "n_layers":3
+        "n_layers": 3
     },
     "data":
     {
