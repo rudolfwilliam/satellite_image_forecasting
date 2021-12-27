@@ -39,8 +39,8 @@ if len(train_files) != training_samples:
 
 # Clean data
 if args.data_cleaning != -1:
-    baseline_scores = genfromtxt(join(os.getcwd(), "scores_last_frame.csv"), delimiter=',')
-    with open(join(os.getcwd(), "last_frame_data_paths.pkl"),'rb') as f:
+    baseline_scores = genfromtxt(join(os.getcwd(), "Data", "scores_last_frame.csv"), delimiter=',')
+    with open(join(os.getcwd(), "Data", "last_frame_data_paths.pkl"),'rb') as f:
         old_train_paths = pickle.load(f)
     old_train_paths = [path.split()[-1] for path in old_train_paths]
 
