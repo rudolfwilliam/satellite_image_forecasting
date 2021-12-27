@@ -3,7 +3,7 @@
     {
         "dilation_rate": 1,
         "input_channels": 11,
-        "hidden_channels": [100, 100],
+        "hidden_channels": 2,
         "output_channels": 4,
         "big_mem": true,
         "img_width": 128,
@@ -17,11 +17,8 @@
     },
     "data":
     {
-        "train_dir": "/Data/train/",
-        "test_dir": "/Data/test/",
-        "pickle_dir": "all_data",
-        "mesoscale_cut": [39, 41],
-        "veg_threshold": 0.7
+        "pickle_dir": "Data/all_data",
+        "mesoscale_cut": [39, 41]
     },
     "training":
     {
@@ -30,8 +27,7 @@
         "epochs": 200,
         "train_batch_size": 2,
         "val_1_batch_size": 1,
-        "val_2_batch_size": 2,
-        "test_batch_size": 1,
+        "val_2_batch_size": 1,
         "optimizer": "adamW",
         "seed": 1,
         "num_workers": 0,
@@ -45,9 +41,5 @@
         "lr_threshold": 0.001,
         "test_loss": "ENS", 
         "use_context": false
-    },
-    "project":
-    {
-        "evaluate": true
     }
 }

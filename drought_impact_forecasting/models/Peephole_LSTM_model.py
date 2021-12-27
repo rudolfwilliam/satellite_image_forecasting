@@ -27,7 +27,7 @@ class Peephole_LSTM_model(pl.LightningModule):
         """
         super().__init__()
         self.cfg = cfg
-        
+        self.save_hyperparameters()
         self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
                                         output_dim=cfg["model"]["output_channels"],
                                         hidden_dims=cfg["model"]["hidden_channels"],
@@ -43,7 +43,6 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         )
 
         self.baseline = self.cfg["model"]["baseline"]
-        self.val_metric = self.cfg["training"]["val_metric"]
         self.future_training = self.cfg["model"]["future_training"]
         self.learning_rate = self.cfg["training"]["start_learn_rate"]
         self.training_loss = get_loss_from_name(self.cfg["training"]["training_loss"])

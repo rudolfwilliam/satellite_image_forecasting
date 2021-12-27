@@ -258,68 +258,6 @@ def process_md(md, target_shape):
 
     return md_reshaped
 
-class Earthnet_NDVI_Dataset(torch.utils.data.Dataset):
-    def __init__(self, paths, ms_cut, device):
-        
-        '''
-            The NDVI Dataset will only consider heavilly vegetated areas of the training dataset
-            (since we have access to the ESA Scene Classification)
-            We will discard any cubes with a low percetage of vegetated pixels
-        '''
-
-        self.device = device
-        self.paths = paths
-        self.ms_cut = ms_cut
-        
-    def __getstate__(self):
-        return { 
-            "device": self.device.__str__(), 
-            "paths": self.paths, 
-            "ms_cut": self.ms_cut
-        }
-        
-    def __setstate__(self, d):
-        self.device = torch.device(d["device"])
-        self.paths = d["paths"]
-        self.ms_cut = d["ms_cut"]
-
-    def __len__(self):
-        return len(self.paths)
- 
-    def __getitem__(self, index):
-        # Load the item from data
-        context = np.load(self.paths[index], allow_pickle=True)
-        
-        hrd = np.nan_to_num(context['highresdynamic'], nan = 0.0)
-        ndvi = ((hrd[:, :, 3, :] - hrd[ :, :, 2, :]) / (
-                    hrd[ :, :, 3, :] + hrd[ :, :, 2, :] + 1e-6))[:, :, np.newaxis, :]
-        highres_dynamic = np.append(ndvi, hrd[:,:,6:7,:], axis=2)
-        # Maybe we also want the sencor cloud mask in here?
-        
-        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
-        # For mesoscale data cut out overlapping section of interest
-        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
-
-        # Stick all data together
-        all_data = np.append(highres_dynamic, highres_static,axis=-2)
-
-        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
-                                                            all_data.shape[1],
-                                                            meso_dynamic.shape[2],
-                                                            all_data.shape[3]]))
-        all_data = np.append(all_data, meso_dynamic, axis=-2)
-        
-        ''' 
-            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
-            w = width
-            h = height
-            c = channel
-            t = time
-        '''
-        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
-        
-        return all_data 
-
 def process_md(md, target_shape):
     '''
         Channels: Precipitation (RR), Sea pressure (PP), Mean temperature (TG), Minimum temperature (TN), Maximum temperature (TX)
@@ -372,17 +310,17 @@ class Earth_net_DataModule(pl.LightningDataModule):
         self.use_real_test_set = use_real_test_set
 
 
-        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "train_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), self.data_dir, "train_data_paths.pkl"),'rb') as f:
             self.training_path_list = pickle.load(f)
-        with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
+        with open(os.path.join(os.getcwd(), self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
             self.val_1_path_list = pickle.load(f)
         if use_real_test_set:
-            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "test_context_data_paths.pkl"),'rb') as f:
+            with open(os.path.join(os.getcwd(), self.data_dir, "test_context_data_paths.pkl"),'rb') as f:
                 self.test_context_path_list = pickle.load(f)
-            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "test_target_data_paths.pkl"),'rb') as f:
+            with open(os.path.join(os.getcwd(), self.data_dir, "test_target_data_paths.pkl"),'rb') as f:
                 self.test_target_path_list = pickle.load(f)
         else: 
-            with open(os.path.join(os.getcwd(), "Data", self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
+            with open(os.path.join(os.getcwd(), self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
                 self.val_2_path_list = pickle.load(f)
 
     def setup(self, stage):

@@ -30,7 +30,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         self.c_channels = h_channels if big_mem else 1
         self.dilation_rate = dilation_rate
         self.kernel_size = kernel_size
-        self.layer_norm = layer_norm
+        self.layer_norm_flag = layer_norm
         self.img_width = img_width
         self.img_height = img_height
 
@@ -38,7 +38,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                                      bias=True, padding='same', padding_mode='reflect')
         self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels , dilation=dilation_rate, kernel_size=memory_kernel_size,
                                      bias=False, padding='same', padding_mode='reflect')
-        if self.layer_norm:
+        if self.layer_norm_flag:
             self.layer_norm = nn.LayerNorm([self.img_width, self.img_height])
 
     def forward(self, input_tensor, cur_state):
@@ -65,7 +65,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
             h_next = o * torch.tanh(c_next).repeat([1,self.h_channels, 1, 1])
 
         # apply layer normalization
-        if self.layer_norm:
+        if self.layer_norm_flag:
             h_next = self.layer_norm(h_next)
 
         return h_next, c_next
@@ -162,7 +162,7 @@ class Peephole_Conv_LSTM(nn.Module):
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
 
         self.input_dim = input_dim                  # n of channels in input pics
-        self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1)    
+        self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1) # n of hidden channels   
         self.h_channels.append(output_dim)    # n of channels in output pics
         self.big_mem = big_mem                 # true means c = h, false c = 1. 
         self.num_layers = num_layers                # n of channels that go through hidden layers
@@ -186,11 +186,12 @@ class Peephole_Conv_LSTM(nn.Module):
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
+            cur_layer_norm = self.layer_norm if i == self.num_layers else False
 
             cell_list.append(Peephole_Conv_LSTM_Cell(input_dim= cur_input_dim,
                                                         h_channels= self.h_channels[i],
                                                         big_mem= self.big_mem,
-                                                        layer_norm=self.layer_norm,
+                                                        layer_norm=cur_layer_norm,
                                                         img_width=self.img_width,
                                                         img_height=self.img_height,
                                                         kernel_size= kernel_size,

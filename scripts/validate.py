@@ -5,7 +5,6 @@ import numpy as np
 import random
 from shutil import copy2
 from os import listdir
-import pickle
 # from pytorch_lightning.accelerators import accelerator
 # from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -18,80 +17,50 @@ import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 
-from config.config import command_line_parser
-from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from config.config import validate_line_parser
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
-from drought_impact_forecasting.models.Conv_model import Conv_model
-from Data.data_preparation import Earthnet_Dataset, prepare_train_data, Earth_net_DataModule
+from Data.data_preparation import Earth_net_DataModule
 from scripts.callbacks import WandbTest_callback
 
 import wandb
-from datetime import datetime
 
 def main():
     
-    args, cfg = command_line_parser(mode = 'validate')
+    configs = validate_line_parser()
 
-    model_path = os.path.join(cfg['path_dir'], "files", "runtime_model")
-    models = listdir(model_path)
-    models.sort()
-    model_path = os.path.join(model_path , models[args.me])
-    # to check that it's the last model
+    print("validating experiment {0}".format(configs['run_name']))
+    print("validating model at epoch {0}".format(configs['epoch_to_validate']))
 
-    print("validating experiment {0}".format(args.rn))
-    print("validating model at epoch {0}".format(args.me))
-
-    if not cfg["training"]["offline"]:
-        wandb.login()
+    wandb.login()
 
     #GPU handling
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print("GPU count: {0}".format(gpu_count))
 
-    wandb_logger = WandbLogger(project='DS_Lab', config=cfg, group='LSTM', job_type='test', offline=True)
-    random.seed(cfg["training"]["seed"])
-    pl.seed_everything(cfg["training"]["seed"], workers=True)
+    wandb_logger = WandbLogger(project='DS_Lab', job_type='test', offline=True)
 
     # Always use same val_2 data from Data folder
 
-    ENdataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
-                                     train_batch_size = cfg["training"]["train_batch_size"],
-                                     val_batch_size = cfg["training"]["val_1_batch_size"], 
-                                     test_batch_size = cfg["training"]["val_2_batch_size"], 
-                                     mesoscale_cut = cfg["data"]["mesoscale_cut"])
+    ENdataset = Earth_net_DataModule(data_dir =configs['dataset_dir'], 
+                                     train_batch_size = configs['batch_size'],
+                                     val_batch_size = configs['batch_size'], 
+                                     test_batch_size = configs['batch_size'], 
+                                     use_real_test_set = configs['use_real_test_set'],
+                                     mesoscale_cut = [39,41])
     
-    callbacks = WandbTest_callback(args.rn)
+    callbacks = WandbTest_callback(configs['run_name'])
 
     #setup Trainer
-    trainer = Trainer(  max_epochs=cfg["training"]["epochs"], 
-                        logger=wandb_logger,
-                        log_every_n_steps = min(cfg["training"]["log_steps"],
-                                            cfg["training"]["training_samples"] / cfg["training"]["train_batch_size"]),
-                        devices = cfg["training"]["devices"], 
-                        accelerator=cfg["training"]["accelerator"],
-                        callbacks=[callbacks])
+    trainer = Trainer(logger=wandb_logger, callbacks=[callbacks])
 
+    
+    model = Peephole_LSTM_model.load_from_checkpoint(configs['model_path'])
+    model.eval()
     #setup Model
-    if args.model_name == "LSTM_model":
-        model = LSTM_model(cfg)
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.eval()
-    elif args.model_name == "Peephole_LSTM_model":
-        model = Peephole_LSTM_model(cfg)
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.eval()
-    elif args.model_name == "Conv_model":
-        model = Conv_model(cfg)
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.eval()
-    else:
-        raise ValueError("The specified model name is invalid.")
 
     # Run validation
-    trainer.test(model, ENdataset)
+    trainer.test(model = model, dataloaders = ENdataset)
 
-    if not cfg["training"]["offline"]:
-        wandb.finish()
+    wandb.finish()
 
 if __name__ == "__main__":
     main()

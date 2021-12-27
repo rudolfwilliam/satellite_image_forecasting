@@ -32,7 +32,6 @@ class WandbTrain_callback(pl.Callback):
         self.epoch_train_loss = []
         self.validation_loss = []
 
-        self.runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
         self.runtime_prediction = os.path.join(wandb.run.dir,"runtime_pred") 
         self.r_pred = os.path.join(self.runtime_prediction,"r")
         self.g_pred = os.path.join(self.runtime_prediction,"g")
@@ -41,7 +40,7 @@ class WandbTrain_callback(pl.Callback):
         self.img_pred = os.path.join(self.runtime_prediction,"img")
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
 
-        for dir_path in [self.runtime_model_folder,self.runtime_prediction,
+        for dir_path in [self.runtime_prediction,
                          self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
@@ -121,7 +120,7 @@ class WandbTrain_callback(pl.Callback):
         pl_module.log('epoch_training_loss', e_loss, on_epoch=True, on_step=False)
         pl_module.log('lr', lr, on_epoch=True, on_step=False)
 
-        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
+        #torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
         return super().on_train_epoch_end(trainer, pl_module)
     
     def on_validation_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
