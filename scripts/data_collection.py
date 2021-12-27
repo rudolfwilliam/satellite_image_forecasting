@@ -39,8 +39,8 @@ if len(train_files) != training_samples:
 
 # Clean data
 if args.data_cleaning != -1:
-    baseline_scores = genfromtxt(join(os.getcwd(), "Data", "scores_last_frame.csv"), delimiter=',')
-    with open(join(os.getcwd(), "Data", "last_frame_data_paths.pkl"),'rb') as f:
+    baseline_scores = genfromtxt(join(os.getcwd(), "scores_last_frame.csv"), delimiter=',')
+    with open(join(os.getcwd(), "last_frame_data_paths.pkl"),'rb') as f:
         old_train_paths = pickle.load(f)
     old_train_paths = [path.split()[-1] for path in old_train_paths]
 
@@ -71,15 +71,15 @@ if args.val_2_data == -1:
 else:
     val_2_data = train_files[args.training_data + args.val_1_data:args.training_data + args.val_1_data+args.val_2_data]
 # Create pickle dir if needed
-if not os.path.exists(join(os.getcwd(), "Data", args.dest_folder)):
-    os.makedirs(os.path.join(os.getcwd(), "Data", args.dest_folder))
+if not os.path.exists(join(os.getcwd(), args.dest_folder)):
+    os.makedirs(os.path.join(os.getcwd(), args.dest_folder))
 
 # To build back the datasets
-with open(join(os.getcwd(), "Data", args.dest_folder, "train_data_paths.pkl"), "wb") as fp:
+with open(join(os.getcwd(), args.dest_folder, "train_data_paths.pkl"), "wb") as fp:
     pickle.dump(training_data, fp)
-with open(join(os.getcwd(), "Data", args.dest_folder, "val_1_data_paths.pkl"), "wb") as fp:
+with open(join(os.getcwd(), args.dest_folder, "val_1_data_paths.pkl"), "wb") as fp:
     pickle.dump(val_1_data, fp)
-with open(join(os.getcwd(), "Data", args.dest_folder, "val_2_data_paths.pkl"), "wb") as fp:
+with open(join(os.getcwd(), args.dest_folder, "val_2_data_paths.pkl"), "wb") as fp:
     pickle.dump(val_2_data, fp)
 
 if args.test_folder is not None:
@@ -100,9 +100,9 @@ if args.test_folder is not None:
     # Sort file names just in case (so we glue together the right context & target)
     test_context_files.sort()
     test_target_files.sort()
-    with open(os.path.join(os.getcwd(), "Data", args.dest_folder, test_set+"_context_data_paths.pkl"), "wb") as fp:
+    with open(os.path.join(os.getcwd(), args.dest_folder, test_set+"_context_data_paths.pkl"), "wb") as fp:
         pickle.dump(test_context_files, fp)
-    with open(os.path.join(os.getcwd(), "Data", args.dest_folder, test_set+"_target_data_paths.pkl"), "wb") as fp:
+    with open(os.path.join(os.getcwd(), args.dest_folder, test_set+"_target_data_paths.pkl"), "wb") as fp:
         pickle.dump(test_target_files, fp)
 
 print("Done")
