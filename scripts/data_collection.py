@@ -37,6 +37,16 @@ train_files.sort()
 if len(train_files) != training_samples:
     warnings.warn("Your training set is incomplete! You only have " + str(len(train_files)) + " samples instead of " + str(training_samples))
 
+random.seed(args.seed)
+random.shuffle(train_files)
+
+training_data = train_files[:args.training_data]
+val_1_data = train_files[args.training_data: args.training_data + args.val_1_data]
+if args.val_2_data == -1:
+    val_2_data = train_files[args.training_data + args.val_1_data:-1]
+else:
+    val_2_data = train_files[args.training_data + args.val_1_data:args.training_data + args.val_1_data+args.val_2_data]
+
 # Clean data
 if args.data_cleaning != -1:
     baseline_scores = genfromtxt(join(os.getcwd(), "Data", "scores_last_frame.csv"), delimiter=',')
@@ -55,21 +65,8 @@ if args.data_cleaning != -1:
                 bad_cubes.append(split(old_train_paths[i])[-1])
     
     # Discard bad samples
-    train_files = [f for f in train_files if split(f)[-1] not in bad_cubes]
+    training_data = [f for f in training_data if split(f)[-1] not in bad_cubes]
 
-    # If we have too little samples after cleaing, decrease the training set size
-    if args.training_data + args.val_1_data + args.val_2_data > len(train_files):
-        args.training_data = len(train_files) - args.val_1_data - args.val_2_data
-
-random.seed(args.seed)
-random.shuffle(train_files)
-
-training_data = train_files[:args.training_data]
-val_1_data = train_files[args.training_data: args.training_data + args.val_1_data]
-if args.val_2_data == -1:
-    val_2_data = train_files[args.training_data + args.val_1_data: -1]
-else:
-    val_2_data = train_files[args.training_data + args.val_1_data:args.training_data + args.val_1_data+args.val_2_data]
 # Create pickle dir if needed
 if not os.path.exists(join(os.getcwd(), args.dest_folder)):
     os.makedirs(os.path.join(os.getcwd(), args.dest_folder))

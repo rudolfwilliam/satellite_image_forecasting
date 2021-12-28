@@ -140,7 +140,8 @@ class Conv_LSTM_Cell(nn.Module):
                 torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device))
 
 class Peephole_Conv_LSTM(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size, memory_kernel_size, dilation_rate, img_width, img_height, layer_norm=True, baseline="last_frame", num_layers = 1):
+    def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size, memory_kernel_size, dilation_rate,
+                    img_width, img_height, layer_norm=True, baseline="last_frame", num_layers = 1):
         """
         Parameters:
             input_dim: Number of channels in input
@@ -174,15 +175,6 @@ class Peephole_Conv_LSTM(nn.Module):
         self.img_height = img_height
         self.baseline = baseline
 
-        self.Cell = Peephole_Conv_LSTM_Cell(input_dim= input_dim,
-                                            h_channels= self.h_channels[0],
-                                            big_mem= big_mem,
-                                            layer_norm=self.layer_norm,
-                                            img_width=self.img_width,
-                                            img_height=self.img_height,
-                                            kernel_size= kernel_size,
-                                            memory_kernel_size=memory_kernel_size,
-                                            dilation_rate=dilation_rate)
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
@@ -271,7 +263,7 @@ class Peephole_Conv_LSTM(nn.Module):
         return preds, pred_deltas, baselines
 
     def _get_device(self):
-        return self.Cell.conv_cc.weight.device
+        return self.cell_list[0].conv_cc.weight.device
 
     @staticmethod
     def _check_kernel_size_consistency(kernel_size):

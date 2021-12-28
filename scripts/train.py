@@ -59,7 +59,6 @@ def main():
     # To build back the datasets for safety
     ENdataset.serialize_datasets(wandb.run.dir)
     
-
     # Load Callbacks
     wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
     # Create folder for runtime models
