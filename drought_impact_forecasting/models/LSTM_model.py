@@ -1,18 +1,10 @@
-import torch
-import time
-from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
-import numpy as np
-import os
-import glob
 
-from torchmetrics import metric
 from ..losses import cloud_mask_loss
-
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import ENS
  
 class LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -79,7 +71,7 @@ class LSTM_model(pl.LightningModule):
         else:
             raise ValueError("You have specified an invalid optimizer.")
 
-        return [self.optimizer]#, [self.scheduler]
+        return [self.optimizer]
 
     def training_step(self, batch, batch_idx):
 
@@ -99,7 +91,7 @@ class LSTM_model(pl.LightningModule):
 
         npf = all_data[:, 5:, :, :, t0:]
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
-        x_preds, x_delta, baseline = self(all_data[:, :, :, :, :t0], non_pred_feat = npf, prediction_count = T-t0)
+        x_preds, _, _ = self(all_data[:, :, :, :, :t0], non_pred_feat = npf, prediction_count = T-t0)
 
         loss = cloud_mask_loss(x_preds[0], target[:,:4,:,:,0], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
         # 
@@ -125,7 +117,7 @@ class LSTM_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+        t0 = round(all_data.shape[-1]/3) # t0 is the length of the context part
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
@@ -137,15 +129,15 @@ class LSTM_model(pl.LightningModule):
             # ENS loss = -ENS (ENS==1 would mean perfect prediction)
             # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
             x_preds = x_preds.permute(1,2,3,4,0) # b, c, h, w, t
-            score, scores = ENS(prediction = x_preds, target = target)
-            loss = - scores
+            _, scores = ENS(prediction = x_preds, target = target)
+            loss = -scores
         else: # L2 cloud mask loss
             delta = all_data[:, :4, :, :, t0] - baselines[0]
-            loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :,:,t0])
+            loss = cloud_mask_loss(x_delta[0], delta, all_data[:,cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
             
             for t_end in range(t0 + 1, T): # this iterates with t_end = t0 + 1, ..., T-1
-                delta = all_data[:, :4, :, :, t_end] - baselines[t_end-t0]
-                loss = loss.add(cloud_mask_loss(x_delta[t_end-t0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
+                delta = all_data[:, :4, :, :, t_end] - baselines[t_end - t0]
+                loss = loss.add(cloud_mask_loss(x_delta[t_end - t0], delta, all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t_end]))
             
         return loss
     
@@ -158,20 +150,18 @@ class LSTM_model(pl.LightningModule):
 
         T = all_data.size()[4]
 
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+        t0 = round(all_data.shape[-1]/3) # t0 is the length of the context part
 
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
         npf = all_data[:, 5:, :, :, t0+1:]
 
-        x_preds, x_deltas, baselines = self(x = context, 
-                                            prediction_count = T-t0, 
-                                            non_pred_feat = npf)
+        x_preds, _, _ = self(x = context, prediction_count = T-t0, non_pred_feat = npf)
         
         # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
         x_preds = x_preds.permute(1,2,3,4,0) # b, c, h, w, t
         
-        score, part_scores = ENS(prediction = x_preds, target = target)
+        _, part_scores = ENS(prediction = x_preds, target = target)
         
         return part_scores
 

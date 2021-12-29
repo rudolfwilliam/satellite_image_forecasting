@@ -1,31 +1,18 @@
 import torch
-from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
-import numpy as np
-import os
-import glob
 from ..losses import cloud_mask_loss
 from .model_parts.Conv_Transformer import Conv_Transformer
 from .model_parts.adapters.Conv_Transformer_adapter import Conv_Transformer_adapter
 import pytorch_lightning as pl
-from .utils.utils import last_cube, mean_cube, last_frame
 import torch
-import time
-from torch import nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
-import numpy as np
-import os
-import glob
 
-from torchmetrics import metric
 from ..losses import cloud_mask_loss
 
-from .model_parts.Conv_LSTM import Conv_LSTM
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 class Transformer_model(pl.LightningModule):
     def __init__(self, cfg):

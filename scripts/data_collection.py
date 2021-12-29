@@ -1,14 +1,12 @@
-from math import floor
 import sys
 import os
 import warnings
-from os.path import isfile, join, split
+from os.path import join, split
 import random
 import pickle
 import glob
 import numpy as np
 from numpy import genfromtxt
-import re
 
 sys.path.append(os.getcwd())
 

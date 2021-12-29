@@ -1,8 +1,6 @@
-import numpy as np
 import torch.nn as nn
 import torch
 from .shared import Conv_Block
-from collections import OrderedDict
 
 class Peephole_Conv_LSTM_Cell(nn.Module):
     def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
@@ -167,13 +165,13 @@ class Peephole_Conv_LSTM(nn.Module):
 
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
 
-        self.input_dim = input_dim                  # n of channels in input pics
-        self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1) # n of hidden channels   
-        self.h_channels.append(output_dim)    # n of channels in output pics
-        self.big_mem = big_mem                 # true means c = h, false c = 1. 
-        self.num_layers = num_layers                # n of channels that go through hidden layers
+        self.input_dim = input_dim                                                  # n of channels in input pics
+        self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1)  # n of hidden channels   
+        self.h_channels.append(output_dim)                                          # n of channels in output pics
+        self.big_mem = big_mem                                                      # true means c = h, false c = 1. 
+        self.num_layers = num_layers                                                # n of channels that go through hidden layers
         self.kernel_size = kernel_size     
-        self.memory_kernel_size = memory_kernel_size              # n kernel size (no magic here)
+        self.memory_kernel_size = memory_kernel_size                                # n kernel size (no magic here)
         self.dilation_rate = dilation_rate
         self.layer_norm_flag = layer_norm_flag
         self.img_width = img_width
@@ -226,19 +224,19 @@ class Peephole_Conv_LSTM(nn.Module):
         preds = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
         baselines = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
         
-        #Iterate over the past
+        # iterate over the past
         for t in range(T):
             hs[0], cs[0] = self.cell_list[0](input_tensor=input_tensor[..., t], cur_state=[hs[0], cs[0]])
             for i in range(1, self.num_layers):
                 hs[i], cs[i] = self.cell_list[i](input_tensor=hs[i-1], cur_state=[hs[i], cs[i]])
 
-        baselines[...,0] = baseline
+        baselines[..., 0] = baseline
         pred_deltas[..., 0] = hs[-1]
-        preds[...,0] = pred_deltas[...,0] + baselines[...,0]
+        preds[..., 0] = pred_deltas[..., 0] + baselines[..., 0]
 
         
 
-        #Add a mask to our prediction
+        # add a mask to our prediction
         if prediction_count > 1:
             non_pred_feat = torch.cat((torch.zeros((non_pred_feat.shape[0],
                                                     1,
@@ -246,9 +244,9 @@ class Peephole_Conv_LSTM(nn.Module):
                                                     non_pred_feat.shape[3],
                                                     non_pred_feat.shape[4]), device=non_pred_feat.device), non_pred_feat), dim = 1)
 
-            #iterate over the future
+            # iterate over the future
             for t in range(1, prediction_count):
-                #Gluiong with non_pred_data
+                # glue together with non_pred_data
                 prev = torch.cat((preds[..., t - 1], non_pred_feat[..., t - 1]), axis=1)
 
                 hs[0], cs[0] = self.cell_list[0](input_tensor=prev, cur_state=[hs[0], cs[0]])
@@ -263,7 +261,7 @@ class Peephole_Conv_LSTM(nn.Module):
                 else:
                     baselines[...,t]  = preds[..., t-1]
 
-                preds[...,t] = pred_deltas[...,t] + baselines[...,t]
+                preds[..., t] = pred_deltas[..., t] + baselines[..., t]
 
         return preds, pred_deltas, baselines
 
@@ -311,7 +309,7 @@ class Conv_LSTM(nn.Module):
 
         self._check_kernel_size_consistency(kernel_size)
 
-        # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
+        # make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
         kernel_size = self._extend_for_multilayer(kernel_size, num_layers)
         hidden_dim = self._extend_for_multilayer(hidden_dim, num_layers)
         if not len(kernel_size) == len(hidden_dim) == num_layers:
@@ -321,7 +319,7 @@ class Conv_LSTM(nn.Module):
         self.hidden_dim = hidden_dim                # n of channels that go through hidden layers
         self.kernel_size = kernel_size              # n kernel size (no magic here)
         self.num_layers = num_layers                # n of cells in time
-        self.batch_first = batch_first                # true if you have c_0, h_0
+        self.batch_first = batch_first              # true if you have c_0, h_0
         self.dilation_rate = dilation_rate
         self.num_conv_layers = num_conv_layers
         self.num_conv_layers_mem = num_conv_layers
@@ -404,8 +402,8 @@ class Conv_LSTM(nn.Module):
                 baseline = 1/(seq_len + 1) * (prev + (baseline * seq_len))
                 seq_len += 1
             else:
-                baseline = prev # We don't predict image quality, so we just feed in the last prediction
-            prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
+                baseline = prev # no image quality predicted, just feed in last prediction
+            prev = torch.cat((prev, non_pred_feat[:, :, :, :, 0]), axis=1)
 
             for counter in range(prediction_count - 1):
                 for layer_idx in range(self.num_layers):
@@ -423,11 +421,10 @@ class Conv_LSTM(nn.Module):
                         predictions = torch.cat((predictions, prediction.unsqueeze(0)), 0)
                         # update the baseline & glue together predicted + given channels
                         if self.baseline == "mean_cube":
-                            baseline = (prediction + (baseline * seq_len))/(seq_len + 1) #  CHECK THIS ONE TOO!!!!!!!!
-                            #baseline = baseline*(seq_len/(seq_len+1)) + prediction/(seq_len+1)
+                            baseline = (prediction + (baseline * seq_len))/(seq_len + 1)
                             seq_len += 1
                         else:
-                            baseline = prediction # We don't predict image quality, so we just feed in the last prediction
+                            baseline = prediction # no image quality predicted, just feed in last prediction
                         prev = torch.cat((prediction, non_pred_feat[:, :, :, :, counter]), axis=1)
 
         return predictions, pred_deltas, baselines

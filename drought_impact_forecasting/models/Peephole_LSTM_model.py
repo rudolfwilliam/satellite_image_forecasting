@@ -1,20 +1,9 @@
-from pytorch_lightning.loggers import base
-import torch
-import time
-from torch import nn
-import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-import numpy as np
-import os
-import glob
 
-from torchmetrics import metric
-from ..losses import cloud_mask_loss, get_loss_from_name
+from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
-
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class Peephole_LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -68,7 +57,7 @@ class Peephole_LSTM_model(pl.LightningModule):
 
     def batch_loss(self, batch, t_future = 20, loss = None):
         all_data = batch
-        cmc = 4 #cloud_mask channel
+        cmc = 4 # cloud_mask channel
         T = all_data.size()[4]
         t0 = T - t_future
         context = all_data[:, :, :, :, :t0] # b, c, h, w, t
@@ -110,7 +99,6 @@ class Peephole_LSTM_model(pl.LightningModule):
         l = self.batch_loss(batch, t_future=self.future_training, loss = self.training_loss)
         return l
     
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
         all_data of size (b, w, h, c, t)
