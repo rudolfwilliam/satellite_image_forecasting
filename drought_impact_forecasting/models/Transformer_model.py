@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 
 from ..losses import cloud_mask_loss
-
+from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 class Transformer_model(pl.LightningModule):
     def __init__(self, cfg):

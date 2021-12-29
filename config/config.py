@@ -33,9 +33,9 @@ def train_line_parser(cfg):
     
     if args.layer_normalization is not None:
         if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":
-            cfg["model"]["layer_norm_flag"] = True
+            cfg["model"]["layer_norm"] = True
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
-            cfg["model"]["layer_norm_flag"] = False
+            cfg["model"]["layer_norm"] = False
     
     if args.num_layers is not None:
         cfg["model"]["n_layers"] = args.num_layers

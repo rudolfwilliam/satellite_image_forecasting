@@ -7,7 +7,6 @@ from torch.utils import data
 
 sys.path.append(os.getcwd())
 
-
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger

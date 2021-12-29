@@ -4,6 +4,8 @@ import pytorch_lightning as pl
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
+
+from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class Peephole_LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -26,7 +28,7 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
                                         baseline=self.cfg["model"]["baseline"],
-                                        layer_norm_flag=cfg["model"]["layer_norm_flag"],
+                                        layer_norm_flag=cfg["model"]["layer_norm"],
                                         img_width=cfg["model"]["img_width"],
                                         img_height=cfg["model"]["img_height"]
                                         )
