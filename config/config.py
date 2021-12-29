@@ -12,7 +12,7 @@ def train_line_parser(cfg):
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
     parser.add_argument('-nl', '--num_layers', type=int, default=None, help='number of layers')
-    parser.add_argument('-ln', '--layer_normalization', type=str, default=None, help='òayer normalization: t = ture, f = false')
+    parser.add_argument('-ln', '--layer_normalization', type=str, default=None, help='layer normalization: t = true, f = false')
     parser.add_argument('-ft', '--future_training', type=int, default=None, help='future steps for training')
     parser.add_argument('-lr', '--learining_rate' , type=float, default=None, help='starting learining rate')
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
@@ -33,9 +33,9 @@ def train_line_parser(cfg):
     
     if args.layer_normalization is not None:
         if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":
-            cfg["model"]["layer_norm"] = True
+            cfg["model"]["layer_norm_flag"] = True
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
-            cfg["model"]["layer_norm"] = False
+            cfg["model"]["layer_norm_flag"] = False
     
     if args.num_layers is not None:
         cfg["model"]["n_layers"] = args.num_layers

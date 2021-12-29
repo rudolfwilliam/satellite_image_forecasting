@@ -37,7 +37,7 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
                                         baseline=self.cfg["model"]["baseline"],
-                                        layer_norm=cfg["model"]["layer_norm"],
+                                        layer_norm_flag=cfg["model"]["layer_norm_flag"],
                                         img_width=cfg["model"]["img_width"],
                                         img_height=cfg["model"]["img_height"]
                                         )

@@ -8,7 +8,7 @@
         "big_mem": true,
         "img_width": 128,
         "img_height": 128,
-        "layer_norm": true,
+        "layer_norm_flag": true,
         "kernel": 5,
         "memory_kernel": 5,
         "baseline": "last_frame",

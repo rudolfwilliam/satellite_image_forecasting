@@ -5,7 +5,7 @@ from .shared import Conv_Block
 from collections import OrderedDict
 
 class Peephole_Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm, img_width, img_height):
+    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
         """
         Initialize ConvLSTM cell.
         Parameters
@@ -17,6 +17,8 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         num_conv_layers_mem: int
             Number of convolutional blocks for the weight matrices that perform a hadamard product with current memory
             (should be much lower than num_conv_layers)
+        layer_norm_flag: bool
+            Whether to perform layer normalization.
         hidden_dim: int
             Number of channels of hidden state.
         kernel_size: (int, int)
@@ -30,7 +32,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         self.c_channels = h_channels if big_mem else 1
         self.dilation_rate = dilation_rate
         self.kernel_size = kernel_size
-        self.layer_norm_flag = layer_norm
+        self.layer_norm_flag = layer_norm_flag
         self.img_width = img_width
         self.img_height = img_height
 
@@ -43,6 +45,10 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
 
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
+
+        # apply layer normalization
+        if self.layer_norm_flag:
+            h_cur = self.layer_norm(h_cur)
 
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
@@ -64,10 +70,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         elif self.c_channels == 1:
             h_next = o * torch.tanh(c_next).repeat([1,self.h_channels, 1, 1])
 
-        # apply layer normalization
-        if self.layer_norm_flag:
-            h_next = self.layer_norm(h_next)
-
+        
         return h_next, c_next
 
     def init_hidden(self, batch_size, image_size):
@@ -88,6 +91,8 @@ class Conv_LSTM_Cell(nn.Module):
         num_conv_layers_mem: int
             Number of convolutional blocks for the weight matrices that perform a hadamard product with current memory
             (should be much lower than num_conv_layers)
+        layer_norm_flag: bool
+            Whether to perform layer normalization.
         hidden_dim: int
             Number of channels of hidden state.
         kernel_size: (int, int)
@@ -141,7 +146,7 @@ class Conv_LSTM_Cell(nn.Module):
 
 class Peephole_Conv_LSTM(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size, memory_kernel_size, dilation_rate,
-                    img_width, img_height, layer_norm=True, baseline="last_frame", num_layers = 1):
+                    img_width, img_height, layer_norm_flag=True, baseline="last_frame", num_layers = 1):
         """
         Parameters:
             input_dim: Number of channels in input
@@ -170,7 +175,7 @@ class Peephole_Conv_LSTM(nn.Module):
         self.kernel_size = kernel_size     
         self.memory_kernel_size = memory_kernel_size              # n kernel size (no magic here)
         self.dilation_rate = dilation_rate
-        self.layer_norm = layer_norm
+        self.layer_norm_flag = layer_norm_flag
         self.img_width = img_width
         self.img_height = img_height
         self.baseline = baseline
@@ -178,17 +183,17 @@ class Peephole_Conv_LSTM(nn.Module):
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
-            cur_layer_norm = self.layer_norm if i == self.num_layers else False
+            cur_layer_norm_flag = self.layer_norm_flag if i != 0 else False
 
-            cell_list.append(Peephole_Conv_LSTM_Cell(input_dim= cur_input_dim,
-                                                        h_channels= self.h_channels[i],
-                                                        big_mem= self.big_mem,
-                                                        layer_norm=cur_layer_norm,
-                                                        img_width=self.img_width,
-                                                        img_height=self.img_height,
-                                                        kernel_size= kernel_size,
-                                                        memory_kernel_size=memory_kernel_size,
-                                                        dilation_rate=dilation_rate))
+            cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
+                                                     h_channels= self.h_channels[i],
+                                                     big_mem= self.big_mem,
+                                                     layer_norm_flag=cur_layer_norm_flag,
+                                                     img_width=self.img_width,
+                                                     img_height=self.img_height,
+                                                     kernel_size= kernel_size,
+                                                     memory_kernel_size=memory_kernel_size,
+                                                     dilation_rate=dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
 
