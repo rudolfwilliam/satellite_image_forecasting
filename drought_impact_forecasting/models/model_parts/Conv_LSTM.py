@@ -38,8 +38,10 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                                      bias=True, padding='same', padding_mode='reflect')
         self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels , dilation=dilation_rate, kernel_size=memory_kernel_size,
                                      bias=False, padding='same', padding_mode='reflect')
+        
         if self.layer_norm_flag:
-            self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height]) for _ in range(self.h_channels + self.input_dim)]
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height], device=device) for _ in range(self.h_channels + self.input_dim)]
 
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
@@ -50,8 +52,8 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         if self.layer_norm_flag:
             combined = torch.stack([self.layer_norm[c](combined[:, c, ...]) for c in range(combined.size()[1])], dim=1)
 
-        combined_conv = self.conv_cc(combined) # h_channel  + 3 * c_channel 
-        combined_memory = self.conv_ll(c_cur)  #  h_channel + 2 * c_channel  # NO BIAS HERE
+        combined_conv = self.conv_cc(combined) # h_channel + 3 * c_channel 
+        combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE
 
         cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels,self.c_channels,self.c_channels,self.h_channels], dim=1)
         ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
@@ -68,7 +70,6 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         elif self.c_channels == 1:
             h_next = o * torch.tanh(c_next).repeat([1,self.h_channels, 1, 1])
 
-        
         return h_next, c_next
 
     def init_hidden(self, batch_size, image_size):
@@ -184,7 +185,7 @@ class Peephole_Conv_LSTM(nn.Module):
             cur_layer_norm_flag = self.layer_norm_flag if i != 0 else False
 
             cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
-                                                     h_channels= self.h_channels[i],
+                                                     h_channels=self.h_channels[i],
                                                      big_mem= self.big_mem,
                                                      layer_norm_flag=cur_layer_norm_flag,
                                                      img_width=self.img_width,
