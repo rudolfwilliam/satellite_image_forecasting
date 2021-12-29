@@ -39,19 +39,19 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels , dilation=dilation_rate, kernel_size=memory_kernel_size,
                                      bias=False, padding='same', padding_mode='reflect')
         if self.layer_norm_flag:
-            self.layer_norm = nn.LayerNorm([self.img_width, self.img_height])
+            self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height]) for _ in range(self.h_channels + self.input_dim)]
 
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
-        # apply layer normalization
-        if self.layer_norm_flag:
-            h_cur = self.layer_norm(h_cur)
-
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
-        combined_conv = self.conv_cc(combined) # h_channel + 3*c_channel 
-        combined_memory = self.conv_ll(c_cur) #  h_channel + 2*c_channel  # NO BIAS HERE
+        # apply layer normalization
+        if self.layer_norm_flag:
+            combined = torch.stack([self.layer_norm[c](combined[:, c, ...]) for c in range(combined.size()[1])], dim=1)
+
+        combined_conv = self.conv_cc(combined) # h_channel  + 3 * c_channel 
+        combined_memory = self.conv_ll(c_cur)  #  h_channel + 2 * c_channel  # NO BIAS HERE
 
         cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels,self.c_channels,self.c_channels,self.h_channels], dim=1)
         ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
@@ -228,14 +228,13 @@ class Peephole_Conv_LSTM(nn.Module):
         for t in range(T):
             hs[0], cs[0] = self.cell_list[0](input_tensor=input_tensor[..., t], cur_state=[hs[0], cs[0]])
             for i in range(1, self.num_layers):
-                hs[i], cs[i] = self.cell_list[i](input_tensor=hs[i-1], cur_state=[hs[i], cs[i]])
+                hs[i], cs[i] = self.cell_list[i](input_tensor=hs[i - 1], cur_state=[hs[i], cs[i]])
 
         baselines[..., 0] = baseline
         pred_deltas[..., 0] = hs[-1]
         preds[..., 0] = pred_deltas[..., 0] + baselines[..., 0]
 
         
-
         # add a mask to our prediction
         if prediction_count > 1:
             non_pred_feat = torch.cat((torch.zeros((non_pred_feat.shape[0],

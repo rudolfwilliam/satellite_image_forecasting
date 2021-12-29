@@ -62,16 +62,16 @@ class Peephole_LSTM_model(pl.LightningModule):
         cmc = 4 # cloud_mask channel
         T = all_data.size()[4]
         t0 = T - t_future
-        context = all_data[:, :, :, :, :t0] # b, c, h, w, t
+        context = all_data[:, :, :, :, :t0]       # b, c, h, w, t
         target = all_data[:, :cmc + 1, :, :, t0:] # b, c, h, w, t
         npf = all_data[:, cmc + 1:, :, :, t0:]
 
         x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
         if loss is None:
-            return self.training_loss(labels = target, prediction = x_preds)
+            return self.training_loss(labels=target, prediction=x_preds)
         else:
-            return loss(labels = target, prediction = x_preds)
+            return loss(labels=target, prediction=x_preds)
 
     def configure_optimizers(self):        
         optimizer = get_opt_from_name(self.cfg["training"]["optimizer"],
