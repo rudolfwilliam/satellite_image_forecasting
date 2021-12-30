@@ -12,6 +12,7 @@ def train_line_parser(cfg):
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
     parser.add_argument('-nl', '--num_layers', type=int, default=None, help='number of layers')
+    parser.add_argument('-hc', '--hidden_channels', type=int, default=None, help='number of hidden channels')
     parser.add_argument('-ln', '--layer_normalization', type=str, default=None, help='layer normalization: t = true, f = false')
     parser.add_argument('-ft', '--future_training', type=int, default=None, help='future steps for training')
     parser.add_argument('-lr', '--learining_rate' , type=float, default=None, help='starting learining rate')
@@ -37,8 +38,11 @@ def train_line_parser(cfg):
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
             cfg["model"]["layer_norm"] = False
     
+    if args.hidden_channels is not None:
+        cfg["model"]["hidden_channels"] = args.hidden_channels
+
     if args.num_layers is not None:
-        cfg["model"]["n_layers"] = args.num_layers
+        cfg["model"]["n_layers"] = args.hidden_channels
 
     if args.future_training is not None:
         cfg["model"]["future_training"] = args.future_training

@@ -40,9 +40,9 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                                      bias=False, padding='same', padding_mode='reflect')
         
         if self.layer_norm_flag:
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height], device=device) for _ in range(self.h_channels + self.input_dim)]
-
+            #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            #self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height], device=device) for _ in range(self.h_channels + self.input_dim)]
+            self.layer_norm = nn.InstanceNorm2d(self.input_dim + self.h_channels, affine= True)
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
@@ -50,7 +50,9 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
 
         # apply layer normalization
         if self.layer_norm_flag:
-            combined = torch.stack([self.layer_norm[c](combined[:, c, ...]) for c in range(combined.size()[1])], dim=1)
+            combined = self.layer_norm(combined)
+        #if self.layer_norm_flag:
+        #    combined = torch.stack([self.layer_norm[c](combined[:, c, ...]) for c in range(combined.size()[1])], dim=1)
 
         combined_conv = self.conv_cc(combined) # h_channel + 3 * c_channel 
         combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE

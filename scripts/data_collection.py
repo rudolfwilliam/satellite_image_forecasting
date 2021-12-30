@@ -1,7 +1,8 @@
 import sys
 import os
 import warnings
-from os.path import join, split
+from os.path import join
+from os.path import split
 import random
 import pickle
 import glob
@@ -30,7 +31,7 @@ parser.add_argument('-dc', '--data_cleaning', type=float,  help='level of data c
 args = parser.parse_args()
 
 # Collect all cubes in the training set
-train_files = glob.glob(os.getcwd() + args.source_folder + '/**/*.npz', recursive=True)
+train_files = glob.glob(os.path.join(os.getcwd(), args.source_folder) + '/**/*.npz', recursive=True)
 train_files.sort()
 if len(train_files) != training_samples:
     warnings.warn("Your training set is incomplete! You only have " + str(len(train_files)) + " samples instead of " + str(training_samples))
@@ -83,7 +84,7 @@ if args.test_folder is not None:
     
     test_context_files = []
     test_target_files = []
-    for path, subdirs, files in os.walk(os.getcwd() + args.test_folder):
+    for path, subdirs, files in os.walk(os.path.join(os.getcwd(), args.test_folder)):
         for name in files:
             if '.npz' in name:
                 full_name = join(path, name)
