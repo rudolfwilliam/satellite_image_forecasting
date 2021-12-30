@@ -42,7 +42,7 @@ def train_line_parser(cfg):
         cfg["model"]["hidden_channels"] = args.hidden_channels
 
     if args.num_layers is not None:
-        cfg["model"]["n_layers"] = args.hidden_channels
+        cfg["model"]["n_layers"] = args.num_layers
 
     if args.future_training is not None:
         cfg["model"]["future_training"] = args.future_training
