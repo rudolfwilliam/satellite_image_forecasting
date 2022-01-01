@@ -2,8 +2,11 @@ import argparse
 import os
 import json
 
+def train_line_parser():
+    # Load default args from json
+    cfg = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
 
-def train_line_parser(cfg):
+    # Parse settable args from terminal
     parser = argparse.ArgumentParser(
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -14,8 +17,12 @@ def train_line_parser(cfg):
     parser.add_argument('-nl', '--num_layers', type=int, default=None, help='number of layers')
     parser.add_argument('-hc', '--hidden_channels', type=int, default=None, help='number of hidden channels')
     parser.add_argument('-ln', '--layer_normalization', type=str, default=None, help='layer normalization: t = true, f = false')
+    parser.add_argument('-k',  '--kernel_size', type=int, default=None, help='convolution kernel size')
+    parser.add_argument('-mk', '--mem_kernel_size', type=int, default=None, help='memory kernel size')
     parser.add_argument('-ft', '--future_training', type=int, default=None, help='future steps for training')
-    parser.add_argument('-lr', '--learining_rate' , type=float, default=None, help='starting learining rate')
+    parser.add_argument('-lr', '--learning_rate', type=float, default=None, help='starting learning rate')
+    parser.add_argument('-lf', '--learning_factor', type=float, default=None, help='learning rate factor')
+    parser.add_argument('-p',  '--patience', type=float, default=None, help='patience')
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
     parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
@@ -40,6 +47,12 @@ def train_line_parser(cfg):
     
     if args.hidden_channels is not None:
         cfg["model"]["hidden_channels"] = args.hidden_channels
+    
+    if args.kernel_size is not None:
+        cfg["model"]["kernel"] = args.kernel_size
+
+    if args.mem_kernel_size is not None:
+        cfg["model"]["memory_kernel"] = args.mem_kernel_size
 
     if args.num_layers is not None:
         cfg["model"]["n_layers"] = args.num_layers
@@ -47,8 +60,14 @@ def train_line_parser(cfg):
     if args.future_training is not None:
         cfg["model"]["future_training"] = args.future_training
 
-    if args.learining_rate is not None:
-        cfg["training"]["start_learn_rate"] = args.learining_rate
+    if args.learning_rate is not None:
+        cfg["training"]["start_learn_rate"] = args.learning_rate
+
+    if args.learning_factor is not None:
+        cfg["training"]["lr_factor"] = args.learning_factor
+
+    if args.patience is not None:
+        cfg["training"]["patience"] = args.patience
 
     if args.epochs is not None:
         cfg["training"]["epochs"] = args.epochs
@@ -120,7 +139,6 @@ def find_dir_path(wandb_name):
                     if (f.read() == wandb_name):
                         return os.path.join(dir_path,dir_)
     raise ValueError("The name doesn't exist.")
-
 
 def read_config(path):
     cfg = json.load(open(path, 'r'))

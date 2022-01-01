@@ -34,15 +34,16 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         self.img_width = img_width
         self.img_height = img_height
 
-        self.conv_cc = nn.Conv2d(self.input_dim + self.h_channels, self.h_channels + 3*self.c_channels , dilation=dilation_rate, kernel_size=kernel_size,
+        self.conv_cc = nn.Conv2d(self.input_dim + self.h_channels, self.h_channels + 3*self.c_channels, dilation=dilation_rate, kernel_size=kernel_size,
                                      bias=True, padding='same', padding_mode='reflect')
-        self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels , dilation=dilation_rate, kernel_size=memory_kernel_size,
+        self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
                                      bias=False, padding='same', padding_mode='reflect')
         
         if self.layer_norm_flag:
             #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             #self.layer_norm = [nn.LayerNorm([self.img_width, self.img_height], device=device) for _ in range(self.h_channels + self.input_dim)]
-            self.layer_norm = nn.InstanceNorm2d(self.input_dim + self.h_channels, affine= True)
+            self.layer_norm = nn.InstanceNorm2d(self.input_dim + self.h_channels, affine=True)
+        
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
@@ -57,7 +58,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         combined_conv = self.conv_cc(combined) # h_channel + 3 * c_channel 
         combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE
 
-        cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels,self.c_channels,self.c_channels,self.h_channels], dim=1)
+        cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels, self.c_channels, self.c_channels, self.h_channels], dim=1)
         ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
 
         i = torch.sigmoid(cc_i + ll_i)
@@ -192,8 +193,8 @@ class Peephole_Conv_LSTM(nn.Module):
                                                      layer_norm_flag=cur_layer_norm_flag,
                                                      img_width=self.img_width,
                                                      img_height=self.img_height,
-                                                     kernel_size= kernel_size,
-                                                     memory_kernel_size=memory_kernel_size,
+                                                     kernel_size=self.kernel_size,
+                                                     memory_kernel_size=self.memory_kernel_size,
                                                      dilation_rate=dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
@@ -273,6 +274,8 @@ class Peephole_Conv_LSTM(nn.Module):
     @staticmethod
     def _check_kernel_size_consistency(kernel_size):
         if not (isinstance(kernel_size, tuple) or
+                isinstance(kernel_size, int) or
+                # Lists currently not supported for Peephole_Conv_LSTM
                 (isinstance(kernel_size, list) and all([isinstance(elem, tuple) for elem in kernel_size]))):
             raise ValueError('`kernel_size` must be tuple or list of tuples')
 

@@ -23,9 +23,7 @@ from datetime import datetime
 def main():
 
     # Load configs
-    cfg = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
-
-    cfg = train_line_parser(cfg)
+    cfg = train_line_parser()
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"

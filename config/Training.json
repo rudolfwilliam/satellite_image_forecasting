@@ -17,7 +17,7 @@
     },
     "data":
     {
-        "pickle_dir": "Data/b_train_data",
+        "pickle_dir": "Data/all_data",
         "mesoscale_cut": [39, 41]
     },
     "training":
