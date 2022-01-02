@@ -21,7 +21,7 @@ for path, subdirs, files in os.walk(join(os.getcwd(), score_dir)):
     for name in files:
         if '.csv' in name:
             names.append(name[7:-4])
-            scores.append(genfromtxt(os.path.join(os.getcwd(), score_dir, name), delimiter=','))
+            scores.append(genfromtxt(join(os.getcwd(), score_dir, name), delimiter=','))
 
 nm = len(names)
 

@@ -20,9 +20,9 @@ parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-parser.add_argument('-s', '--source_folder', type=str, help='folder where the training data is')
+parser.add_argument('-s',  '--source_folder', type=str, help='folder where the training data is')
 parser.add_argument('-tf', '--test_folder', type=str, help='folder where the test data is', default=None)
-parser.add_argument('-d', '--dest_folder', type=str,  help='folder where pickles shoud be saved')
+parser.add_argument('-d',  '--dest_folder', type=str,  help='folder where pickles shoud be saved')
 parser.add_argument('-td', '--training_data', type=int,  help='number of training data points')
 parser.add_argument('-v1', '--val_1_data', type=int,  help='number of validation 1 data points')
 parser.add_argument('-v2', '--val_2_data', type=int,  help='number of validation 2 data points', default=-1)
@@ -31,7 +31,7 @@ parser.add_argument('-dc', '--data_cleaning', type=float,  help='level of data c
 args = parser.parse_args()
 
 # Collect all cubes in the training set
-train_files = glob.glob(os.path.join(os.getcwd(), args.source_folder) + '/**/*.npz', recursive=True)
+train_files = glob.glob(join(os.getcwd(), args.source_folder) + '/**/*.npz', recursive=True)
 train_files.sort()
 if len(train_files) != training_samples:
     warnings.warn("Your training set is incomplete! You only have " + str(len(train_files)) + " samples instead of " + str(training_samples))
@@ -68,7 +68,7 @@ if args.data_cleaning != -1:
 
 # Create pickle dir if needed
 if not os.path.exists(join(os.getcwd(), args.dest_folder)):
-    os.makedirs(os.path.join(os.getcwd(), args.dest_folder))
+    os.makedirs(join(os.getcwd(), args.dest_folder))
 
 # To build back the datasets
 with open(join(os.getcwd(), args.dest_folder, "train_data_paths.pkl"), "wb") as fp:
@@ -84,7 +84,7 @@ if args.test_folder is not None:
     
     test_context_files = []
     test_target_files = []
-    for path, subdirs, files in os.walk(os.path.join(os.getcwd(), args.test_folder)):
+    for path, subdirs, files in os.walk(join(os.getcwd(), args.test_folder)):
         for name in files:
             if '.npz' in name:
                 full_name = join(path, name)
@@ -96,9 +96,9 @@ if args.test_folder is not None:
     # Sort file names just in case (so we glue together the right context & target)
     test_context_files.sort()
     test_target_files.sort()
-    with open(os.path.join(os.getcwd(), args.dest_folder, test_set+"_context_data_paths.pkl"), "wb") as fp:
+    with open(join(os.getcwd(), args.dest_folder, test_set+"_context_data_paths.pkl"), "wb") as fp:
         pickle.dump(test_context_files, fp)
-    with open(os.path.join(os.getcwd(), args.dest_folder, test_set+"_target_data_paths.pkl"), "wb") as fp:
+    with open(join(os.getcwd(), args.dest_folder, test_set+"_target_data_paths.pkl"), "wb") as fp:
         pickle.dump(test_target_files, fp)
 
 print("Done")

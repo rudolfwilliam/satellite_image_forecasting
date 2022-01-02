@@ -1,5 +1,6 @@
 import argparse
 import os
+from os.path import join
 import json
 
 def train_line_parser():
@@ -22,7 +23,7 @@ def train_line_parser():
     parser.add_argument('-ft', '--future_training', type=int, default=None, help='future steps for training')
     parser.add_argument('-lr', '--learning_rate', type=float, default=None, help='starting learning rate')
     parser.add_argument('-lf', '--learning_factor', type=float, default=None, help='learning rate factor')
-    parser.add_argument('-p',  '--patience', type=float, default=None, help='patience')
+    parser.add_argument('-p',  '--patience', type=int, default=None, help='patience')
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
     parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
@@ -88,35 +89,37 @@ def validate_line_parser():
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('-cp','--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
-    parser.add_argument('-rn','--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not bot')
-    parser.add_argument('-bs','--batch_size', type=int, default=4, help='batch size')
-    parser.add_argument('-vd','--validation_dataset', type=int, default=None, help='Filepath to the pickle folder of the validation set')
-    parser.add_argument('-test','--use_real_test_set', action="store_true", help='If present we use the real test set!')
-    parser.add_argument('-e','--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
+    parser.add_argument('-cp',  '--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-rn',  '--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-bs',  '--batch_size', type=int, default=4, help='batch size')
+    parser.add_argument('-vd',  '--validation_dataset', type=str, default=None, help='path to the pickle folder of the validation set')
+    parser.add_argument('-test','--use_real_test_set', action="store_true", help='if present we use the real test set!')
+    parser.add_argument('-e',   '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
     args = parser.parse_args()
 
     if args.run_name is not None and args.check_point_path is not None:
-        raise ValueError("Either use --checkpoint or --run_name, not bot")
+        raise ValueError("Either use --checkpoint or --run_name, not both!")
 
     if args.run_name is not None and args.check_point_path is None:
         dir_path = find_dir_path(args.run_name)
-        model_path = os.path.join(dir_path, "files", "runtime_model")
+        model_path = join(dir_path, "files", "runtime_model")
         models = os.listdir(model_path)
         models.sort()
-        model_path = os.path.join(model_path , models[args.epoch_to_validate])
-        if args.validation_dataset == None:
-            cfg = json.load(open(os.path.join(dir_path, "files", "Training.json"), 'r'))
+        args.epoch_to_validate = (args.epoch_to_validate + len(models)) % len(models)
+        model_path = join(model_path , models[args.epoch_to_validate])
+        if args.validation_dataset is None:
+            cfg = json.load(open(join(dir_path, "files", "Training.json"), 'r'))
             dataset_dir = cfg["data"]["pickle_dir"]
         else:
             dataset_dir = args.validation_dataset
     
     if args.run_name is None and args.check_point_path is not None:
         model_path = args.check_point_path
-        if args.validation_dataset == None:
-            raise ValueError("When using a checkpoint outside of a folder one must specify the dataset_directory")
+        if args.validation_dataset is None:
+            raise ValueError("When using a checkpoint outside of a folder, one must specify the dataset_directory")
         else:
             dataset_dir = args.validation_dataset
+    
     configs = dict(
         model_path = model_path,
         dataset_dir = dataset_dir,
@@ -134,10 +137,10 @@ def find_dir_path(wandb_name):
     for path, subdirs, files in os.walk(dir_path):
         for dir_ in subdirs:
             # Ignore any licence, progress, etc. files
-            if os.path.isfile(os.path.join(dir_path,dir_, "files", "run_name.txt")):
-                with open(os.path.join(dir_path,dir_, "files",  "run_name.txt"),'r') as f:
+            if os.path.isfile(join(dir_path,dir_, "files", "run_name.txt")):
+                with open(join(dir_path,dir_, "files",  "run_name.txt"),'r') as f:
                     if (f.read() == wandb_name):
-                        return os.path.join(dir_path,dir_)
+                        return join(dir_path,dir_)
     raise ValueError("The name doesn't exist.")
 
 def read_config(path):

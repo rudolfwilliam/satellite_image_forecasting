@@ -199,11 +199,12 @@ class WandbTrain_callback(pl.Callback):
         
 
 class WandbTest_callback(pl.Callback):
-    def __init__(self, wandb_name_model_to_test) -> None:
+    def __init__(self, wandb_name_model_to_test, epoch) -> None:
         self.wandb_name_model_to_test = wandb_name_model_to_test
+        self.epoch = epoch
         super().__init__()
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
-        with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+".csv"), 'a') as filehandle:
+        with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+".csv"), 'a') as filehandle:
             for i in range(len(outputs)):
                 filehandle.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3])+ "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
 

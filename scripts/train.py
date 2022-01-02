@@ -3,8 +3,6 @@ import os
 import json
 import random
 
-from torch.utils import data
-
 sys.path.append(os.getcwd())
 
 import pytorch_lightning as pl
@@ -47,14 +45,14 @@ def main():
     random.seed(cfg["training"]["seed"])
     pl.seed_everything(cfg["training"]["seed"], workers=True)
 
-    ENdataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
+    EN_dataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
                                      train_batch_size = cfg["training"]["train_batch_size"],
                                      val_batch_size = cfg["training"]["val_1_batch_size"], 
                                      test_batch_size = cfg["training"]["val_2_batch_size"], 
                                      mesoscale_cut = cfg["data"]["mesoscale_cut"])
     
     # To build back the datasets for safety
-    ENdataset.serialize_datasets(wandb.run.dir)
+    EN_dataset.serialize_datasets(wandb.run.dir)
     
     # Load Callbacks
     wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
@@ -66,18 +64,18 @@ def main():
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
 
-    # setup Trainer
+    # Setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
                       devices = cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback])
 
-    # setup Model
+    # Setup Model
     model = Peephole_LSTM_model(cfg)
     
     # Run training
-    trainer.fit(model, ENdataset)
+    trainer.fit(model, EN_dataset)
 
     if not cfg["training"]["offline"]:
         wandb.finish()

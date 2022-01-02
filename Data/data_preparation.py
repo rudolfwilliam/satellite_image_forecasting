@@ -1,17 +1,12 @@
-import earthnet as en
 import numpy as np
 import pytorch_lightning as pl
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 import torch
 import os
-from os.path import isfile, join
+from os.path import join
 import random
 import pickle
 import math
-
-from torch._C import device
-
-
 
 def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None, undersample = False):
     
@@ -291,7 +286,6 @@ def process_md(md, target_shape):
             md_reshaped[i,j,:,:] = md_new[row, col,:,:]
 
     return md_reshaped
-
 
 class Earth_net_DataModule(pl.LightningDataModule):
     def __init__(self, 

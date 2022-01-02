@@ -2,18 +2,11 @@ from logging import Logger
 import sys
 import os
 import numpy as np
-import random
 from shutil import copy2
 from os import listdir
-# from pytorch_lightning.accelerators import accelerator
-# from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
-import torch
-import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 
@@ -33,32 +26,30 @@ def main():
 
     wandb.login()
 
-    #GPU handling
+    # GPU handling
     # print("GPU count: {0}".format(gpu_count))
 
-    wandb_logger = WandbLogger(project='DS_Lab', job_type='test', offline=True)
+    wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
     # Always use same val_2 data from Data folder
-
-    ENdataset = Earth_net_DataModule(data_dir =configs['dataset_dir'], 
+    EN_dataset = Earth_net_DataModule(data_dir =configs['dataset_dir'], 
                                      train_batch_size = configs['batch_size'],
                                      val_batch_size = configs['batch_size'], 
                                      test_batch_size = configs['batch_size'], 
                                      use_real_test_set = configs['use_real_test_set'],
                                      mesoscale_cut = [39,41])
     
-    callbacks = WandbTest_callback(configs['run_name'])
+    callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'])
 
-    #setup Trainer
+    # setup Trainer
     trainer = Trainer(logger=wandb_logger, callbacks=[callbacks])
 
-    
+    # setup Model
     model = Peephole_LSTM_model.load_from_checkpoint(configs['model_path'])
     model.eval()
-    #setup Model
 
     # Run validation
-    trainer.test(model = model, dataloaders = ENdataset)
+    trainer.test(model = model, dataloaders = EN_dataset)
 
     wandb.finish()
 
