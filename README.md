@@ -11,7 +11,7 @@ Feel free to reach out to us if you have any questions!
 
 Prerequisites: Create a python environment as defined in ```config/dif_env.yml```
 
-1. Dowload the dataset (train/iid/ood/extreme/seasonal splits):
+1. Download the dataset (train/iid/ood/extreme/seasonal splits):
 
     ```python scripts/data_retrieval.py directory/to/store/data split```
 
@@ -31,7 +31,7 @@ Prerequisites: Create a python environment as defined in ```config/dif_env.yml``
 
     ```python scripts/validate.py -rn wandb/run/name -e epoch/to/validate/on -ts iid_test_split```
 
-6. Evaluate you (ensemble of) model:
+6. Evaluate your (ensemble of) model:
 
     ```python scripts/ensemble_score.py```
 
