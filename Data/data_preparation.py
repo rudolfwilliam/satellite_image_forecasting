@@ -290,47 +290,46 @@ def process_md(md, target_shape):
 class Earth_net_DataModule(pl.LightningDataModule):
     def __init__(self, 
                  data_dir: str = "./", 
-                 train_batch_size = 16,
-                 val_batch_size = 16,
-                 test_batch_size = 16,
+                 train_batch_size = 4,
+                 val_batch_size = 4,
+                 test_batch_size = 4,
                  mesoscale_cut = [39, 41],
-                 use_real_test_set = False):
+                 test_set = 'val_2'):
         super().__init__()
         self.data_dir = data_dir
         self.mesoscale_cut = mesoscale_cut
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
-        self.use_real_test_set = use_real_test_set
+        self.test_set = test_set
 
-
-        with open(os.path.join(os.getcwd(), self.data_dir, "train_data_paths.pkl"),'rb') as f:
+        with open(join(os.getcwd(), self.data_dir, "train_data_paths.pkl"),'rb') as f:
             self.training_path_list = pickle.load(f)
-        with open(os.path.join(os.getcwd(), self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
+        with open(join(os.getcwd(), self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
             self.val_1_path_list = pickle.load(f)
-        if use_real_test_set:
-            with open(os.path.join(os.getcwd(), self.data_dir, "test_context_data_paths.pkl"),'rb') as f:
-                self.test_context_path_list = pickle.load(f)
-            with open(os.path.join(os.getcwd(), self.data_dir, "test_target_data_paths.pkl"),'rb') as f:
-                self.test_target_path_list = pickle.load(f)
-        else: 
-            with open(os.path.join(os.getcwd(), self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
+        if test_set == 'val_2':
+            with open(join(os.getcwd(), self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
                 self.val_2_path_list = pickle.load(f)
+        else: 
+            with open(join(os.getcwd(), self.data_dir, self.test_set+"_context_data_paths.pkl"),'rb') as f:
+                self.test_context_path_list = pickle.load(f)
+            with open(join(os.getcwd(), self.data_dir, self.test_set+"_target_data_paths.pkl"),'rb') as f:
+                self.test_target_path_list = pickle.load(f)
 
     def setup(self, stage):
         # Assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
-            #training
+            # training
             self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut)
-            #validation
+            # validation
             self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut)
 
         # Assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
-            if self.use_real_test_set:
-                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut)
-            else:
+            if self.test_set == 'val_2':
                 self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut)
+            else:
+                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut)
 
     def train_dataloader(self):
         return DataLoader(self.training_data, batch_size=self.train_batch_size)
@@ -339,15 +338,15 @@ class Earth_net_DataModule(pl.LightningDataModule):
         return DataLoader(self.val_1_data, batch_size=self.val_batch_size)
 
     def test_dataloader(self):
-        if self.use_real_test_set:
-            return DataLoader(self.test_data, batch_size=self.test_batch_size)
-        else:
+        if self.test_set == 'val_2':
             return DataLoader(self.val_2_data, batch_size=self.test_batch_size)
+        else:
+            return DataLoader(self.test_data, batch_size=self.test_batch_size)
 
     def serialize_datasets(self, directory):
-        with open(os.path.join(directory, "train_data_paths.pkl"), "wb") as fp:
+        with open(join(directory, "train_data_paths.pkl"), "wb") as fp:
             pickle.dump(self.training_path_list, fp)
-        with open(os.path.join(directory, "val_1_data_paths.pkl"), "wb") as fp:
+        with open(join(directory, "val_1_data_paths.pkl"), "wb") as fp:
             pickle.dump(self.val_1_path_list, fp)
-        with open(os.path.join(directory, "val_2_data_paths.pkl"), "wb") as fp:
+        with open(join(directory, "val_2_data_paths.pkl"), "wb") as fp:
             pickle.dump(self.val_2_path_list, fp)

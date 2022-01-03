@@ -5,52 +5,41 @@ import numpy as np
 import random
 from shutil import copy2
 from os import listdir
+from os.path import join
 from matplotlib.widgets import Slider, RadioButtons
 import pickle
-#from pytorch_lightning.accelerators import acceleratofrom pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 sys.path.append(os.getcwd())
 
-import torch
 import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-import pytorch_lightning as pl
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import WandbLogger
 
 from config.config import validate_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.Conv_model import Conv_model
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
-from Data.data_preparation import Earthnet_Dataset, prepare_test_data,Earth_net_DataModule
-from scripts.callbacks import WandbTest_callback
+from Data.data_preparation import Earth_net_DataModule, Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import wandb
-from datetime import datetime
-
-
 
 def main():
 
     configs = validate_line_parser()
+    mesoscale_cut = [39, 41]
 
-    print("validating experiment {0}".format(configs['run_name']))
-    print("validating model at epoch {0}".format(configs['epoch_to_validate']))
+    print("Validating experiment {0}".format(configs['run_name']))
+    print("Validating model at epoch {0}".format(configs['epoch_to_validate']))
 
-    ENdataset = Earth_net_DataModule(data_dir =configs['dataset_dir'], 
+    EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'], 
                                      train_batch_size = configs['batch_size'],
                                      val_batch_size = configs['batch_size'], 
                                      test_batch_size = configs['batch_size'], 
-                                     use_real_test_set = configs['use_real_test_set'],
-                                     mesoscale_cut = [39,41])
+                                     test_set = configs['test_set'],
+                                     mesoscale_cut = mesoscale_cut)
+    EN_dataset.setup(stage=None)
 
     model = Peephole_LSTM_model.load_from_checkpoint(configs['model_path'])
     model.eval()
     
-
-    truth = ENdataset.test_dataloader().__getitem__(np.random.choice(range(ENdataset.test_dataloader().__len__())))
-
+    truth = EN_dataset.test_dataloader().dataset.__getitem__(np.random.choice(range(EN_dataset.test_dataloader().__len__())))
 
     truth = truth.unsqueeze(dim=0)
     T = truth.shape[-1]
@@ -154,7 +143,6 @@ def get_image(pred, true, channel, time):
         return im_truu.cpu().detach().numpy(), im_pred.cpu().detach().numpy(), im_delt.cpu().detach().numpy()
     else:
         return im_truu.cpu().detach().numpy(), None, None
-
 
 if __name__ == "__main__":
     main()

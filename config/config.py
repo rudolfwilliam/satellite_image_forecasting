@@ -89,12 +89,12 @@ def validate_line_parser():
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('-cp',  '--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
-    parser.add_argument('-rn',  '--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
-    parser.add_argument('-bs',  '--batch_size', type=int, default=4, help='batch size')
-    parser.add_argument('-vd',  '--validation_dataset', type=str, default=None, help='path to the pickle folder of the validation set')
-    parser.add_argument('-test','--use_real_test_set', action="store_true", help='if present we use the real test set!')
-    parser.add_argument('-e',   '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
+    parser.add_argument('-cp','--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-rn','--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-bs','--batch_size', type=int, default=4, help='batch size')
+    parser.add_argument('-vd','--validation_dataset', type=str, default=None, help='path to the pickle folder of the validation set')
+    parser.add_argument('-ts','--test_set', type=str, default='val_2', help='test split to use')
+    parser.add_argument('-e', '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
     args = parser.parse_args()
 
     if args.run_name is not None and args.check_point_path is not None:
@@ -119,14 +119,14 @@ def validate_line_parser():
             raise ValueError("When using a checkpoint outside of a folder, one must specify the dataset_directory")
         else:
             dataset_dir = args.validation_dataset
-    
+
     configs = dict(
         model_path = model_path,
         dataset_dir = dataset_dir,
         run_name = args.run_name,
         epoch_to_validate = args.epoch_to_validate,
         batch_size = args.batch_size,
-        use_real_test_set = args.use_real_test_set
+        test_set = args.test_set
     )
     return configs
 

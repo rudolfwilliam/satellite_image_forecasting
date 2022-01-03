@@ -21,8 +21,8 @@ def main():
     
     configs = validate_line_parser()
 
-    print("validating experiment {0}".format(configs['run_name']))
-    print("validating model at epoch {0}".format(configs['epoch_to_validate']))
+    print("Validating experiment {0}".format(configs['run_name']))
+    print("Validating model at epoch {0}".format(configs['epoch_to_validate']))
 
     wandb.login()
 
@@ -32,11 +32,11 @@ def main():
     wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
     # Always use same val_2 data from Data folder
-    EN_dataset = Earth_net_DataModule(data_dir =configs['dataset_dir'], 
+    EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'], 
                                      train_batch_size = configs['batch_size'],
                                      val_batch_size = configs['batch_size'], 
                                      test_batch_size = configs['batch_size'], 
-                                     use_real_test_set = configs['use_real_test_set'],
+                                     test_set = configs['test_set'],
                                      mesoscale_cut = [39,41])
     
     callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'])

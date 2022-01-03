@@ -227,10 +227,13 @@ Data/*
 # Models
 /model_instances
 
-# images
+# Images
 *.png
 *.jpg
 *.npz
 
-# script files
+# Script files
 /drought_impact_forecasting-scripts
+
+# Ensemble scores
+/scripts/Ensemble_score
