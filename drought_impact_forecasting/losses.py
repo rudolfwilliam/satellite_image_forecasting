@@ -86,7 +86,6 @@ class ENS_loss(nn.Module):
         # score is a np array with all the scores
         # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
 
-
 class L2_disc_cube_loss(nn.Module):
     def __init__(self):
         super().__init__()

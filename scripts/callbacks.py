@@ -7,7 +7,6 @@ import numpy as np
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from drought_impact_forecasting.models.utils.utils import mean_prediction, last_prediction, ENS
-import json
 import wandb
 
 class SDVI_Train_callback(pl.Callback):
@@ -20,8 +19,6 @@ class SDVI_Train_callback(pl.Callback):
         torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
         return super().on_train_epoch_end(trainer, pl_module)
     
-
-
 class WandbTrain_callback(pl.Callback):
     def __init__(self, cfg, print_preds = True):
         self.print_preds = print_preds
@@ -29,8 +26,7 @@ class WandbTrain_callback(pl.Callback):
         self.print_table = None
 
         self.step_train_loss = []
-        self.epoch_train_loss = []
-        self.validation_loss = []
+        self.step_validation_loss = []
 
         self.runtime_prediction = os.path.join(wandb.run.dir,"runtime_pred") 
         self.r_pred = os.path.join(self.runtime_prediction,"r")
@@ -44,21 +40,14 @@ class WandbTrain_callback(pl.Callback):
                          self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
-        #wandb.init()
-
-        
 
         wandb.define_metric("step")
         wandb.define_metric("epoch")
-
 
         wandb.define_metric('batch_training_loss', step_metric = "step")
         wandb.define_metric('epoch_training_loss', step_metric = "epoch")
 
         #self.log_ENS_baseline(val_1_data)
-
-        # define our custom x axis metric
-        pass
 
     def log_ENS_baseline(self, data):
         scores_mean = np.zeros((data.__len__(), 5))
@@ -99,7 +88,6 @@ class WandbTrain_callback(pl.Callback):
                                 'baseline_emd_last':  avg_scores_last[4]
                             })
                 
-
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         tr_loss = float(outputs['loss'])
         self.step_train_loss.append(tr_loss)
@@ -112,7 +100,6 @@ class WandbTrain_callback(pl.Callback):
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused = None) -> None:
         # compute the avg training loss
         e_loss = sum(self.step_train_loss)/len(self.step_train_loss)
-        self.epoch_train_loss.append(e_loss)
         # resetting the per-batch training loss
         self.step_train_loss = []
         lr = trainer.lr_schedulers[0]['scheduler'].optimizer.param_groups[0]['lr']
@@ -124,7 +111,7 @@ class WandbTrain_callback(pl.Callback):
         return super().on_train_epoch_end(trainer, pl_module)
     
     def on_validation_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
-        self.validation_loss.append(outputs)
+        self.step_validation_loss.append(outputs)
         # Assigning the picture
         if self.print_preds:
             if self.print_sample is None:
@@ -135,11 +122,13 @@ class WandbTrain_callback(pl.Callback):
 
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
 
-        v_loss = np.mean(np.vstack(self.validation_loss), axis = 0)
-
-        # resetting the per-batch validation loss
-        self.validation_loss = []
         if not trainer.sanity_checking:
+            v_loss = np.mean(np.vstack(self.step_validation_loss), axis = 0)
+            if np.min(v_loss[1:]) == 0:
+                v_loss[0] = 0
+            else:
+                v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
+
             trainer.logger.experiment.log({ 
                                     'epoch': trainer.current_epoch,
                                     'epoch_validation_ENS':  v_loss[0],
@@ -151,17 +140,23 @@ class WandbTrain_callback(pl.Callback):
                             
             if self.print_preds:
                 self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
+
+            # resetting the per-batch validation loss
+            self.step_validation_loss = []
             return {"epoch_validation_ENS" : v_loss[0]}
+
+        # resetting the per-batch validation loss
+        self.step_validation_loss = []
 
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
 
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
     
     def log_predictions(self, model, sample, epoch):
-        preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
+        _, delta_preds, _ = model(sample[:1, :, :, :, :10])
         delta = np.flip(delta_preds[0, :4, :, :, 0].cpu().numpy().transpose(1, 2, 0).astype(float), -1)
         #delta_gt = np.flip(((self.sample[:4, :, :, 9] - means[0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
-     
+    
         figs = []
         for i, c in enumerate(self.channel_list):
             fig, ax = plt.subplots()
@@ -178,7 +173,7 @@ class WandbTrain_callback(pl.Callback):
         wandb.log({"epoch": epoch, "pred_imgs": figs})
 
     def log_groundtruth(self, model, sample):
-        preds, delta_preds, baselines = model(sample[:1, :, :, :, :10])
+        _, _, baselines = model(sample[:1, :, :, :, :10])
         delta_gt = np.flip(((sample[:1,:4, :, :, 9] - baselines[...,0])[0]).cpu().numpy().transpose(1, 2, 0).astype(float), -1)
         figs = []
         for i, c in enumerate(self.channel_list):
@@ -197,7 +192,6 @@ class WandbTrain_callback(pl.Callback):
 
         wandb.log({"epoch": -1,"pred_imgs": figs})
         
-
 class WandbTest_callback(pl.Callback):
     def __init__(self, wandb_name_model_to_test, epoch) -> None:
         self.wandb_name_model_to_test = wandb_name_model_to_test
@@ -211,7 +205,6 @@ class WandbTest_callback(pl.Callback):
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         return super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
-    pass
 
 class Prediction_Callback(pl.Callback):
     def __init__(self, ms_cut, train_dir, test_dir, dataset, print_predictions, timestamp):

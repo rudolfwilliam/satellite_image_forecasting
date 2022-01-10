@@ -1,5 +1,6 @@
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
+import numpy as np
 
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
@@ -111,6 +112,13 @@ class Peephole_LSTM_model(pl.LightningModule):
             t = time
         '''
         _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.test_loss)
+        v_loss = np.mean(np.vstack(l), axis = 0)
+        if np.min(v_loss[1:]) == 0:
+            v_loss[0] = 0
+        else:
+            v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
+        self.log('epoch_validation_ENS', v_loss[0], on_epoch=True, on_step=False)
+        self.log("hp_metric", v_loss[0], on_step=False, on_epoch=True)
         return l
     
     def test_step(self, batch, batch_idx):

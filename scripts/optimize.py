@@ -18,10 +18,20 @@ from callbacks import WandbTrain_callback
 import wandb
 from datetime import datetime
 
-def main():
+import optuna
+from optuna.trial import TrialState
+import warnings
+warnings.filterwarnings('ignore')
+
+def objective(trial):
 
     # Load configs
     cfg = train_line_parser()
+
+    # Set up search space
+    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 5)
+    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
+    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"
@@ -58,7 +68,9 @@ def main():
     wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
     # Create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
-    os.mkdir(runtime_model_folder)
+
+    if not os.path.isdir(runtime_model_folder):
+        os.mkdir(runtime_model_folder)
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
                                           save_top_k = -1,
@@ -69,7 +81,8 @@ def main():
                       logger=wandb_logger,
                       devices = cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
-                      callbacks=[wd_callbacks, checkpoint_callback])
+                      callbacks=[wd_callbacks, checkpoint_callback],
+                      num_sanity_val_steps=0)
 
     # Setup Model
     model = Peephole_LSTM_model(cfg)
@@ -80,5 +93,27 @@ def main():
     if not cfg["training"]["offline"]:
         wandb.finish()
     
+    return trainer.callback_metrics["epoch_validation_ENS"]
+
 if __name__ == "__main__":
-    main()
+
+    pruner = optuna.pruners.MedianPruner()
+    study = optuna.create_study(direction='maximize', pruner=pruner)
+    study.optimize(objective, n_trials=4, timeout=3600)
+
+    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+    print("Study statistics: ")
+    print("  Number of finished trials: ", len(study.trials))
+    print("  Number of pruned trials: ", len(pruned_trials))
+    print("  Number of complete trials: ", len(complete_trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  ENS Score: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
