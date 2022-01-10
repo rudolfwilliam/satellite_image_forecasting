@@ -8,10 +8,10 @@
         "big_mem": true,
         "img_width": 128,
         "img_height": 128,
-        "layer_norm_flag": true,
+        "layer_norm_flag": false,
         "kernel": 5,
         "memory_kernel": 5,
-        "baseline": "last_frame",
+        "baseline": "zeros",
         "future_training": 20,
         "n_layers": 3
     },

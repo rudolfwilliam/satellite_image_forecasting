@@ -54,6 +54,9 @@ def last_frame(cube, mask_channel=4):
         missing = missing * (1 - mask)
         t -= 1
     return new_cube
+    
+def zeros(cube, mask_channel = 4):
+    return cube[:, :-1, :, :, 0]*0
 
 def mean_prediction(cube, mask_channel=True, timepoints=20):
     # compute the mean image and make a prediction cube of the correct length

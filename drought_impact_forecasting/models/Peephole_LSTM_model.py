@@ -6,7 +6,7 @@ from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
 
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class Peephole_LSTM_model(pl.LightningModule):
     def __init__(self, cfg):

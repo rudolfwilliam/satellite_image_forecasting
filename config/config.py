@@ -25,7 +25,7 @@ def train_line_parser():
     parser.add_argument('-lf', '--learning_factor', type=float, default=None, help='learning rate factor')
     parser.add_argument('-p',  '--patience', type=int, default=None, help='patience')
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
-    parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame'], help='baseline function')
+    parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame', 'zeros'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
     args = parser.parse_args()
 

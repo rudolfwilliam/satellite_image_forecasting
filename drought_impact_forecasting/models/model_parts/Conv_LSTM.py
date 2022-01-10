@@ -260,7 +260,8 @@ class Peephole_Conv_LSTM(nn.Module):
 
                 if self.baseline == "mean_cube":
                     baselines[..., t] = (preds[..., t-1] + (baselines[..., t - 1] * (T + t)))/(T + t + 1)
-                    
+                if self.baseline == "zeros":
+                    pass
                 else:
                     baselines[...,t]  = preds[..., t-1]
 
