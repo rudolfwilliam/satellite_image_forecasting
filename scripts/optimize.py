@@ -20,6 +20,7 @@ from datetime import datetime
 
 import optuna
 from optuna.trial import TrialState
+from optuna.integration import PyTorchLightningPruningCallback
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -29,16 +30,22 @@ def objective(trial):
     cfg = train_line_parser()
 
     # Set up search space
-    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 5)
+    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 4)
     cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
     cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
+    #cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    #cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [true,false])
+
+    # Kernel sizes must be odd to be symmetric
+    #cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
+    #cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 15, 20)
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"
     else:
         os.environ["WANDB_MODE"]="offline"
 
-    wandb.init(entity="eth-ds-lab", project="Drought Impact Forecasting", config=cfg)
+    wandb.init(entity="eth-ds-lab", project="DIF Optimization", config=cfg)
 
     # Store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
@@ -71,17 +78,19 @@ def objective(trial):
 
     if not os.path.isdir(runtime_model_folder):
         os.mkdir(runtime_model_folder)
+    
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
+    prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_validation_ENS')
 
     # Setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
                       devices = cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
-                      callbacks=[wd_callbacks, checkpoint_callback],
+                      callbacks=[wd_callbacks, checkpoint_callback, prun_callback],
                       num_sanity_val_steps=0)
 
     # Setup Model
@@ -93,13 +102,13 @@ def objective(trial):
     if not cfg["training"]["offline"]:
         wandb.finish()
     
-    return trainer.callback_metrics["epoch_validation_ENS"]
+    return trainer.callback_metrics["epoch_validation_ENS"].item()
 
 if __name__ == "__main__":
 
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(direction='maximize', pruner=pruner)
-    study.optimize(objective, n_trials=4, timeout=3600)
+    study.optimize(objective, n_trials=100, timeout=86400)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

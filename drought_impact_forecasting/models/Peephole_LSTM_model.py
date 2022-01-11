@@ -118,7 +118,6 @@ class Peephole_LSTM_model(pl.LightningModule):
         else:
             v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
         self.log('epoch_validation_ENS', v_loss[0], on_epoch=True, on_step=False)
-        self.log("hp_metric", v_loss[0], on_step=False, on_epoch=True)
         return l
     
     def test_step(self, batch, batch_idx):

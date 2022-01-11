@@ -189,7 +189,7 @@ class Peephole_Conv_LSTM(nn.Module):
 
             cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
                                                      h_channels=self.h_channels[i],
-                                                     big_mem= self.big_mem,
+                                                     big_mem=self.big_mem,
                                                      layer_norm_flag=cur_layer_norm_flag,
                                                      img_width=self.img_width,
                                                      img_height=self.img_height,
@@ -237,7 +237,6 @@ class Peephole_Conv_LSTM(nn.Module):
         baselines[..., 0] = baseline
         pred_deltas[..., 0] = hs[-1]
         preds[..., 0] = pred_deltas[..., 0] + baselines[..., 0]
-
         
         # add a mask to our prediction
         if prediction_count > 1:
