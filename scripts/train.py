@@ -54,7 +54,7 @@ def main():
     # To build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
-    # Load Callbacks
+    # Load callbacks
     wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
     # Create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
@@ -64,16 +64,20 @@ def main():
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
 
-    # Setup Trainer
+    # Setup trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
                       devices = cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback])
 
-    # Setup Model
-    model = Peephole_LSTM_model(cfg)
-    
+    # Setup model
+    if cfg["training"]["checkpoint"] is not None:
+        # Resume training from checkpoint
+        model = Peephole_LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
+    else:
+        model = Peephole_LSTM_model(cfg)
+
     # Run training
     trainer.fit(model, EN_dataset)
 

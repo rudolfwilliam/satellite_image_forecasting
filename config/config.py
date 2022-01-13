@@ -27,6 +27,7 @@ def train_line_parser():
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
     parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame', 'zeros'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
+    parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to continue from')
     args = parser.parse_args()
 
     if args.batch_size is not None:
@@ -81,6 +82,9 @@ def train_line_parser():
         
     if args.pickle_dir is not None:
         cfg["data"]["pickle_dir"] = args.pickle_dir
+
+    if args.checkpoint is not None:
+        cfg["training"]["checkpoint"] = args.checkpoint
     
     return cfg
 
