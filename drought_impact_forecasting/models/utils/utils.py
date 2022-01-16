@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import earthnet as en
 
-
 def mean_cube(cube, mask_channel=False):  # dumb one
     # cube is the input cube (note that the time is always the last coordinate)
     # cannels is the list of channels we compute the avarage on
@@ -22,7 +21,6 @@ def mean_cube(cube, mask_channel=False):  # dumb one
         avg_cube = torch.sum(masked_cube, dim=-1) / torch.sum(mask, dim = -1)
         return torch.nan_to_num(avg_cube, nan = 0)
 
-
 def last_cube(cube, mask_channel=4):
     # note that cube can either be a torch tensor or a numpy array
     new_cube = mean_cube(cube[:, 0:4, :, :, :])
@@ -38,9 +36,8 @@ def last_cube(cube, mask_channel=4):
                         break
     return new_cube
 
-
 def last_frame(cube, mask_channel=4):
-    # Note that by default the last channel will be the mask
+    # note that by default the last channel will be the mask
     T = cube.shape[-1]
     # 1 = good quality, 0 = bad quality (in the flipped version)
     mask = 1 - cube[:, mask_channel:mask_channel + 1, :, :, T - 1]
@@ -65,12 +62,11 @@ def mean_prediction(cube, mask_channel=True, timepoints=20):
     
 def last_prediction(cube, mask_channel=4, timepoints=20):
     # find the last cloud free context image and return it as a constant prediction
-
     new_cube = last_frame(cube, mask_channel).permute(2, 3, 1, 0)
     return new_cube.repeat(1,1,1,1,timepoints)
 
 def get_ENS(target, preds):
-    # Calculate the ENS score of each prediction in preds
+    # calculate the ENS score of each prediction in preds
     scores = []
     for pred in preds:
         output = en.parallel_score.CubeCalculator.get_scores({"pred_filepath": pred, "targ_filepath": target})
@@ -80,7 +76,6 @@ def get_ENS(target, preds):
             denom = 1 / output['MAD'] + 1 / output['OLS'] + 1 / output['EMD'] + 1 / output['SSIM']
             scores.append(4 / denom)
     return scores
-
 
 def ENS(target: torch.Tensor, prediction: torch.Tensor):
     '''
@@ -122,6 +117,7 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
 
     partial_score = np.zeros((target.shape[0], 5))
     score = np.zeros(target.shape[0])
+
     # partial score computation
     for i in range(target.shape[0]):
         partial_score[i, 1], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], target[i], mask[i])
@@ -137,4 +133,3 @@ def ENS(target: torch.Tensor, prediction: torch.Tensor):
     return score, partial_score
     # score is a np array with all the scores
     # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
-

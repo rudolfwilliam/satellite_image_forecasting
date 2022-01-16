@@ -37,8 +37,8 @@
         "start_learn_rate": 0.001,
         "patience": 100,
         "lr_factor": 0.1,
-        "training_loss": "l2",
         "lr_threshold": 0.001,
+        "training_loss": "l2",
         "test_loss": "ENS", 
         "use_context": false
     }

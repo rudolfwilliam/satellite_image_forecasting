@@ -31,14 +31,15 @@ def objective(trial):
 
     # Set up search space
     cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 4)
-    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
+    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 22)
     cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
-    #cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
-    #cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [true,false])
+    cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
+    cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [True,False])
 
     # Kernel sizes must be odd to be symmetric
-    #cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
-    #cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 15, 20)
+    cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
+    cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"
@@ -108,7 +109,7 @@ if __name__ == "__main__":
 
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(direction='maximize', pruner=pruner)
-    study.optimize(objective, n_trials=100, timeout=86400)
+    study.optimize(objective, n_trials=10000, timeout=1000000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

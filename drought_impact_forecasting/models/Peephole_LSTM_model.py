@@ -7,7 +7,7 @@ from ..optimizers import get_opt_from_name
 from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
 
 from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
- 
+
 class Peephole_LSTM_model(pl.LightningModule):
     def __init__(self, cfg):
         """
@@ -23,8 +23,8 @@ class Peephole_LSTM_model(pl.LightningModule):
         self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
                                         output_dim=cfg["model"]["output_channels"],
                                         hidden_dims=cfg["model"]["hidden_channels"],
-                                        big_mem = cfg["model"]["big_mem"],
-                                        num_layers= cfg["model"]["n_layers"],
+                                        big_mem=cfg["model"]["big_mem"],
+                                        num_layers=cfg["model"]["n_layers"],
                                         kernel_size=self.cfg["model"]["kernel"],
                                         memory_kernel_size=self.cfg["model"]["memory_kernel"],
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
@@ -59,15 +59,14 @@ class Peephole_LSTM_model(pl.LightningModule):
         return preds, pred_deltas, baselines
 
     def batch_loss(self, batch, t_future = 20, loss = None):
-        all_data = batch
         cmc = 4 # cloud_mask channel
-        T = all_data.size()[4]
+        T = batch.size()[4]
         t0 = T - t_future
-        context = all_data[:, :, :, :, :t0]       # b, c, h, w, t
-        target = all_data[:, :cmc + 1, :, :, t0:] # b, c, h, w, t
-        npf = all_data[:, cmc + 1:, :, :, t0:]
+        context = batch[:, :, :, :, :t0]       # b, c, h, w, t
+        target = batch[:, :cmc + 1, :, :, t0:] # b, c, h, w, t
+        npf = batch[:, cmc + 1:, :, :, t0:]
 
-        x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
+        x_preds, _, _ = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
         if loss is None:
             return self.training_loss(labels=target, prediction=x_preds)
@@ -111,7 +110,7 @@ class Peephole_LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
-        _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.test_loss)
+        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss = self.test_loss)
         v_loss = np.mean(np.vstack(l), axis = 0)
         if np.min(v_loss[1:]) == 0:
             v_loss[0] = 0
@@ -129,6 +128,6 @@ class Peephole_LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
-        _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.test_loss)
+        # across all test sets 1/3 is context, 2/3 target
+        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss = self.test_loss)
         return l
-

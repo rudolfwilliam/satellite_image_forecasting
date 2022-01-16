@@ -83,8 +83,7 @@ def train_line_parser():
     if args.pickle_dir is not None:
         cfg["data"]["pickle_dir"] = args.pickle_dir
 
-    if args.checkpoint is not None:
-        cfg["training"]["checkpoint"] = args.checkpoint
+    cfg["training"]["checkpoint"] = args.checkpoint
     
     return cfg
 
