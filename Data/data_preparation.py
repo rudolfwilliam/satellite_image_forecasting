@@ -111,10 +111,11 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
         return all_data
 
 class Earthnet_Context_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_paths, ms_cut, device) -> None:
+    def __init__(self, context_paths, ms_cut, device, fake_weather = False) -> None:
         self.device = device
         self.context_paths = context_paths
         self.ms_cut = ms_cut
+        self.fake_weather = fake_weather
         super().__init__()
 
     def __len__(self):
@@ -140,6 +141,8 @@ class Earthnet_Context_Dataset(torch.utils.data.Dataset):
                                                             all_data.shape[1],
                                                             meso_dynamic.shape[2],
                                                             all_data.shape[3]]))
+        if self.fake_weather:
+            meso_dynamic = 0*meso_dynamic                             
         all_data = np.append(all_data, meso_dynamic, axis=-2)
         
         ''' 
@@ -155,7 +158,7 @@ class Earthnet_Context_Dataset(torch.utils.data.Dataset):
         return all_data        
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
-    def __init__(self, paths, ms_cut):
+    def __init__(self, paths, ms_cut, fake_weather = False):
         '''
             context_file_paths: list of paths of all the context files
             ms_cut: indxs for relevant mesoscale data
@@ -177,6 +180,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         '''
         self.paths = paths
         self.ms_cut = ms_cut
+        self.fake_weather = False
         
     def __setstate__(self, d):
         self.paths = d["paths"]
@@ -206,6 +210,8 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
                                                             all_data.shape[1],
                                                             meso_dynamic.shape[2],
                                                             all_data.shape[3]]))
+        if self.fake_weather:
+            meso_dynamic = 0*meso_dynamic
         all_data = np.append(all_data, meso_dynamic, axis=-2)
         
         ''' 
@@ -294,7 +300,8 @@ class Earth_net_DataModule(pl.LightningDataModule):
                  val_batch_size = 4,
                  test_batch_size = 4,
                  mesoscale_cut = [39, 41],
-                 test_set = 'val_2'):
+                 test_set = 'val_2',
+                 fake_weather = False):
         super().__init__()
         self.data_dir = data_dir
         self.mesoscale_cut = mesoscale_cut
@@ -302,6 +309,7 @@ class Earth_net_DataModule(pl.LightningDataModule):
         self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
         self.test_set = test_set
+        self.fake_weather = fake_weather
 
         with open(join(os.getcwd(), self.data_dir, "train_data_paths.pkl"),'rb') as f:
             self.training_path_list = pickle.load(f)
@@ -320,16 +328,16 @@ class Earth_net_DataModule(pl.LightningDataModule):
         # Assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
             # training
-            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut)
+            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, fake_weather=self.fake_weather)
             # validation
-            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut)
+            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather)
 
         # Assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
             if self.test_set == 'val_2':
-                self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut)
+                self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut, fake_weather=self.fake_weather)
             else:
-                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut)
+                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut, fake_weather=self.fake_weather)
 
     def train_dataloader(self):
         return DataLoader(self.training_data, batch_size=self.train_batch_size)

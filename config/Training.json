@@ -40,6 +40,7 @@
         "lr_threshold": 0.001,
         "training_loss": "l2",
         "test_loss": "ENS", 
-        "use_context": false
+        "use_context": false,
+        "fake_weather": false
     }
 }

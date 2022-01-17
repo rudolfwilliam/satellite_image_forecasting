@@ -28,6 +28,7 @@ def train_line_parser():
     parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame', 'zeros'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
     parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to continue from')
+    parser.add_argument('-fw', '--fake_weather', type=str, default=None, help='if true weather is masked: t = true, f = false')
     args = parser.parse_args()
 
     if args.batch_size is not None:
@@ -40,6 +41,12 @@ def train_line_parser():
             cfg["model"]["big_mem"] = True
         elif args.big_memory == "n" or args.big_memory == "N" or args.big_memory == "f" or args.big_memory == "F":
             cfg["model"]["big_mem"] = False
+    
+    if args.fake_weather is not None:
+        if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":
+            cfg["training"]["fake_weather"] = True
+        elif args.fake_weather == "n" or args.fake_weather == "N" or args.fake_weather == "f" or args.fake_weather == "F":
+            cfg["training"]["fake_weather"] = False
     
     if args.layer_normalization is not None:
         if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":

@@ -49,7 +49,8 @@ def main():
                                      train_batch_size = cfg["training"]["train_batch_size"],
                                      val_batch_size = cfg["training"]["val_1_batch_size"], 
                                      test_batch_size = cfg["training"]["val_2_batch_size"], 
-                                     mesoscale_cut = cfg["data"]["mesoscale_cut"])
+                                     mesoscale_cut = cfg["data"]["mesoscale_cut"],
+                                     fake_weather=cfg["training"]["fake_weather"])
     
     # To build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
