@@ -53,7 +53,7 @@ def en_score(s):
     return means[-1], hm(means[:4]), means[[0,2,3,1]]
 
 with open(output_file, 'a') as f:
-    f.write("Score of ensemble of ALL models" + "\n")
+    f.write("Score of ensemble of ALL models:" + "\n")
     f.write(str(en_score(scr)) + "\n")
 
 def powerset(iterable):
@@ -71,10 +71,11 @@ for l in lst:
         f.write(str(l) + "\n")
         f.write(str(e_scores[-1]) + "\n")
 
-e_scores, lst = zip(*sorted(zip(e_scores, lst)))
-for i in range(len(e_scores)):
-    with open(output_file, 'a') as f:
-        f.write(str(lst[i]) + ": " + str(e_scores[i]) + "\n")
-    #print(str(lst[i]) + ": " + str(e_scores[i]))
+if len(e_scores) != 0:
+    e_scores, lst = zip(*sorted(zip(e_scores, lst)))
+    for i in range(len(e_scores)):
+        with open(output_file, 'a') as f:
+            f.write(str(lst[i]) + ": " + str(e_scores[i]) + "\n")
+        #print(str(lst[i]) + ": " + str(e_scores[i]))
 
 print("Done")
