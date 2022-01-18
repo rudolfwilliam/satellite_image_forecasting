@@ -108,7 +108,7 @@ def validate_line_parser():
     args = parser.parse_args()
 
     if args.run_name is not None and args.check_point_path is not None:
-        raise ValueError("Either use --checkpoint or --run_name, not both!")
+        raise ValueError("Either use --check_point_path or --run_name, not both!")
 
     if args.run_name is not None and args.check_point_path is None:
         dir_path = find_dir_path(args.run_name)
