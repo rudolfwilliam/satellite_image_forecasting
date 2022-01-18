@@ -76,3 +76,5 @@ for i in range(len(e_scores)):
     with open(output_file, 'a') as f:
         f.write(str(lst[i]) + ": " + str(e_scores[i]) + "\n")
     #print(str(lst[i]) + ": " + str(e_scores[i]))
+
+print("Done")

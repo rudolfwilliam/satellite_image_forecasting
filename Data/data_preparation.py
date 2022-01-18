@@ -68,10 +68,11 @@ def prepare_test_data(ms_cut, data_dir, device):
     return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut)
 
 class Earthnet_Test_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_paths, target_paths, ms_cut) -> None:
+    def __init__(self, context_paths, target_paths, ms_cut, fake_weather = False) -> None:
         self.context_paths = context_paths
         self.target_paths = target_paths
         self.ms_cut = ms_cut
+        self.fake_weather = fake_weather
         assert len(self.context_paths) == len(self.target_paths)
         super().__init__()
 
@@ -97,6 +98,8 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
                                                             all_data.shape[1],
                                                             meso_dynamic.shape[2],
                                                             all_data.shape[3]]))
+        if self.fake_weather:
+            meso_dynamic = 0*meso_dynamic 
         all_data = np.append(all_data, meso_dynamic, axis=-2)
         
         ''' 

@@ -39,7 +39,7 @@ def main():
                                      test_set = configs['test_set'],
                                      mesoscale_cut = [39,41])
     
-    callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'])
+    callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'], configs['test_set'])
 
     # setup Trainer
     trainer = Trainer(logger=wandb_logger, callbacks=[callbacks])

@@ -193,14 +193,15 @@ class WandbTrain_callback(pl.Callback):
         wandb.log({"epoch": -1,"pred_imgs": figs})
         
 class WandbTest_callback(pl.Callback):
-    def __init__(self, wandb_name_model_to_test, epoch) -> None:
+    def __init__(self, wandb_name_model_to_test, epoch, test_set) -> None:
         self.wandb_name_model_to_test = wandb_name_model_to_test
         self.epoch = epoch
+        self.test_set = test_set
         super().__init__()
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
-        with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+".csv"), 'a') as filehandle:
+        with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+'_'+self.test_set[:3]+".csv"), 'a') as f:
             for i in range(len(outputs)):
-                filehandle.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3])+ "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
+                f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3])+ "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
 
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
