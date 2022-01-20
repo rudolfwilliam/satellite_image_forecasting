@@ -1,3 +1,4 @@
+from operator import mod
 import sys
 import os
 import json
@@ -37,6 +38,14 @@ def main():
         except:
             f.write("offline_run_" + str(datetime.now()))
 
+    # Setup model
+    if cfg["training"]["checkpoint"] is not None:
+        # Resume training from checkpoint
+        model = Peephole_LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
+        cfg = model.cfg
+    else:
+        model = Peephole_LSTM_model(cfg)
+
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
         json.dump(cfg, fp)
     
@@ -71,13 +80,6 @@ def main():
                       devices=cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback])
-
-    # Setup model
-    if cfg["training"]["checkpoint"] is not None:
-        # Resume training from checkpoint
-        model = Peephole_LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
-    else:
-        model = Peephole_LSTM_model(cfg)
 
     # Run training
     trainer.fit(model, EN_dataset)
