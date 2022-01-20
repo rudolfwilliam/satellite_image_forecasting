@@ -32,10 +32,10 @@ def main():
     wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
     # Always use same val_2 data from Data folder
-    EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'], 
+    EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'],
                                      train_batch_size = configs['batch_size'],
-                                     val_batch_size = configs['batch_size'], 
-                                     test_batch_size = configs['batch_size'], 
+                                     val_batch_size = configs['batch_size'],
+                                     test_batch_size = configs['batch_size'],
                                      test_set = configs['test_set'],
                                      mesoscale_cut = [39,41])
     
