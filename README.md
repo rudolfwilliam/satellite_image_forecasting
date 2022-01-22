@@ -43,5 +43,5 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 
 ```demos/data_observation_demo.ipynb``` for visualizing the dataset
 
-```scripts/daignosticate.py -rn wandb/run/name -e epoch/to/validate/on``` for visualizing the model's predictions
+```scripts/diagnosticate.py -rn wandb/run/name -e epoch/to/validate/on``` for visualizing the model's predictions
 

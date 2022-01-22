@@ -1,4 +1,5 @@
 import argparse
+from operator import index
 import os
 from os.path import join
 import json
@@ -137,6 +138,51 @@ def validate_line_parser():
         epoch_to_validate = args.epoch_to_validate,
         batch_size = args.batch_size,
         test_set = args.test_set
+    )
+    return configs
+
+def diagnosticate_line_parser():
+    parser = argparse.ArgumentParser(
+        add_help=True,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument('-cp','--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-rn','--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-e', '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
+    parser.add_argument('-td','--train_dataset', type=str, default=None, help='pickle file with train set')
+    parser.add_argument('-tcd','--test_context_dataset', type=str, default=None, help='pickle file with context of a test set')
+    parser.add_argument('-ttd','--test_target_dataset', type=str, default=None, help='pickle file with target of a test set')
+    parser.add_argument('-id','--cube_index', type=int, default=0, help='index of cube to use')
+    parser.add_argument('-a','--action', type=str, default=None, choices=['visualize', 'time_plot'], help='diagnosticate kind to run')
+    args = parser.parse_args()
+
+    if args.run_name is not None and args.check_point_path is not None:
+        raise ValueError("Either use --check_point_path or --run_name, not both!")
+
+    if args.run_name is not None and args.check_point_path is None:
+        dir_path = find_dir_path(args.run_name)
+        model_path = join(dir_path, "files", "runtime_model")
+        models = os.listdir(model_path)
+        models.sort()
+        args.epoch_to_validate = (args.epoch_to_validate + len(models)) % len(models)
+        model_path = join(model_path , models[args.epoch_to_validate])
+    
+    if args.run_name is None and args.check_point_path is not None:
+        model_path = args.check_point_path
+    
+    if args.test_context_dataset is not None and args.test_target_dataset is None or \
+        args.test_context_dataset is None and args.test_target_dataset is not None:
+        raise ValueError("When test data cube you must supply a context and target")
+
+    configs = dict(
+        model_path = model_path,
+        run_name = args.run_name,
+        epoch_to_validate = args.epoch_to_validate,
+        train_data = args.train_dataset,
+        test_context_data = args.test_context_dataset,
+        test_target_data = args.test_target_dataset,
+        index = args.cube_index,
+        action = args.action
     )
     return configs
 

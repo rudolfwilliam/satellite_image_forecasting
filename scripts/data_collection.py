@@ -79,7 +79,7 @@ with open(join(os.getcwd(), args.dest_folder, "val_2_data_paths.pkl"), "wb") as 
     pickle.dump(val_2_data, fp)
 
 if args.test_folder is not None:
-    # this folder name should indicate what test set we want (iid/ood/extreme/seasoanl)
+    # This folder name should indicate what test set we want (iid/ood/extreme/seasoanl)
     test_set = args.test_folder.split('/')[-2]
     
     test_context_files = []
