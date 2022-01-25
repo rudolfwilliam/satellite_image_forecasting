@@ -222,11 +222,6 @@ ENV/
 !Data/
 
 Data/*
-!Data/small_data/
-!Data/iid/
-!Data/ood/
-!Data/extreme/
-!Data/seasonal/
 
 # Models
 /model_instances
@@ -234,6 +229,7 @@ Data/*
 # Images
 *.png
 *.jpg
+*.npz
 
 # Script files
 /drought_impact_forecasting-scripts
