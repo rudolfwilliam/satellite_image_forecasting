@@ -30,6 +30,7 @@ def train_line_parser():
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
     parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to continue from')
     parser.add_argument('-fw', '--fake_weather', type=str, default=None, help='if true weather is masked: t = true, f = false')
+    parser.add_argument('-ph', '--peephole', type=str, default=None, help='if true peephole connection are used: t = true, f = false')
     args = parser.parse_args()
 
     if args.batch_size is not None:
@@ -42,6 +43,12 @@ def train_line_parser():
             cfg["model"]["big_mem"] = True
         elif args.big_memory == "n" or args.big_memory == "N" or args.big_memory == "f" or args.big_memory == "F":
             cfg["model"]["big_mem"] = False
+
+    if args.peephole is not None:
+        if args.peephole == "y" or args.peephole == "Y" or args.peephole == "T" or args.peephole == "t":
+            cfg["model"]["peephole"] = True
+        elif args.peephole == "n" or args.peephole == "N" or args.peephole == "f" or args.peephole == "F":
+            cfg["model"]["peephole"] = False
     
     if args.fake_weather is not None:
         if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":

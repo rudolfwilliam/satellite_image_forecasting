@@ -31,7 +31,8 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         baseline=self.cfg["model"]["baseline"],
                                         layer_norm_flag=cfg["model"]["layer_norm"],
                                         img_width=cfg["model"]["img_width"],
-                                        img_height=cfg["model"]["img_height"]
+                                        img_height=cfg["model"]["img_height"],
+                                        peephole=cfg["model"]["peephole"]
                                         )
 
         self.baseline = self.cfg["model"]["baseline"]

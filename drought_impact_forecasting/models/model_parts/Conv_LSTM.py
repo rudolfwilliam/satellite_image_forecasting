@@ -83,7 +83,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                 torch.zeros(batch_size, self.c_channels, height, width, device=self.conv_cc.weight.device))
 
 class Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, num_conv_layers, num_conv_layers_mem, hidden_dim, kernel_size, dilation_rate):
+    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
         """
         Initialize ConvLSTM cell.
         Parameters
@@ -106,51 +106,58 @@ class Conv_LSTM_Cell(nn.Module):
         super(Conv_LSTM_Cell, self).__init__()
 
         self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
+        self.h_channels = h_channels
+        self.c_channels = h_channels if big_mem else 1
         self.dilation_rate = dilation_rate
-        self.num_conv_layers = num_conv_layers
-        self.num_conv_layers_mem = num_conv_layers_mem
         self.kernel_size = kernel_size
+        self.layer_norm_flag = layer_norm_flag
+        self.img_width = img_width
+        self.img_height = img_height
 
-        self.conv_block = Conv_Block(in_channels=self.input_dim + self.hidden_dim,
-                                     out_channels=4*self.hidden_dim,
-                                     dilation_rate=self.dilation_rate,
-                                     num_conv_layers=self.num_conv_layers,
-                                     kernel_size=self.kernel_size)
-        self.conv_block_mem = Conv_Block(in_channels=self.input_dim + 2*self.hidden_dim,
-                                     out_channels=3*self.hidden_dim,
-                                     dilation_rate=self.dilation_rate,
-                                     num_conv_layers=self.num_conv_layers_mem,
-                                     kernel_size=self.kernel_size)
-
+        self.conv_cc = nn.Conv2d(self.input_dim + self.h_channels, self.h_channels + 3*self.c_channels, dilation=dilation_rate, kernel_size=kernel_size,
+                                     bias=True, padding='same', padding_mode='reflect')
+        
+        if self.layer_norm_flag:
+            self.layer_norm = nn.InstanceNorm2d(self.input_dim + self.h_channels, affine=True)
+        
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
-        combined_conv = self.conv_block(combined)
-        combined_conv_weights = self.conv_block_mem(torch.concat([combined, c_cur], dim=1))
-        cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
-        w_i, w_f, w_o = torch.split(combined_conv_weights, self.hidden_dim, dim=1)
+        # apply layer normalization
+        if self.layer_norm_flag:
+            combined = self.layer_norm(combined)
+        #if self.layer_norm_flag:
+        #    combined = torch.stack([self.layer_norm[c](combined[:, c, ...]) for c in range(combined.size()[1])], dim=1)
 
-        i = torch.sigmoid(cc_i + w_i * c_cur)
-        f = torch.sigmoid(cc_f + w_f * c_cur)
-        o = torch.sigmoid(cc_o + w_o * c_cur)
+        combined_conv = self.conv_cc(combined) # h_channel + 3 * c_channel 
+
+        cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels, self.c_channels, self.c_channels, self.h_channels], dim=1)
+
+
+        i = torch.sigmoid(cc_i)
+        f = torch.sigmoid(cc_f)
+        o = torch.sigmoid(cc_o)
         g = torch.tanh(cc_g)
 
         c_next = f * c_cur + i * g
-        h_next = o * torch.tanh(c_next)
+
+        if self.h_channels == self.c_channels:
+            h_next = o * torch.tanh(c_next)
+        elif self.c_channels == 1:
+            h_next = o * torch.tanh(c_next).repeat([1,self.h_channels, 1, 1])
 
         return h_next, c_next
 
     def init_hidden(self, batch_size, image_size):
         height, width = image_size
-        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device),  
-                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv_block_mem.seq[0].weight.device))
+        return (torch.zeros(batch_size, self.h_channels, height, width, device=self.conv_cc.weight.device),  
+                torch.zeros(batch_size, self.c_channels, height, width, device=self.conv_cc.weight.device))
 
 class Peephole_Conv_LSTM(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size, memory_kernel_size, dilation_rate,
-                    img_width, img_height, layer_norm_flag=True, baseline="last_frame", num_layers = 1):
+                    img_width, img_height, layer_norm_flag=True, baseline="last_frame", num_layers = 1, peephole = False):
         """
         Parameters:
             input_dim: Number of channels in input
@@ -183,21 +190,32 @@ class Peephole_Conv_LSTM(nn.Module):
         self.img_width = img_width
         self.img_height = img_height
         self.baseline = baseline
+        self.peephole = peephole
 
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
             cur_layer_norm_flag = self.layer_norm_flag if i != 0 else False
-
-            cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
-                                                     h_channels=self.h_channels[i],
-                                                     big_mem=self.big_mem,
-                                                     layer_norm_flag=cur_layer_norm_flag,
-                                                     img_width=self.img_width,
-                                                     img_height=self.img_height,
-                                                     kernel_size=self.kernel_size,
-                                                     memory_kernel_size=self.memory_kernel_size,
-                                                     dilation_rate=dilation_rate))
+            if self.peephole:
+                cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
+                                                        h_channels=self.h_channels[i],
+                                                        big_mem=self.big_mem,
+                                                        layer_norm_flag=cur_layer_norm_flag,
+                                                        img_width=self.img_width,
+                                                        img_height=self.img_height,
+                                                        kernel_size=self.kernel_size,
+                                                        memory_kernel_size=self.memory_kernel_size,
+                                                        dilation_rate=dilation_rate))
+            else:
+                cell_list.append(Conv_LSTM_Cell(input_dim=cur_input_dim,
+                                                h_channels=self.h_channels[i],
+                                                big_mem=self.big_mem,
+                                                layer_norm_flag=cur_layer_norm_flag,
+                                                img_width=self.img_width,
+                                                img_height=self.img_height,
+                                                kernel_size=self.kernel_size,
+                                                memory_kernel_size=self.memory_kernel_size,
+                                                dilation_rate=dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
 
