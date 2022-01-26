@@ -30,8 +30,8 @@ def objective(trial):
     cfg = train_line_parser()
 
     # Set up search space
-    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 7)
-    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 50)
+    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 3)
+    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
     cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-6, 1e-4, log=True)
     cfg["training"]["training_loss"] = trial.suggest_categorical("tl", ["l1","l2","Huber"])
     #cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
@@ -106,7 +106,7 @@ def objective(trial):
     if not cfg["training"]["offline"]:
         wandb.finish()
     
-    return trainer.callback_metrics["epoch_validation_ENS"].item()
+    return trainer.callback_metrics["epoch_training_loss"].item()
 
 if __name__ == "__main__":
 
