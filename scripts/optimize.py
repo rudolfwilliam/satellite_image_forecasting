@@ -30,16 +30,17 @@ def objective(trial):
     cfg = train_line_parser()
 
     # Set up search space
-    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 4)
-    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 22)
-    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
-    cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
-    cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
-    cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [True,False])
+    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 7)
+    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 50)
+    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-6, 1e-4, log=True)
+    cfg["training"]["training_loss"] = trial.suggest_categorical("tl", ["l1","l2","Huber"])
+    #cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
+    #cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    #cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [True,False])
 
     # Kernel sizes must be odd to be symmetric
-    cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
-    cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
+    cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 3)
+    #cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
 
     if not cfg["training"]["offline"]:
         os.environ["WANDB_MODE"]="online"
@@ -73,7 +74,7 @@ def objective(trial):
     EN_dataset.serialize_datasets(wandb.run.dir)
     
     # Load Callbacks
-    wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
+    wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=False)
     # Create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
 
@@ -82,9 +83,10 @@ def objective(trial):
     
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
-                                          save_top_k = -1,
+                                          save_top_k = 2,
+                                          monitor='epoch_training_loss',
                                           filename = 'model_{epoch:03d}')
-    prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_validation_ENS')
+    prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_training_loss')
 
     # Setup Trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
@@ -92,6 +94,7 @@ def objective(trial):
                       devices = cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback, prun_callback],
+                      check_val_every_n_epoch = 1000,
                       num_sanity_val_steps=0)
 
     # Setup Model
