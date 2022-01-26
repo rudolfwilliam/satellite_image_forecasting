@@ -36,9 +36,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
 
         self.conv_cc = nn.Conv2d(self.input_dim + self.h_channels, self.h_channels + 3*self.c_channels, dilation=dilation_rate, kernel_size=kernel_size,
                                      bias=True, padding='same', padding_mode='reflect')
-        self.conv_ll = nn.Conv2d(self.c_channels, 2*self.c_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
-                                     bias=False, padding='same', padding_mode='reflect')
-        self.conv_oo = nn.Conv2d(self.c_channels, self.h_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
+        self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
                                      bias=False, padding='same', padding_mode='reflect')
         
         if self.layer_norm_flag:
@@ -59,17 +57,15 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE
 
         cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels, self.c_channels, self.c_channels, self.h_channels], dim=1)
-        ll_i, ll_f = torch.split(combined_memory, [self.c_channels, self.c_channels], dim=1)
+        ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
 
         i = torch.sigmoid(cc_i + ll_i)
         f = torch.sigmoid(cc_f + ll_f)
+        o = torch.sigmoid(cc_o + ll_o)
 
         g = torch.tanh(cc_g)
+
         c_next = f * c_cur + i * g
-
-        oo_o = self.conv_oo(c_next) # note that o uses c_next, not c_cur
-        o = torch.sigmoid(oo_o + cc_o)
-
         if self.h_channels == self.c_channels:
             h_next = o * torch.tanh(c_next)
         elif self.c_channels == 1:
