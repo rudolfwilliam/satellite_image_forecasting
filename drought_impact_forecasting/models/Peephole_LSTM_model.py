@@ -69,10 +69,11 @@ class Peephole_LSTM_model(pl.LightningModule):
 
         x_preds, _, _ = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
-        if loss is None:
-            return self.training_loss(labels=target, prediction=x_preds)
-        else:
+
+        if loss == "ENS":
             return loss(labels=target, prediction=x_preds)
+        else:
+            return _, loss(labels=target, prediction=x_preds)
 
     def configure_optimizers(self):        
         optimizer = get_opt_from_name(self.cfg["training"]["optimizer"],
@@ -99,7 +100,7 @@ class Peephole_LSTM_model(pl.LightningModule):
             h = height
             t = time
         '''
-        l = self.batch_loss(batch, t_future=self.future_training, loss = self.training_loss)
+        _, l = self.batch_loss(batch, t_future=self.future_training, loss = self.training_loss)
         return l
     
     def validation_step(self, batch, batch_idx):
@@ -112,12 +113,12 @@ class Peephole_LSTM_model(pl.LightningModule):
             t = time
         '''
         _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss = self.test_loss)
-        v_loss = np.mean(np.vstack(l), axis = 0)
+        '''v_loss = np.mean(np.vstack(l), axis = 0)
         if np.min(v_loss[1:]) == 0:
             v_loss[0] = 0
         else:
             v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
-        self.log('epoch_validation_ENS', v_loss[0], on_epoch=True, on_step=False)
+        self.log('epoch_validation_ENS', v_loss[0], on_epoch=True, on_step=False)'''
         return l
     
     def test_step(self, batch, batch_idx):

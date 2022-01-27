@@ -25,6 +25,8 @@ class WandbTrain_callback(pl.Callback):
         self.print_sample = None
         self.print_table = None
 
+        self.test_loss = cfg["training"]["test_loss"]
+
         self.step_train_loss = []
         self.step_validation_loss = []
 
@@ -124,26 +126,35 @@ class WandbTrain_callback(pl.Callback):
 
         if not trainer.sanity_checking:
             v_loss = np.mean(np.vstack(self.step_validation_loss), axis = 0)
-            if np.min(v_loss[1:]) == 0:
-                v_loss[0] = 0
+            if self.test_loss == "ENS":
+                if np.min(v_loss[1:]) == 0:
+                    v_loss[0] = 0
+                else:
+                    v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
+
+                trainer.logger.experiment.log({ 
+                                        'epoch': trainer.current_epoch,
+                                        'epoch_validation_ENS':  v_loss[0],
+                                        'epoch_validation_mad':  v_loss[1],
+                                        'epoch_validation_ssim': v_loss[2],
+                                        'epoch_validation_ols':  v_loss[3],
+                                        'epoch_validation_emd':  v_loss[4]
+                                    })
+                                
+                if self.print_preds:
+                    self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
+
+                # resetting the per-batch validation loss
+                self.step_validation_loss = []
+                return {"epoch_validation_ENS" : v_loss[0]}
             else:
-                v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
-
-            trainer.logger.experiment.log({ 
-                                    'epoch': trainer.current_epoch,
-                                    'epoch_validation_ENS':  v_loss[0],
-                                    'epoch_validation_mad':  v_loss[1],
-                                    'epoch_validation_ssim': v_loss[2],
-                                    'epoch_validation_ols':  v_loss[3],
-                                    'epoch_validation_emd':  v_loss[4]
-                                })
-                            
-            if self.print_preds:
-                self.log_predictions(trainer.model, self.print_sample, trainer.current_epoch)
-
-            # resetting the per-batch validation loss
-            self.step_validation_loss = []
-            return {"epoch_validation_ENS" : v_loss[0]}
+                trainer.logger.experiment.log({ 
+                                        'epoch': trainer.current_epoch,
+                                        'epoch_validation_{0}'.format(self.test_loss):  v_loss[0]
+                                    })
+                self.step_validation_loss = []
+                return {'epoch_validation_{0}'.format(self.test_loss):  v_loss[0]}
+                
 
         # resetting the per-batch validation loss
         self.step_validation_loss = []

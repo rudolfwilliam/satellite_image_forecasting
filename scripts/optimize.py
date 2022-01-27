@@ -32,7 +32,7 @@ def objective(trial):
     # Set up search space
     cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 3)
     cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
-    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-6, 1e-4, log=True)
+    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-6, 1e-3, log=True)
     cfg["training"]["training_loss"] = trial.suggest_categorical("tl", ["l1","l2","Huber"])
     #cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
     #cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
@@ -110,8 +110,8 @@ def objective(trial):
 
 if __name__ == "__main__":
 
-    pruner = optuna.pruners.MedianPruner()
-    study = optuna.create_study(direction='maximize', pruner=pruner)
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
+    study = optuna.create_study(direction='minimize', pruner=pruner)
     study.optimize(objective, n_trials=10000, timeout=1000000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
