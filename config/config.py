@@ -117,7 +117,7 @@ def validate_line_parser():
         models = os.listdir(model_path)
         models.sort()
         args.epoch_to_validate = (args.epoch_to_validate + len(models)) % len(models)
-        model_path = join(model_path , models[args.epoch_to_validate])
+        model_path = join(model_path, models[args.epoch_to_validate])
         if args.validation_dataset is None:
             cfg = json.load(open(join(dir_path, "files", "Training.json"), 'r'))
             dataset_dir = cfg["data"]["pickle_dir"]

@@ -97,7 +97,6 @@ def plot_time(pred, truth):
     plt.ylabel("NDVI/Weather")
     plt.xlabel("Time")
 
-
     plt.legend(loc='upper left', title="Time NDVI")
     plt.show()
     print("Done")
@@ -133,7 +132,7 @@ def generate_plot(pred, true):
         ax=ax[4],
         label='time',
         valmin=0,
-        valmax=T,
+        valmax=T-0.01,
         valinit=t,
         orientation="vertical"
     )
@@ -181,13 +180,13 @@ def generate_plot(pred, true):
 def get_image(pred, true, channel, time):
     T = true.shape[-1]
     t0 = T - pred.shape[-1]
-    im_truu = true[0,channel,:,:,time]
+    im_true = true[0,channel,:,:,time]
     if time >= t0 and channel < 4:
         im_pred = pred[0,channel,:,:,time - t0]
-        im_delt = im_truu - im_pred
-        return im_truu.cpu().detach().numpy(), im_pred.cpu().detach().numpy(), im_delt.cpu().detach().numpy()
+        im_delt = im_true - im_pred
+        return im_true.cpu().detach().numpy(), im_pred.cpu().detach().numpy(), im_delt.cpu().detach().numpy()
     else:
-        return im_truu.cpu().detach().numpy(), None, None
+        return im_true.cpu().detach().numpy(), None, None
 
 if __name__ == "__main__":
     main()

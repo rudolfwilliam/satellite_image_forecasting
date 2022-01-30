@@ -215,13 +215,21 @@ ENV/
 /.vscode
 
 # wandb
-/wandb
+!wandb/
+
+wandb/*
+!wandb/run-20220116_075903-ofhmef7b/
+!wandb/run-20220116_075903-ofhmef7b/files/
+!wandb/run-20220116_075903-ofhmef7b/files/*
+
 /DS_Lab
 
 # Data folder (only push prediction scores)
 !Data/
 
 Data/*
+!Data/iid/
+!Data/ood/
 
 # Models
 /model_instances
@@ -229,7 +237,6 @@ Data/*
 # Images
 *.png
 *.jpg
-*.npz
 
 # Script files
 /drought_impact_forecasting-scripts

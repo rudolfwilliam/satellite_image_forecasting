@@ -32,6 +32,12 @@ args = parser.parse_args()
 
 # Collect all cubes in the training set
 train_files = glob.glob(join(os.getcwd(), args.source_folder) + '/**/*.npz', recursive=True)
+
+# For 'small_data' dataset take out user-dependent part of paths
+if args.dest_folder == 'Data/small_data':
+    for i in range(len(train_files)):
+        train_files[i] = '/'.join('/'.join(train_files[i].split('\\')).split('/')[-4:])
+
 train_files.sort()
 if len(train_files) != training_samples:
     warnings.warn("Your training set is incomplete! You only have " + str(len(train_files)) + " samples instead of " + str(training_samples))
@@ -40,7 +46,7 @@ random.seed(args.seed)
 random.shuffle(train_files)
 
 training_data = train_files[:args.training_data]
-val_1_data = train_files[args.training_data: args.training_data + args.val_1_data]
+val_1_data = train_files[args.training_data : args.training_data + args.val_1_data]
 if args.val_2_data == -1:
     val_2_data = train_files[args.training_data + args.val_1_data:-1]
 else:
@@ -92,6 +98,12 @@ if args.test_folder is not None:
                     test_context_files.append(full_name)
                 elif 'target' in full_name:
                     test_target_files.append(full_name)
+
+    # For 'small_data' dataset take out user-dependent part of paths
+    if args.dest_folder == 'Data/small_data':
+        for i in range(len(test_context_files)):
+            test_context_files[i] = '/'.join('/'.join(test_context_files[i].split('\\')).split('/')[-6:])
+            test_target_files[i] = '/'.join('/'.join(test_target_files[i].split('\\')).split('/')[-6:])
 
     # Sort file names just in case (so we glue together the right context & target)
     test_context_files.sort()

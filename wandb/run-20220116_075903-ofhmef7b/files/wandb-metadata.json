@@ -1,0 +1,41 @@
+{
+    "os": "Linux-3.10.0-1160.36.2.el7.x86_64-x86_64-with-centos-7.9.2009-Core",
+    "python": "3.7.1",
+    "heartbeatAt": "2022-01-16T06:59:09.202661",
+    "startedAt": "2022-01-16T06:59:03.862037",
+    "docker": null,
+    "gpu": "GeForce RTX 2080 Ti",
+    "gpu_count": 1,
+    "cpu_count": 72,
+    "cuda": null,
+    "args": [
+        "-lr",
+        "0.0003",
+        "-nl",
+        "3",
+        "-p",
+        "100",
+        "-hc",
+        "20",
+        "-bs",
+        "4",
+        "-pd",
+        "Data/all_data_5",
+        "-ln",
+        "f",
+        "-cp",
+        "wandb/run-20220113_204500-2nq3gfum/files/runtime_model/model_epoch=007.ckpt"
+    ],
+    "state": "running",
+    "program": "scripts/train.py",
+    "codePath": "scripts/train.py",
+    "git": {
+        "remote": "https://github.com/rudolfwilliam/drought_impact_forecasting",
+        "commit": "85088de438cb821eefbb2a60ad5a7e741ef0d3bd"
+    },
+    "email": null,
+    "root": "/cluster/home/otmraz/drought_impact_forecasting",
+    "host": "eu-g2-01",
+    "username": "otmraz",
+    "executable": "/cluster/apps/python/3.7.1/x86_64/bin/python"
+}
