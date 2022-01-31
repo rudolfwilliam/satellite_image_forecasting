@@ -4,6 +4,8 @@ from os.path import join
 import numpy as np
 import pickle
 from matplotlib.widgets import Slider, RadioButtons
+from matplotlib import gridspec
+
 
 sys.path.append(os.getcwd())
 
@@ -71,7 +73,8 @@ def plot_time(pred, truth):
 
     # Take out cloudy days
     #splits = np.linspace(0.1,1,10)
-    splits = [0.25, 0.5, 0.75]
+    confidence = .5
+    splits = [(1-confidence)/2, 0.5, 1 - (1-confidence)/2]
     q_t = np.quantile(ndvi_truth, splits, axis = (0,1,2))
 
     valid_ndvi_time = q_t[0]!=0
@@ -83,22 +86,57 @@ def plot_time(pred, truth):
     q_p = np.quantile(ndvi_pred.detach().numpy(), splits, axis = (0,1,2))
 
     # Plot pred and truth NDVI
-    for i in range(len(splits)):
-        plt.plot(x_p, q_p[i,:], '--*', label = 'truth ' + str(splits[i]))
-        plt.plot(x_t, q_t[i,valid_ndvi_time], '-*', label = 'pred ' + str(splits[i]))
+    fig = plt.figure()
+    # set height ratios for subplots
+    gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1]) 
 
-    # Plot weather
-    plt.plot(np.arange(truth.shape[-1] - 1), truth[0,6,0,0,:-1], label = 'precipitation')
-    plt.plot(np.arange(truth.shape[-1] - 1), truth[0,8,0,0,:-1], label = 'mean temp')
-    #plt.plot(np.arange(truth.shape[-1] - 1), truth[0,9,0,0,:-1], label = 'min temp')
-    #plt.plot(np.arange(truth.shape[-1] - 1), truth[0,10,0,0,:-1], label = 'max temp')
-    
-    plt.title("NDVI Time series")
-    plt.ylabel("NDVI/Weather")
-    plt.xlabel("Time")
+    # the first subplot
+    ax0 = plt.subplot(gs[0])
 
-    plt.legend(loc='upper left', title="Time NDVI")
+    ax0.plot(x_p, q_p[1,:], '--',color = 'b', label = 'true median')
+    ax0.plot(x_t, q_t[1,valid_ndvi_time], '-',color = 'r', label = 'pred. median')
+
+    ax0.legend(loc="upper right")
+
+    ax0.fill_between(x_p, q_p[0,:],q_p[2,:], color = 'b', alpha=.1)
+    ax0.fill_between(x_t, q_t[0,valid_ndvi_time],q_t[2,valid_ndvi_time], color = 'r', alpha=.1)
+
+   
+
+    # log scale for axis Y of the first subplot
+
+    # the second subplot
+    # shared axis X
+    ax1 = plt.subplot(gs[1], sharex = ax0)
+    ax2 = plt.subplot(gs[2], sharex = ax0)
+
+    ax0.grid()
+    ax1.grid()
+    ax2.grid()
+
+    ax1.plot(np.arange(truth.shape[-1]-1)+1 , 50 * truth[0,6,0,0,:-1], label = 'precipitation')
+    ax2.plot(np.arange(truth.shape[-1]-1)+1 , 50 *(2*truth[0,8,0,0,:-1] - 1), label = 'mean temp')
+
+
+    ax0.set_ylabel("NDVI")
+    ax1.set_ylabel("Rain (mm)")
+    ax2.set_ylabel("Temp. (°C)")
+    ax0.set_xlabel("Time (x5 days)")
+
+    #plt.setp(ax0.get_xticklabels(), visible=False)
+    #plt.setp(ax2.get_xticklabels(), visible=False)
+    # remove last tick label for the second subplot
+    '''
+    yticks = ax1.yaxis.get_major_ticks()
+    yticks[-1].label1.set_visible(False)'''
+
+    # put legend on first subplot
+    #ax0.legend((line0, line1), ('red line', 'blue line'), loc='lower left')
+
+    # remove vertical gap between subplots
+    plt.subplots_adjust(hspace=.0)
     plt.show()
+    
     print("Done")
 
 def generate_plot(pred, true):
