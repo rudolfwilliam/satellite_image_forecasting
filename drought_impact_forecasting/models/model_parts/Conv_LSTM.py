@@ -83,7 +83,7 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                 torch.zeros(batch_size, self.c_channels, height, width, device=self.conv_cc.weight.device))
 
 class Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
+    def __init__(self, input_dim, h_channels, big_mem, kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
         """
         Initialize ConvLSTM cell.
         Parameters
@@ -214,7 +214,6 @@ class Peephole_Conv_LSTM(nn.Module):
                                                 img_width=self.img_width,
                                                 img_height=self.img_height,
                                                 kernel_size=self.kernel_size,
-                                                memory_kernel_size=self.memory_kernel_size,
                                                 dilation_rate=dilation_rate))
 
         self.cell_list = nn.ModuleList(cell_list)
