@@ -31,15 +31,14 @@ def objective(trial):
 
     # Set up search space
     cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 3)
-    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 20)
+    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 50)
     cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-6, 1e-3, log=True)
-    cfg["training"]["training_loss"] = trial.suggest_categorical("tl", ["l1","l2","Huber"])
     #cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
-    #cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
     #cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [True,False])
 
     # Kernel sizes must be odd to be symmetric
-    cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 3)
+    cfg["model"]["kernel"] = 1 + 2 * trial.suggest_int('k', 0, 4)
     #cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
 
     if not cfg["training"]["offline"]:
@@ -47,7 +46,7 @@ def objective(trial):
     else:
         os.environ["WANDB_MODE"]="offline"
 
-    wandb.init(entity="eth-ds-lab", project="DIF Optimization", config=cfg)
+    wandb.init(entity="eth-ds-lab", project="DIF Optimization l2 non-peephole", config=cfg)
 
     # Store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
