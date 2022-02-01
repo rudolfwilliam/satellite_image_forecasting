@@ -57,10 +57,48 @@ def main():
         generate_plot(x_preds, truth)
     elif cfg['action'] == 'time_plot':
         plot_time(x_preds, truth)
+    elif cfg['action'] == 'visualize_in_time':
+        visualize_rgb(x_preds, truth)
+    elif cfg['action'] == 'visualize_in_time_ndvi':
+        visualize_ndvi(x_preds, truth)
     '''real_deltas = target[:, :4, ...] - truth[:,:4,:,:,t0-1:-1]
     full_mit_baselines = truth
     full_mit_baselines[:, :4, :, :, t0:] = real_deltas
     generate_plot(x_deltas, full_mit_baselines)'''
+
+def visualize_rgb(pred, truth):
+    pred = pred.detach().numpy()
+    truth = truth.detach().numpy()
+    T = truth.shape[-1]
+    t = int(T/3)
+    img = np.zeros((3, 128*T, 128*2))
+    for i in range(T):
+        img[:, 128*i: 128*(i + 1), 0:128] = truth[:, :3, :, :, i]
+        if i >= t:
+            img[:, 128*i: 128*(i + 1),128:256] = pred[:, :3, :, :, i - t]
+    img = np.flip(img[:,:,:].astype(float),0)*2
+    plt.imsave("img.png",np.clip(img.transpose(1,2,0),0,1))
+    plt.show()
+
+def visualize_ndvi(pred, truth):
+    pred = pred.detach().numpy()
+    truth = truth.detach().numpy()
+    ndvi_truth = ((truth[:, 3, ...] - truth[ :, 2, ...]) / (
+                truth[:, 3, ...] + truth[:, 2, ...] + 1e-6))
+    cloud_mask = 1 - truth[:, 4, ...]
+    ndvi_truth = ndvi_truth*cloud_mask
+    ndvi_pred = ((pred[:, 3, ...] - pred[ :, 2, ...]) / (
+                pred[:, 3, ...] + pred[:, 2, ...] + 1e-6))
+
+    T = truth.shape[-1]
+    t = int(T/3)
+    img = np.zeros((128*T, 128*2))
+    for i in range(T):
+        img[128*i: 128*(i + 1), 0:128] = ndvi_truth[0, :, :, i]
+        if i >= t:
+            img[128*i: 128*(i + 1),128:256] = ndvi_pred[0, :, :, i - t]
+    plt.imsave("img.png",np.clip(img,0,1))
+    plt.show()
 
 def plot_time(pred, truth):
     ndvi_truth = ((truth[:, 3, ...] - truth[ :, 2, ...]) / (
@@ -93,8 +131,8 @@ def plot_time(pred, truth):
     # the first subplot
     ax0 = plt.subplot(gs[0])
 
-    ax0.plot(x_p, q_p[1,:], '--',color = 'b', label = 'true median')
-    ax0.plot(x_t, q_t[1,valid_ndvi_time], '-',color = 'r', label = 'pred. median')
+    ax0.plot(x_p, q_p[1,:], '--',color = 'b', label = 'pred. median')
+    ax0.plot(x_t, q_t[1,valid_ndvi_time], '-',color = 'r', label = 'true median')
 
     ax0.legend(loc="upper right")
 

@@ -153,7 +153,7 @@ def diagnosticate_line_parser():
     parser.add_argument('-tcd','--test_context_dataset', type=str, default=None, help='pickle file with context of a test set')
     parser.add_argument('-ttd','--test_target_dataset', type=str, default=None, help='pickle file with target of a test set')
     parser.add_argument('-id','--cube_index', type=int, default=0, help='index of cube to use')
-    parser.add_argument('-a','--action', type=str, default=None, choices=['visualize', 'time_plot'], help='diagnosticate kind to run')
+    parser.add_argument('-a','--action', type=str, default=None, choices=['visualize', 'time_plot', 'visualize_in_time', 'visualize_in_time_ndvi'], help='diagnosticate kind to run')
     args = parser.parse_args()
 
     if args.run_name is not None and args.check_point_path is not None:
