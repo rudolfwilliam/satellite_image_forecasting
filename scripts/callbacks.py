@@ -125,8 +125,8 @@ class WandbTrain_callback(pl.Callback):
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
 
         if not trainer.sanity_checking:
-            v_loss = np.mean(np.vstack(self.step_validation_loss), axis = 0)
             if self.test_loss == "ENS":
+                v_loss = np.mean(np.vstack(self.step_validation_loss), axis = 0)
                 if np.min(v_loss[1:]) == 0:
                     v_loss[0] = 0
                 else:
@@ -148,6 +148,7 @@ class WandbTrain_callback(pl.Callback):
                 self.step_validation_loss = []
                 return {"epoch_validation_ENS" : v_loss[0]}
             else:
+                v_loss = np.mean(np.vstack(self.step_validation_loss.cpu().numpy()), axis = 0)
                 trainer.logger.experiment.log({ 
                                         'epoch': trainer.current_epoch,
                                         'epoch_validation_{0}'.format(self.test_loss):  v_loss[0]
