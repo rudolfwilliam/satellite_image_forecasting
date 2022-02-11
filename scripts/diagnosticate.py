@@ -6,7 +6,6 @@ import pickle
 from matplotlib.widgets import Slider, RadioButtons
 from matplotlib import gridspec
 
-
 sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt
@@ -69,16 +68,26 @@ def main():
 def visualize_rgb(pred, truth):
     pred = pred.detach().numpy()
     truth = truth.detach().numpy()
+
+    # For smaller iid visualizations
+    '''truth_idxs = [0,5,10,15,20,25]
+    pred_idxs = [0,5,10,15]
+    truth = np.take(truth, truth_idxs, axis=-1)
+    pred = np.take(pred, pred_idxs, axis=-1)'''
+
     T = truth.shape[-1]
-    t = int(T/3)
+    t = T-pred.shape[-1]
     img = np.zeros((3, 128*T, 128*2))
     for i in range(T):
         img[:, 128*i: 128*(i + 1), 0:128] = truth[:, :3, :, :, i]
         if i >= t:
             img[:, 128*i: 128*(i + 1),128:256] = pred[:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
-    plt.imsave("img.png",np.clip(img.transpose(1,2,0),0,1))
+    plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
+    plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
     plt.show()
+    
+    print("Done")
 
 def visualize_ndvi(pred, truth):
     pred = pred.detach().numpy()
@@ -97,8 +106,10 @@ def visualize_ndvi(pred, truth):
         img[128*i: 128*(i + 1), 0:128] = ndvi_truth[0, :, :, i]
         if i >= t:
             img[128*i: 128*(i + 1),128:256] = ndvi_pred[0, :, :, i - t]
-    plt.imsave("img.png",np.clip(img,0,1))
+    plt.imsave('ndvi.png', np.clip(img,0,1))
     plt.show()
+    
+    print("Done")
 
 def plot_time(pred, truth):
     ndvi_truth = ((truth[:, 3, ...] - truth[ :, 2, ...]) / (
@@ -109,7 +120,7 @@ def plot_time(pred, truth):
     ndvi_pred = ((pred[:, 3, ...] - pred[ :, 2, ...]) / (
                 pred[:, 3, ...] + pred[:, 2, ...] + 1e-6))
 
-    # Take out cloudy days
+    # take out cloudy days
     #splits = np.linspace(0.1,1,10)
     confidence = .5
     splits = [(1-confidence)/2, 0.5, 1 - (1-confidence)/2]
@@ -119,11 +130,11 @@ def plot_time(pred, truth):
     q_t[0,valid_ndvi_time]
 
     x_t = np.arange(truth.shape[-1])[valid_ndvi_time]
-    x_p = np.arange(truth.shape[-1] - pred.shape[-1],truth.shape[-1])
+    x_p = np.arange(truth.shape[-1] - pred.shape[-1], truth.shape[-1])
 
     q_p = np.quantile(ndvi_pred.detach().numpy(), splits, axis = (0,1,2))
 
-    # Plot pred and truth NDVI
+    # plot pred and truth NDVI
     fig = plt.figure()
     # set height ratios for subplots
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1]) 
@@ -134,12 +145,10 @@ def plot_time(pred, truth):
     ax0.plot(x_p, q_p[1,:], '--',color = 'b', label = 'pred. median')
     ax0.plot(x_t, q_t[1,valid_ndvi_time], '-',color = 'r', label = 'true median')
 
-    ax0.legend(loc="upper right")
+    ax0.legend(loc="upper left")
 
     ax0.fill_between(x_p, q_p[0,:],q_p[2,:], color = 'b', alpha=.1)
     ax0.fill_between(x_t, q_t[0,valid_ndvi_time],q_t[2,valid_ndvi_time], color = 'r', alpha=.1)
-
-   
 
     # log scale for axis Y of the first subplot
 
@@ -155,14 +164,15 @@ def plot_time(pred, truth):
     ax1.plot(np.arange(truth.shape[-1]-1)+1 , 50 * truth[0,6,0,0,:-1], label = 'precipitation')
     ax2.plot(np.arange(truth.shape[-1]-1)+1 , 50 *(2*truth[0,8,0,0,:-1] - 1), label = 'mean temp')
 
-
     ax0.set_ylabel("NDVI")
-    ax1.set_ylabel("Rain (mm)")
-    ax2.set_ylabel("Temp. (°C)")
-    ax0.set_xlabel("Time (x5 days)")
+    ax1.set_ylabel("Rain" +"\n" + "(mm)")
+    ax2.set_ylabel("Temp" +"\n" + "(°C)")
+    ax2.set_xlabel("Time (x5 days)")
 
-    #plt.setp(ax0.get_xticklabels(), visible=False)
-    #plt.setp(ax2.get_xticklabels(), visible=False)
+    plt.xlim([0, truth.size()[-1]])
+
+    plt.setp(ax0.get_xticklabels(), visible=False)
+    plt.setp(ax1.get_xticklabels(), visible=False)
     # remove last tick label for the second subplot
     '''
     yticks = ax1.yaxis.get_major_ticks()
@@ -174,6 +184,7 @@ def plot_time(pred, truth):
     # remove vertical gap between subplots
     plt.subplots_adjust(hspace=.0)
     plt.show()
+    plt.savefig('NDVI_time_series.png')
     
     print("Done")
 

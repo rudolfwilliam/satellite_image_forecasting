@@ -243,3 +243,6 @@ Data/*
 
 # Ensemble scores
 /scripts/Ensemble_score
+
+# Predictions
+/Predictions

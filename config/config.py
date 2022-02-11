@@ -30,6 +30,7 @@ def train_line_parser():
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
     parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to continue from')
     parser.add_argument('-fw', '--fake_weather', type=str, default=None, help='if true weather is masked: t = true, f = false')
+    parser.add_argument('-aw', '--all_weather', type=str, default=None, help='if true use all weather timesteps, else 5-day min/max/mean: t = true, f = false')
     args = parser.parse_args()
 
     if args.batch_size is not None:
@@ -43,17 +44,23 @@ def train_line_parser():
         elif args.big_memory == "n" or args.big_memory == "N" or args.big_memory == "f" or args.big_memory == "F":
             cfg["model"]["big_mem"] = False
     
+    if args.layer_normalization is not None:
+        if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":
+            cfg["model"]["layer_norm"] = True
+        elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
+            cfg["model"]["layer_norm"] = False
+    
     if args.fake_weather is not None:
         if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":
             cfg["training"]["fake_weather"] = True
         elif args.fake_weather == "n" or args.fake_weather == "N" or args.fake_weather == "f" or args.fake_weather == "F":
             cfg["training"]["fake_weather"] = False
     
-    if args.layer_normalization is not None:
-        if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":
-            cfg["model"]["layer_norm"] = True
-        elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
-            cfg["model"]["layer_norm"] = False
+    if args.all_weather is not None:
+        if args.all_weather == "y" or args.all_weather == "Y" or args.all_weather == "T" or args.all_weather == "t":
+            cfg["training"]["all_weather"] = True
+        elif args.all_weather == "n" or args.all_weather == "N" or args.all_weather == "f" or args.all_weather == "F":
+            cfg["training"]["all_weather"] = False
     
     if args.hidden_channels is not None:
         cfg["model"]["hidden_channels"] = args.hidden_channels
@@ -131,7 +138,7 @@ def validate_line_parser():
         else:
             dataset_dir = args.validation_dataset
 
-    configs = dict(
+    cfg = dict(
         model_path = model_path,
         dataset_dir = dataset_dir,
         run_name = args.run_name,
@@ -139,7 +146,7 @@ def validate_line_parser():
         batch_size = args.batch_size,
         test_set = args.test_set
     )
-    return configs
+    return cfg
 
 def diagnosticate_line_parser():
     parser = argparse.ArgumentParser(
@@ -174,7 +181,7 @@ def diagnosticate_line_parser():
         args.test_context_dataset is None and args.test_target_dataset is not None:
         raise ValueError("When test data cube you must supply a context and target")
 
-    configs = dict(
+    cfg = dict(
         model_path = model_path,
         run_name = args.run_name,
         epoch_to_validate = args.epoch_to_validate,
@@ -184,7 +191,7 @@ def diagnosticate_line_parser():
         index = args.cube_index,
         action = args.action
     )
-    return configs
+    return cfg
 
 def find_dir_path(wandb_name):
     dir_path = os.path.join(os.getcwd(), "wandb")
