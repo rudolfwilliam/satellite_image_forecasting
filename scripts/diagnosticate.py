@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 from matplotlib.widgets import Slider, RadioButtons
 from matplotlib import gridspec
+import copy
 
 sys.path.append(os.getcwd())
 
@@ -60,12 +61,59 @@ def main():
         visualize_rgb(x_preds, truth)
     elif cfg['action'] == 'visualize_in_time_ndvi':
         visualize_ndvi(x_preds, truth)
+    elif cfg['action'] == 'synthetic weather':
+        fake_weather(model, truth, t0, T)
     '''real_deltas = target[:, :4, ...] - truth[:,:4,:,:,t0-1:-1]
     full_mit_baselines = truth
     full_mit_baselines[:, :4, :, :, t0:] = real_deltas
     generate_plot(x_deltas, full_mit_baselines)'''
 
-def visualize_rgb(pred, truth):
+def fake_weather(model, truth, t0, T):
+    context = truth[:, :, :, :, :t0] # b, c, h, w, t
+    target = truth[:, :5, :, :, t0:] # b, c, h, w, t
+    npf = truth[:, 5:, :, :, t0:]
+    temp_truth = copy.deepcopy(truth)
+    #Original
+    x_preds, x_deltas, baselines = model(x = context, 
+                                        prediction_count = T-t0, 
+                                        non_pred_feat = npf)
+
+    visualize_rgb(x_preds, truth, "visualizations/original.png")
+    plot_time(x_preds, truth, "visualizations/original_time.png")
+    #No water 
+    npf_no_water = copy.deepcopy(npf)
+    npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
+    x_preds, x_deltas, baselines = model(x = context, 
+                                        prediction_count = T-t0, 
+                                        non_pred_feat = npf_no_water)
+    temp_truth[:, 5:, :, :, t0:] = npf_no_water
+    visualize_rgb(x_preds, temp_truth, "visualizations/no_water.png")
+    plot_time(x_preds, temp_truth, "visualizations/no_water_time.png")
+
+    #always_rain
+    npf_always_rain = copy.deepcopy(npf)
+    npf_always_rain[:,1,:,:,:] = 0.1+0*npf_always_rain[:,1,:,:,:]
+    x_preds, x_deltas, baselines = model(x = context, 
+                                        prediction_count = T-t0, 
+                                        non_pred_feat = npf_always_rain)
+
+    temp_truth[:, 5:, :, :, t0:] = npf_always_rain
+    visualize_rgb(x_preds, temp_truth, "visualizations/too_always_rain.png")
+    plot_time(x_preds, temp_truth, "visualizations/too_always_rain_time.png")
+
+    #stronger_rain
+    npf_stronger_rain = copy.deepcopy(npf)
+    npf_stronger_rain[:,1,:,:,:] = 3*npf_stronger_rain[:,1,:,:,:]
+    x_preds, x_deltas, baselines = model(x = context, 
+                                        prediction_count = T-t0, 
+                                        non_pred_feat = npf_stronger_rain)
+
+    temp_truth[:, 5:, :, :, t0:] = npf_stronger_rain
+    visualize_rgb(x_preds, temp_truth, "visualizations/stronger_rain.png")
+    plot_time(x_preds, temp_truth, "visualizations/stronger_rain_time.png")
+    pass
+
+def visualize_rgb(pred, truth, filename = None):
     pred = pred.detach().numpy()
     truth = truth.detach().numpy()
 
@@ -83,9 +131,12 @@ def visualize_rgb(pred, truth):
         if i >= t:
             img[:, 128*i: 128*(i + 1),128:256] = pred[:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
-    plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
-    plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
-    plt.show()
+    if filename == None:
+        plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
+        plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
+        plt.show()
+    else:
+        plt.imsave(filename, np.clip(img.transpose(1,2,0),0,1))
     
     print("Done")
 
@@ -111,7 +162,7 @@ def visualize_ndvi(pred, truth):
     
     print("Done")
 
-def plot_time(pred, truth):
+def plot_time(pred, truth, filename = None):
     ndvi_truth = ((truth[:, 3, ...] - truth[ :, 2, ...]) / (
                 truth[:, 3, ...] + truth[:, 2, ...] + 1e-6))
     cloud_mask = 1 - truth[:, 4, ...]
@@ -183,8 +234,11 @@ def plot_time(pred, truth):
 
     # remove vertical gap between subplots
     plt.subplots_adjust(hspace=.0)
-    plt.show()
-    plt.savefig('NDVI_time_series.png')
+    if filename == None:
+        plt.savefig('NDVI_time_series.png')
+        plt.show()
+    else:
+        plt.savefig(filename)
     
     print("Done")
 
