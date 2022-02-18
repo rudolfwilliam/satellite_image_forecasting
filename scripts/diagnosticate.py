@@ -69,6 +69,7 @@ def main():
     generate_plot(x_deltas, full_mit_baselines)'''
 
 def fake_weather(model, truth, t0, T):
+    path = "visualizations/fake_weather"
     context = truth[:, :, :, :, :t0] # b, c, h, w, t
     target = truth[:, :5, :, :, t0:] # b, c, h, w, t
     npf = truth[:, 5:, :, :, t0:]
@@ -78,8 +79,9 @@ def fake_weather(model, truth, t0, T):
                                         prediction_count = T-t0, 
                                         non_pred_feat = npf)
 
-    visualize_rgb(x_preds, truth, "visualizations/original.png")
-    plot_time(x_preds, truth, "visualizations/original_time.png")
+    visualize_rgb(x_preds, truth, path + "/original.png")
+    visualize_ndvi(x_preds, truth, path + "/original_ndvi.png")
+    plot_time(x_preds, truth, path + "/original_time.png")
     #No water 
     npf_no_water = copy.deepcopy(npf)
     npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
@@ -87,8 +89,9 @@ def fake_weather(model, truth, t0, T):
                                         prediction_count = T-t0, 
                                         non_pred_feat = npf_no_water)
     temp_truth[:, 5:, :, :, t0:] = npf_no_water
-    visualize_rgb(x_preds, temp_truth, "visualizations/no_water.png")
-    plot_time(x_preds, temp_truth, "visualizations/no_water_time.png")
+    visualize_rgb(x_preds, temp_truth, path + "/no_water.png", False)
+    visualize_ndvi(x_preds, temp_truth, path + "/no_water_ndvi.png", False)
+    plot_time(x_preds, temp_truth, path + "/no_water_time.png")
 
     #always_rain
     npf_always_rain = copy.deepcopy(npf)
@@ -98,8 +101,9 @@ def fake_weather(model, truth, t0, T):
                                         non_pred_feat = npf_always_rain)
 
     temp_truth[:, 5:, :, :, t0:] = npf_always_rain
-    visualize_rgb(x_preds, temp_truth, "visualizations/too_always_rain.png")
-    plot_time(x_preds, temp_truth, "visualizations/too_always_rain_time.png")
+    visualize_rgb(x_preds, temp_truth, "visualizations/fake_weather/too_always_rain.png", False)
+    visualize_ndvi(x_preds, temp_truth, "visualizations/fake_weather/too_always_rain_ndvi.png", False)
+    plot_time(x_preds, temp_truth, "visualizations/fake_weather/too_always_rain_time.png")
 
     #stronger_rain
     npf_stronger_rain = copy.deepcopy(npf)
@@ -109,11 +113,12 @@ def fake_weather(model, truth, t0, T):
                                         non_pred_feat = npf_stronger_rain)
 
     temp_truth[:, 5:, :, :, t0:] = npf_stronger_rain
-    visualize_rgb(x_preds, temp_truth, "visualizations/stronger_rain.png")
-    plot_time(x_preds, temp_truth, "visualizations/stronger_rain_time.png")
+    visualize_rgb(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain.png",False)
+    visualize_ndvi(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain_ndvi.png",False)
+    plot_time(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain_time.png")
     pass
 
-def visualize_rgb(pred, truth, filename = None):
+def visualize_rgb(pred, truth, filename = None, gt = True):
     pred = pred.detach().numpy()
     truth = truth.detach().numpy()
 
@@ -122,15 +127,23 @@ def visualize_rgb(pred, truth, filename = None):
     pred_idxs = [0,5,10,15]
     truth = np.take(truth, truth_idxs, axis=-1)
     pred = np.take(pred, pred_idxs, axis=-1)'''
-
-    T = truth.shape[-1]
-    t = T-pred.shape[-1]
-    img = np.zeros((3, 128*T, 128*2))
-    for i in range(T):
-        img[:, 128*i: 128*(i + 1), 0:128] = truth[:, :3, :, :, i]
-        if i >= t:
-            img[:, 128*i: 128*(i + 1),128:256] = pred[:, :3, :, :, i - t]
-    img = np.flip(img[:,:,:].astype(float),0)*2
+    if gt:
+        T = truth.shape[-1]
+        t = T-pred.shape[-1]
+        img = np.zeros((3, 128*T, 128*2))
+        for i in range(T):
+            img[:, 128*i: 128*(i + 1), 0:128] = truth[:, :3, :, :, i]
+            if i >= t:
+                img[:, 128*i: 128*(i + 1),128:256] = pred[:, :3, :, :, i - t]
+        img = np.flip(img[:,:,:].astype(float),0)*2
+    else:
+        T = truth.shape[-1]
+        t = T-pred.shape[-1]
+        img = np.zeros((3, 128*T, 128))
+        for i in range(T):
+            if i >= t:
+                img[:, 128*i: 128*(i + 1),:128] = pred[:, :3, :, :, i - t]
+        img = np.flip(img[:,:,:].astype(float),0)*2
     if filename == None:
         plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
         plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
@@ -140,7 +153,7 @@ def visualize_rgb(pred, truth, filename = None):
     
     print("Done")
 
-def visualize_ndvi(pred, truth):
+def visualize_ndvi(pred, truth, filename = None, gt = True):
     pred = pred.detach().numpy()
     truth = truth.detach().numpy()
     ndvi_truth = ((truth[:, 3, ...] - truth[ :, 2, ...]) / (
@@ -150,15 +163,25 @@ def visualize_ndvi(pred, truth):
     ndvi_pred = ((pred[:, 3, ...] - pred[ :, 2, ...]) / (
                 pred[:, 3, ...] + pred[:, 2, ...] + 1e-6))
 
+
     T = truth.shape[-1]
     t = int(T/3)
-    img = np.zeros((128*T, 128*2))
-    for i in range(T):
-        img[128*i: 128*(i + 1), 0:128] = ndvi_truth[0, :, :, i]
-        if i >= t:
-            img[128*i: 128*(i + 1),128:256] = ndvi_pred[0, :, :, i - t]
-    plt.imsave('ndvi.png', np.clip(img,0,1))
-    plt.show()
+    if gt:
+        img = np.zeros((128*T, 128*2))
+        for i in range(T):
+            img[128*i: 128*(i + 1), 0:128] = ndvi_truth[0, :, :, i]
+            if i >= t:
+                img[128*i: 128*(i + 1),128:256] = ndvi_pred[0, :, :, i - t]
+    else:
+        img = np.zeros((128*T, 128))
+        for i in range(T):
+            if i >= t:
+                img[128*i: 128*(i + 1),:128] = ndvi_pred[0, :, :, i - t]
+    if filename == None:
+        plt.imsave('ndvi.png', np.clip(img,0,1))
+        plt.show()
+    else:
+        plt.imsave(filename, np.clip(img,0,1))
     
     print("Done")
 
