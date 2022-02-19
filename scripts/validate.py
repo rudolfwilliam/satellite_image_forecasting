@@ -1,21 +1,17 @@
-from logging import Logger
 import sys
 import os
+import wandb
 import numpy as np
+sys.path.append(os.getcwd())
+from logging import Logger
 from shutil import copy2
 from os import listdir
-
-sys.path.append(os.getcwd())
-
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
-
 from config.config import validate_line_parser
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from Data.data_preparation import Earth_net_DataModule
 from scripts.callbacks import WandbTest_callback
-
-import wandb
 
 def main():
     
@@ -31,7 +27,7 @@ def main():
 
     wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
-    # Always use same val_2 data from Data folder
+    # always use same val_2 data from Data folder
     EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'],
                                      train_batch_size = configs['batch_size'],
                                      val_batch_size = configs['batch_size'],
@@ -48,7 +44,7 @@ def main():
     model = Peephole_LSTM_model.load_from_checkpoint(configs['model_path'])
     model.eval()
 
-    # Run validation
+    # run validation
     trainer.test(model = model, dataloaders = EN_dataset)
 
     wandb.finish()

@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-from einops import rearrange
-from .shared import Conv_Block
 import torch.nn as nn
 import torch.nn.functional as F
+from einops import rearrange
+from .shared import Conv_Block
 
 
 
@@ -87,7 +87,7 @@ class ConvAttention(nn.Module):
             V_out = []
             for i in range(t):
                 Q_K_temp = Q_K[..., :i+1, i]
-                Q_K_temp = rearrange(Q_K_temp, 'b c h w t-> (b t) c h w') # no convolution across time dim!
+                Q_K_temp = rearrange(Q_K_temp, 'b c h w t -> (b t) c h w') # no convolution across time dim!
                 extr_feat = rearrange(torch.squeeze(self.conv2(Q_K_temp)), '(b t) h w -> b h w t', b=b, t=i+1)
                 attn_mask = F.softmax(extr_feat, dim=-1)
                 V_pre = torch.stack([torch.mul(attn_mask, V_rep[:, c, :, :, i, :i+1]) for c in range(V_rep.size()[1])], dim=1)
@@ -111,8 +111,7 @@ class PositionalEncoding(nn.Module):
 
     def _get_sinusoid_encoding_table(self, t, device):
         ''' Sinusoid position encoding table '''
-        # no differentiation should happen with the params in here!
-        # TODO: make it with torch instead of numpy
+        # no differentiation should happen with respect to the params in here!
 
         def get_position_angle_vec(position):
             return_list = [torch.ones((self.configs["batch_size"],

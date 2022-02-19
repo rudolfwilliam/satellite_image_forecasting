@@ -7,14 +7,14 @@ def mean_cube(cube, mask_channel=False):  # dumb one
     # cannels is the list of channels we compute the avarage on
     # mask_channel whether we include the data quality mask (if we include the mask channel it should be the last one)
     '''
-    cube dimensions will be:
+    cube dimensions are:
         b, c, w, h, t
     '''
     if not mask_channel:
         return torch.mean(cube, dim=-1)
     else:
         channels = cube.shape[1]
-        # Mask which data is cloudy and shouldn't be used for averaging
+        # mask which data is cloudy and shouldn't be used for averaging
         mask = torch.repeat_interleave(1 - cube[:, -1:, :, :, :], channels - 1, axis=1)
 
         masked_cube = mask * cube[:, :-1, :, :, :] 

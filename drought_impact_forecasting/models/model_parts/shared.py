@@ -1,7 +1,7 @@
 import torch
-from torch import nn
 import torchvision
 import torch.nn.functional as F
+from torch import nn
 
 class Conv_Block(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, num_conv_layers=3, dilation_rate=2):
@@ -20,7 +20,7 @@ class Conv_Block(nn.Module):
                                      bias=True, padding='same', padding_mode='reflect'))
         self.seq = nn.Sequential(*ops)
 
-    def forward(self, input_tensor): # irrelevant?
+    def forward(self, input_tensor):
         out = self.seq(input_tensor)
         return out
 
@@ -80,5 +80,5 @@ class U_Net(nn.Module):
         c = self.net[1](x)
         e = self.net[2](c)
         o = self.net[3](e)
-        o = F.interpolate(o, x.shape[-1]) # to get back the right dims we started with
+        o = F.interpolate(o, x.shape[-1]) # get back the right dims we started with
         return o

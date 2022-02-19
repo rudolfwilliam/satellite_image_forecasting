@@ -1,19 +1,17 @@
-from pytorch_lightning.loggers import base
 import torch
 import time
-from torch import nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 import pytorch_lightning as pl
 import numpy as np
 import os
 import glob
-
+from torch import nn
+from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
+from pytorch_lightning.loggers import base
 from torchmetrics import metric
 from ..losses import cloud_mask_loss
 from ..losses import get_loss_from_name
-
-from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
+from .model_parts.Peeph_Conv_LSTM import Peephole_Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class NDVI_Peephole_LSTM_model(pl.LightningModule):
@@ -67,12 +65,12 @@ class NDVI_Peephole_LSTM_model(pl.LightningModule):
             #return self.optimizer
             optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
 
-            scheduler = ReduceLROnPlateau(  optimizer, 
-                                            mode='min', 
-                                            factor=self.cfg["training"]["lr_factor"], 
-                                            patience= self.cfg["training"]["patience"],
-                                            threshold=0.001,
-                                            verbose=True)
+            scheduler = ReduceLROnPlateau(optimizer, 
+                                          mode='min', 
+                                          factor=self.cfg["training"]["lr_factor"], 
+                                          patience= self.cfg["training"]["patience"],
+                                          threshold=0.001,
+                                          verbose=True)
 
         else:
             raise ValueError("You have specified an invalid optimizer.")
@@ -92,7 +90,7 @@ class NDVI_Peephole_LSTM_model(pl.LightningModule):
         target = all_data[:, :2, :, :, t0:] # b, c, h, w, t
         npf = all_data[:, 2:, :, :, t0:]
 
-        x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
+        x_preds, _, _ = self(context, prediction_count=T-t0, non_pred_feat=npf)
         
         if loss is None:
             l = self.training_loss(x_preds, target)
@@ -105,7 +103,6 @@ class NDVI_Peephole_LSTM_model(pl.LightningModule):
         self.log("train loss", l, on_step= True, on_epoch= True)
         return l
     
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         l = self.batch_loss(batch, t_future = self.future_training, loss = self.test_loss)
         self.log("val loss", l, on_step= False, on_epoch= True)

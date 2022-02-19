@@ -1,27 +1,21 @@
-from operator import mod
 import sys
 import os
 import json
+import wandb
 import random
-
-sys.path.append(os.getcwd())
-
 import pytorch_lightning as pl
+sys.path.append(os.getcwd())
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-
 from config.config import train_line_parser
 from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
-
-import wandb
 from datetime import datetime
 
 def main():
-
-    # Load configs
+    # load configs
     cfg = train_line_parser()
 
     if not cfg["training"]["offline"]:
@@ -31,14 +25,14 @@ def main():
 
     wandb.init(entity="eth-ds-lab", project="Drought Impact Forecasting", config=cfg)
 
-    # Store the model name to wandb
+    # store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
         try:
             f.write(wandb.run.name)
         except:
             f.write("offline_run_" + str(datetime.now()))
 
-    # Setup model
+    # setup model
     if cfg["training"]["checkpoint"] is not None:
         # Resume training from checkpoint
         model = Peephole_LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
@@ -61,12 +55,12 @@ def main():
                                      mesoscale_cut = cfg["data"]["mesoscale_cut"],
                                      fake_weather = cfg["training"]["fake_weather"])
     
-    # To build back the datasets for safety
+    # build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
-    # Load callbacks
+    # load callbacks
     wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
-    # Create folder for runtime models
+    # create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
     os.mkdir(runtime_model_folder)
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
@@ -74,14 +68,14 @@ def main():
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
 
-    # Setup trainer
+    # set up trainer
     trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
                       logger=wandb_logger,
                       devices=cfg["training"]["devices"],
                       accelerator=cfg["training"]["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback])
 
-    # Run training
+    # run training
     trainer.fit(model, EN_dataset)
 
     if not cfg["training"]["offline"]:

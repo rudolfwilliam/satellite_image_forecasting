@@ -1,17 +1,15 @@
 import sys
 import os
 import warnings
-from os.path import join
-from os.path import split
 import random
 import pickle
 import glob
-import numpy as np
-from numpy import genfromtxt
-
-sys.path.append(os.getcwd())
-
 import argparse
+import numpy as np
+sys.path.append(os.getcwd())
+from os.path import join
+from os.path import split
+from numpy import genfromtxt
 
 training_samples = 23904
 
@@ -30,10 +28,10 @@ parser.add_argument('-se', '--seed', type=int,  help='seed for train/validation 
 parser.add_argument('-dc', '--data_cleaning', type=float,  help='level of data cleaning (-1: none, 0: cubes giving NaN, (0,1]: min score)', default=-1)
 args = parser.parse_args()
 
-# Collect all cubes in the training set
+# collect all cubes in the training set
 train_files = glob.glob(join(os.getcwd(), args.source_folder) + '/**/*.npz', recursive=True)
 
-# For 'small_data' dataset take out user-dependent part of paths
+# for 'small_data' dataset, remove user-dependent part of paths
 if args.dest_folder == 'Data/small_data':
     for i in range(len(train_files)):
         train_files[i] = '/'.join('/'.join(train_files[i].split('\\')).split('/')[-4:])
@@ -52,14 +50,14 @@ if args.val_2_data == -1:
 else:
     val_2_data = train_files[args.training_data + args.val_1_data:args.training_data + args.val_1_data+args.val_2_data]
 
-# Clean data
+# clean data
 if args.data_cleaning != -1:
     baseline_scores = genfromtxt(join(os.getcwd(), "Data", "scores_last_frame.csv"), delimiter=',')
     with open(join(os.getcwd(), "Data", "last_frame_data_paths.pkl"),'rb') as f:
         old_train_paths = pickle.load(f)
     old_train_paths = [path.split()[-1] for path in old_train_paths]
 
-    # Collect samples yielding NaN or below threshold
+    # collect samples yielding NaN or below threshold
     bad_cubes = []
     for i in range(len(baseline_scores)):
         if np.isnan(baseline_scores[i, -1]):
@@ -69,14 +67,14 @@ if args.data_cleaning != -1:
             if baseline_scores[i, -1] < args.data_cleaning:
                 bad_cubes.append(split(old_train_paths[i])[-1])
     
-    # Discard bad samples
+    # discard bad samples
     training_data = [f for f in training_data if split(f)[-1] not in bad_cubes]
 
-# Create pickle dir if needed
+# create pickle dir if needed
 if not os.path.exists(join(os.getcwd(), args.dest_folder)):
     os.makedirs(join(os.getcwd(), args.dest_folder))
 
-# To build back the datasets
+# build back the datasets
 with open(join(os.getcwd(), args.dest_folder, "train_data_paths.pkl"), "wb") as fp:
     pickle.dump(training_data, fp)
 with open(join(os.getcwd(), args.dest_folder, "val_1_data_paths.pkl"), "wb") as fp:
@@ -85,7 +83,7 @@ with open(join(os.getcwd(), args.dest_folder, "val_2_data_paths.pkl"), "wb") as 
     pickle.dump(val_2_data, fp)
 
 if args.test_folder is not None:
-    # This folder name should indicate what test set we want (iid/ood/extreme/seasoanl)
+    # this folder name should indicate the desired test set (iid/ood/extreme/seasoanl)
     test_set = args.test_folder.split('/')[-2]
     
     test_context_files = []
@@ -99,13 +97,13 @@ if args.test_folder is not None:
                 elif 'target' in full_name:
                     test_target_files.append(full_name)
 
-    # For 'small_data' dataset take out user-dependent part of paths
+    # for 'small_data' dataset take out user-dependent part of paths
     if args.dest_folder == 'Data/small_data':
         for i in range(len(test_context_files)):
             test_context_files[i] = '/'.join('/'.join(test_context_files[i].split('\\')).split('/')[-6:])
             test_target_files[i] = '/'.join('/'.join(test_target_files[i].split('\\')).split('/')[-6:])
 
-    # Sort file names just in case (so we glue together the right context & target)
+    # sort file names, just in case (glue together the right context & target)
     test_context_files.sort()
     test_target_files.sort()
     with open(join(os.getcwd(), args.dest_folder, test_set+"_context_data_paths.pkl"), "wb") as fp:

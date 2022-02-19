@@ -1,11 +1,9 @@
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
 import numpy as np
-
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
-from .model_parts.Conv_LSTM import Peephole_Conv_LSTM
-
+from .model_parts.Peeph_Conv_LSTM import Peephole_Conv_LSTM
 from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 class Peephole_LSTM_model(pl.LightningModule):
@@ -31,8 +29,7 @@ class Peephole_LSTM_model(pl.LightningModule):
                                         baseline=self.cfg["model"]["baseline"],
                                         layer_norm_flag=cfg["model"]["layer_norm"],
                                         img_width=cfg["model"]["img_width"],
-                                        img_height=cfg["model"]["img_height"]
-                                        )
+                                        img_height=cfg["model"]["img_height"])
 
         self.baseline = self.cfg["model"]["baseline"]
         self.future_training = self.cfg["model"]["future_training"]

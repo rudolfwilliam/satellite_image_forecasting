@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from .shared import Conv_Block
+
 
 class Peephole_Conv_LSTM_Cell(nn.Module):
     def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
@@ -22,7 +22,6 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         kernel_size: (int, int)
             Size of the convolutional kernel.
         """
-
         super(Peephole_Conv_LSTM_Cell, self).__init__()
 
         self.input_dim = input_dim
@@ -130,7 +129,7 @@ class Peephole_Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1, num_layer = 1):
+    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
         """
         Parameters
         ----------
@@ -145,7 +144,6 @@ class Peephole_Conv_LSTM(nn.Module):
         -------
         pred_deltas
         """
-
         b, _, width, height, T = input_tensor.size()
         hs = []
         cs = []
@@ -193,7 +191,7 @@ class Peephole_Conv_LSTM(nn.Module):
                 if self.baseline == "zeros":
                     pass
                 else:
-                    baselines[...,t]  = preds[..., t-1]
+                    baselines[..., t]  = preds[..., t-1]
 
                 preds[..., t] = pred_deltas[..., t] + baselines[..., t]
 

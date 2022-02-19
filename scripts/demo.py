@@ -1,23 +1,19 @@
-from logging import Logger
 import sys
 import os
-from pytorch_lightning.accelerators import accelerator
-sys.path.append(os.getcwd())
-
 import torch
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+import matplotlib.pylab as plt
+import numpy as np
+import wandb
+sys.path.append(os.getcwd())
+from os.path import join
+from pytorch_lightning.accelerators import accelerator
+from torch.utils.data import DataLoader
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
-
 from config.config import command_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import prepare_data
-
-import matplotlib.pylab as plt
-import numpy as np
-
-import wandb
 
 def main():   
     # wandb.login()
@@ -41,7 +37,7 @@ def main():
 
 
     fig, axs = plt.subplots(1,2)
-    #for idx 
+    # for idx 
     pic_data = np.flip(pred_training_data[idx,:3,:,:].detach().numpy().transpose(1,2,0),2)
     axs[0].imshow(pic_data)
     pic_pred = np.flip(training_data.highres_dynamic[idx,:3,:,:,29].detach().numpy().transpose(1,2,0), 2)
@@ -51,7 +47,7 @@ def main():
 
     channel = 2
     fig, axs = plt.subplots(1,2)
-    #for idx 
+    # for idx 
     pic_pred = pred_training_data[idx,channel,:,:].detach().numpy()
     axs[0].imshow(pic_pred)
     pic_data = training_data.highres_dynamic[idx,channel,:,:,29].detach().numpy()

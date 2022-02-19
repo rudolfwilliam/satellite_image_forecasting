@@ -1,16 +1,15 @@
 import torch
 import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR
+import pytorch_lightning as pl
+import pytorch_lightning as pl
+import torch
+import torch.optim as optim
 import pytorch_lightning as pl
 from ..losses import cloud_mask_loss
 from .model_parts.Conv_Transformer import Conv_Transformer
 from .model_parts.adapters.Conv_Transformer_adapter import Conv_Transformer_adapter
-import pytorch_lightning as pl
-import torch
-import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-import pytorch_lightning as pl
-
+from torch.optim.lr_scheduler import LambdaLR
 from ..losses import cloud_mask_loss
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
@@ -52,7 +51,7 @@ class Transformer_model(pl.LightningModule):
         if self.cfg["training"]["optimizer"] == "adam":
             self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
 
-            # Decay learning rate according for last (epochs - decay_point) iterations
+            # decay learning rate according for last (epochs - decay_point) iterations
             lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
                           if epoch <= self.cfg["model"]["decay_point"] \
                           else ((self.cfg["training"]["epochs"]-epoch) / (self.cfg["training"]["epochs"]-self.cfg["model"]["decay_point"])
@@ -78,7 +77,6 @@ class Transformer_model(pl.LightningModule):
         cloud_mask_channel = 4
 
         T = all_data.size()[4]
-        #t0 = T - 1 # no. of pics we start with
         t0 = T - 1
 
         _, x_delta, baseline = self(all_data[:, :, :, :, :t0])
@@ -92,7 +90,6 @@ class Transformer_model(pl.LightningModule):
 
         return loss
 
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
             The validation step also uses the L2 loss, but on a prediction of all non-context images
@@ -118,9 +115,8 @@ class Transformer_model(pl.LightningModule):
         x_preds, x_delta, baselines = self(context, prediction_count=T-t0, non_pred_feat=npf)
 
         if self.val_metric=="ENS":
-            # ENS loss = -ENS (ENS==1 would mean perfect prediction)
             x_preds = torch.stack(x_preds, axis=-1)  # b, c, h, w, t
-            score, scores = ENS(prediction = x_preds, target = target)
+            _, scores = ENS(prediction = x_preds, target = target)
             loss = - scores
         else: # L2 cloud mask loss
             delta = all_data[:, :4, :, :, t0] - baselines[0]
@@ -137,7 +133,6 @@ class Transformer_model(pl.LightningModule):
             The test step takes the test data and makes predictions.
             They are then evaluated using the ENS score.
         '''
-        #starting_time = time.time()
         all_data = batch
 
 
@@ -149,12 +144,10 @@ class Transformer_model(pl.LightningModule):
         target = all_data[:, :5, :, :, t0:] # b, c, h, w, t
         npf = all_data[:, 5:, :, :, t0+1:]
 
-        x_preds, x_deltas, baselines = self(x = context,
-                                            prediction_count = T-t0,
-                                            non_pred_feat = npf)
+        x_preds, _, _ = self(x = context, prediction_count = T-t0, non_pred_feat = npf)
 
         x_preds = torch.stack(x_preds , axis = -1) # b, c, h, w, t
 
-        score, part_scores = ENS(prediction = x_preds, target = target)
+        _, part_scores = ENS(prediction = x_preds, target = target)
 
         return part_scores

@@ -1,7 +1,7 @@
 import torch
 import numpy as np
-from .utils.utils import last_frame, ENS
 import pytorch_lightning as pl
+from .utils.utils import last_frame, ENS
 
 class Last_model(pl.LightningModule):
 
@@ -11,7 +11,7 @@ class Last_model(pl.LightningModule):
     def forward(self, x, prediction_count = 1):
         # compute the baseline
         preds = last_frame(x)
-        preds = preds.unsqueeze(-1).repeat(1,1,1,1,prediction_count)
+        preds = preds.unsqueeze(-1).repeat(1, 1, 1, 1, prediction_count)
         return preds
 
     def configure_optimizers(self):
@@ -26,8 +26,7 @@ class Last_model(pl.LightningModule):
             The test step takes the test data and makes predictions.
             They are then evaluated using the ENS score.
         '''
-        #starting_time = time.time()
-        all_data, path = batch
+        all_data, _ = batch
 
 
         T = all_data.size()[4]
@@ -43,7 +42,7 @@ class Last_model(pl.LightningModule):
         
         # b, c, h, w, t
         
-        score, part_scores = ENS(prediction = x_preds, target = target)
+        score, _ = ENS(prediction = x_preds, target = target)
         
         logs = {'y_loss': np.mean(score)}
         self.log_dict(

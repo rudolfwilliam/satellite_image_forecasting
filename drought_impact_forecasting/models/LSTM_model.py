@@ -3,7 +3,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 
 from ..losses import cloud_mask_loss
-from .model_parts.Conv_LSTM import Conv_LSTM
+from .model_parts.Peeph_Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class LSTM_model(pl.LightningModule):
@@ -18,15 +18,14 @@ class LSTM_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.num_epochs = self.cfg["training"]["epochs"]
-
-        channels = self.cfg["model"]["channels"]
-        hidden_channels = self.cfg["model"]["hidden_channels"]
-        n_layers = self.cfg["model"]["n_layers"]
-        self.model = Conv_LSTM(input_dim=channels,
+        self.channels = self.cfg["model"]["channels"]
+        self.hidden_channels = self.cfg["model"]["hidden_channels"]
+        self.n_layers = self.cfg["model"]["n_layers"]
+        self.model = Conv_LSTM(input_dim=self.channels,
                                dilation_rate=self.cfg["model"]["dilation_rate"],
-                               hidden_dim=[hidden_channels] * n_layers,
+                               hidden_dim=[self.hidden_channels] * self.n_layers,
                                kernel_size=(self.cfg["model"]["kernel"][0], self.cfg["model"]["kernel"][1]),
-                               num_layers=n_layers,
+                               num_layers=self.n_layers,
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False,
@@ -56,11 +55,9 @@ class LSTM_model(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg["training"]["optimizer"] == "adam":
-            #self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-            #return self.optimizer
             self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
             
-            # Decay learning rate according for last (epochs - decay_point) iterations
+            # decay learning rate according for last (epochs - decay_point) iterations
             lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
                           if epoch <= self.cfg["model"]["decay_point"] \
                           else ((self.cfg["training"]["epochs"]-epoch) / (self.cfg["training"]["epochs"]-self.cfg["model"]["decay_point"])
@@ -94,13 +91,12 @@ class LSTM_model(pl.LightningModule):
         x_preds, _, _ = self(all_data[:, :, :, :, :t0], non_pred_feat = npf, prediction_count = T-t0)
 
         loss = cloud_mask_loss(x_preds[0], target[:,:4,:,:,0], all_data[:, cloud_mask_channel:cloud_mask_channel+1, :, :, t0])
-        # 
+         
         for i, t_end in enumerate(range(t0 + 1, T)): # this iterates with t_end = t0, ..., T-1
             loss = loss.add(cloud_mask_loss(x_preds[i + 1], target[:,:4,:,:,i + 1], all_data[:, cloud_mask_channel:cloud_mask_channel + 1, :, :, t_end]))
 
         return loss
     
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
             The validation step also uses the L2 loss, but on a prediction of all non-context images
@@ -158,8 +154,7 @@ class LSTM_model(pl.LightningModule):
 
         x_preds, _, _ = self(x = context, prediction_count = T-t0, non_pred_feat = npf)
         
-        # TODO: only permute once, not again inside ENS function, but I didn't want to break the other models right now
-        x_preds = x_preds.permute(1,2,3,4,0) # b, c, h, w, t
+        x_preds = x_preds.permute(1, 2, 3, 4, 0) # b, c, h, w, t
         
         _, part_scores = ENS(prediction = x_preds, target = target)
         

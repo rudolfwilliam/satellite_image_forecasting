@@ -1,14 +1,14 @@
 import argparse
-from operator import index
 import os
-from os.path import join
 import json
+from operator import index
+from os.path import join
 
 def train_line_parser():
-    # Load default args from json
+    # load default args from json
     cfg = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
 
-    # Parse settable args from terminal
+    # parse settable args from terminal
     parser = argparse.ArgumentParser(
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -106,7 +106,8 @@ def validate_line_parser():
     parser = argparse.ArgumentParser(
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+        )
+
     parser.add_argument('-cp','--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
     parser.add_argument('-rn','--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
     parser.add_argument('-bs','--batch_size', type=int, default=4, help='batch size')
@@ -199,7 +200,7 @@ def find_dir_path(wandb_name):
     runs = []
     for path, subdirs, files in os.walk(dir_path):
         for dir_ in subdirs:
-            # Ignore any licence, progress, etc. files
+            # ignore any licence, progress, etc. files
             if os.path.isfile(join(dir_path,dir_, "files", "run_name.txt")):
                 with open(join(dir_path,dir_, "files",  "run_name.txt"),'r') as f:
                     if (f.read() == wandb_name):
