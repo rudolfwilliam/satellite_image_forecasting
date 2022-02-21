@@ -15,11 +15,11 @@ from ..losses import cloud_mask_loss
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
-class Conv_model(pl.LightningModule):
+class U_Net_model(pl.LightningModule):
     def __init__(self, cfg):
         """
-        Base prediction model. It is just a U-Net that 
-        reads in all input time steps and outputs all future time steps at once
+        Base prediction model. It is a U-Net that reads in all input time steps and outputs all future time
+        steps at once
 
         Parameters:
             cfg (dict) -- model configuration parameters
@@ -37,12 +37,6 @@ class Conv_model(pl.LightningModule):
         self.model = U_Net(channels = self.cfg["model"]["u_net_channels"],
                            kernel_size = kernel_size,
                            dilation_rate = self.cfg["model"]["dilation_rate"])
-
-        '''self.model = Conv_Block(in_channels = channels,
-                                out_channels = out_channel,
-                                kernel_size = kernel_size,
-                                num_conv_layers = n_layers,
-                                dilation_rate = self.cfg["model"]["dilation_rate"])'''
 
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]
