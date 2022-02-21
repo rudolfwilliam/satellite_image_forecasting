@@ -2,27 +2,10 @@ import torch.nn as nn
 import torch
 
 
-class Peephole_Conv_LSTM_Cell(nn.Module):
-    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height):
-        """
-        Initialize Peephole ConvLSTM cell.
-        Parameters
-        ----------
-        input_dim: int
-            Number of channels of input tensor.
-        num_conv_layers: int
-            Number of convolutional blocks within the cell
-        num_conv_layers_mem: int
-            Number of convolutional blocks for the weight matrices that perform a hadamard product with current memory
-            (should be much lower than num_conv_layers)
-        layer_norm_flag: bool
-            Whether to perform layer normalization.
-        hidden_dim: int
-            Number of channels of hidden state.
-        kernel_size: (int, int)
-            Size of the convolutional kernel.
-        """
-        super(Peephole_Conv_LSTM_Cell, self).__init__()
+class Conv_LSTM_Cell(nn.Module):
+    def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height, peephole):
+        
+        super(Conv_LSTM_Cell, self).__init__()
 
         self.input_dim = input_dim
         self.h_channels = h_channels
@@ -32,11 +15,13 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
         self.layer_norm_flag = layer_norm_flag
         self.img_width = img_width
         self.img_height = img_height
+        self.peephole = peephole
 
         self.conv_cc = nn.Conv2d(self.input_dim + self.h_channels, self.h_channels + 3*self.c_channels, dilation=dilation_rate, kernel_size=kernel_size,
                                      bias=True, padding='same', padding_mode='reflect')
-        self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
-                                     bias=False, padding='same', padding_mode='reflect')
+        if self.peephole:
+            self.conv_ll = nn.Conv2d(self.c_channels, self.h_channels + 2*self.c_channels, dilation=dilation_rate, kernel_size=memory_kernel_size,
+                                        bias=False, padding='same', padding_mode='reflect')
         
         if self.layer_norm_flag:
             self.layer_norm = nn.InstanceNorm2d(self.input_dim + self.h_channels, affine=True)
@@ -51,14 +36,19 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
             combined = self.layer_norm(combined)
 
         combined_conv = self.conv_cc(combined) # h_channel + 3 * c_channel 
-        combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE
 
         cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, [self.c_channels, self.c_channels, self.c_channels, self.h_channels], dim=1)
-        ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
+        if self.peephole:
+            combined_memory = self.conv_ll(c_cur)  # h_channel + 2 * c_channel  # NO BIAS HERE
+            ll_i, ll_f, ll_o = torch.split(combined_memory, [self.c_channels, self.c_channels, self.h_channels], dim=1)
 
-        i = torch.sigmoid(cc_i + ll_i)
-        f = torch.sigmoid(cc_f + ll_f)
-        o = torch.sigmoid(cc_o + ll_o)
+            i = torch.sigmoid(cc_i + ll_i)
+            f = torch.sigmoid(cc_f + ll_f)
+            o = torch.sigmoid(cc_o + ll_o)
+        else:
+            i = torch.sigmoid(cc_i)
+            f = torch.sigmoid(cc_f)
+            o = torch.sigmoid(cc_o) 
 
         g = torch.tanh(cc_g)
 
@@ -76,25 +66,28 @@ class Peephole_Conv_LSTM_Cell(nn.Module):
                 torch.zeros(batch_size, self.c_channels, height, width, device=self.conv_cc.weight.device))
 
 
-class Peephole_Conv_LSTM(nn.Module):
+class Conv_LSTM(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dims, big_mem, kernel_size, memory_kernel_size, dilation_rate,
-                    img_width, img_height, layer_norm_flag=True, baseline="last_frame", num_layers = 1):
+                    img_width, img_height, layer_norm_flag=True, baseline="last_frame", num_layers=1, peephole=True):
         """
+        Can be initialized both with and without peephole connections. This Conv_LSTM works in a delta prediction 
+        fashion, i.e. predicts the deviation to a given baseline.
+
         Parameters:
             input_dim: Number of channels in input
             output_dim: Number of channels in the output
             hidden_dim: Number of channels in the hidden outputs (should be a number or a list of num_layers - 1)
-            kernel_size: Size of kernel in convolutions
+            kernel_size: Size of kernel in convolutions (Note: Will do same padding)
             memory_kernel_size: Size of kernel in convolutions when the memory influences the output
             dilation_rate: Size of holes in convolutions
             num_layers: Number of LSTM layers stacked on each other
-            Note: Will do same padding.
+            peephole: Whether to include peephole connections or not
         Input:
             A tensor of shape (b, c, w, h, t)
         Output:
-            The residual from the mean cube
+            The residual from the baseline
         """
-        super(Peephole_Conv_LSTM, self).__init__()
+        super(Conv_LSTM, self).__init__()
         self._check_kernel_size_consistency(kernel_size)
 
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
@@ -111,21 +104,23 @@ class Peephole_Conv_LSTM(nn.Module):
         self.img_width = img_width
         self.img_height = img_height
         self.baseline = baseline
+        self.peephole = peephole
 
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.h_channels[i - 1]
             cur_layer_norm_flag = self.layer_norm_flag if i != 0 else False
 
-            cell_list.append(Peephole_Conv_LSTM_Cell(input_dim=cur_input_dim,
-                                                     h_channels=self.h_channels[i],
-                                                     big_mem=self.big_mem,
-                                                     layer_norm_flag=cur_layer_norm_flag,
-                                                     img_width=self.img_width,
-                                                     img_height=self.img_height,
-                                                     kernel_size=self.kernel_size,
-                                                     memory_kernel_size=self.memory_kernel_size,
-                                                     dilation_rate=dilation_rate))
+            cell_list.append(Conv_LSTM_Cell(input_dim=cur_input_dim,
+                                            h_channels=self.h_channels[i],
+                                            big_mem=self.big_mem,
+                                            layer_norm_flag=cur_layer_norm_flag,
+                                            img_width=self.img_width,
+                                            img_height=self.img_height,
+                                            kernel_size=self.kernel_size,
+                                            memory_kernel_size=self.memory_kernel_size,
+                                            dilation_rate=dilation_rate,
+                                            peephole=self.peephole))
 
         self.cell_list = nn.ModuleList(cell_list)
 
@@ -178,7 +173,7 @@ class Peephole_Conv_LSTM(nn.Module):
             # iterate over the future
             for t in range(1, prediction_count):
                 # glue together with non_pred_data
-                prev = torch.cat((preds[..., t - 1], non_pred_feat[..., t - 1]), axis=1)
+                prev = torch.cat((preds[..., t-1], non_pred_feat[..., t-1]), axis=1)
 
                 hs[0], cs[0] = self.cell_list[0](input_tensor=prev, cur_state=[hs[0], cs[0]])
                 for i in range(1, self.num_layers):
@@ -187,7 +182,7 @@ class Peephole_Conv_LSTM(nn.Module):
                 pred_deltas[..., t] = hs[-1]
 
                 if self.baseline == "mean_cube":
-                    baselines[..., t] = (preds[..., t-1] + (baselines[..., t - 1] * (T + t)))/(T + t + 1)
+                    baselines[..., t] = (preds[..., t-1] + (baselines[..., t-1] * (T + t)))/(T + t + 1)
                 if self.baseline == "zeros":
                     pass
                 else:

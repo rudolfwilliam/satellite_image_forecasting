@@ -3,7 +3,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import pytorch_lightning as pl
 
 from ..losses import cloud_mask_loss
-from .model_parts.Peeph_Conv_LSTM import Conv_LSTM
+from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class LSTM_model(pl.LightningModule):
@@ -29,7 +29,8 @@ class LSTM_model(pl.LightningModule):
                                num_conv_layers=self.cfg["model"]["num_conv_layers"],
                                num_conv_layers_mem=self.cfg["model"]["num_conv_layers_mem"],
                                batch_first=False,
-                               baseline=self.cfg["model"]["baseline"])
+                               baseline=self.cfg["model"]["baseline"],
+                               peephole=False)
         self.baseline = self.cfg["model"]["baseline"]
         self.val_metric = self.cfg["model"]["val_metric"]
         self.future_training = self.cfg["model"]["future_training"]

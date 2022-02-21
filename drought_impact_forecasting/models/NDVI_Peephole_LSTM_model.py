@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import base
 from torchmetrics import metric
 from ..losses import cloud_mask_loss
 from ..losses import get_loss_from_name
-from .model_parts.Peeph_Conv_LSTM import Peephole_Conv_LSTM
+from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class NDVI_Peephole_LSTM_model(pl.LightningModule):
@@ -27,9 +27,9 @@ class NDVI_Peephole_LSTM_model(pl.LightningModule):
         self.cfg = cfg
         c_channels = 1
         self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
-                                        output_dim= 1,
-                                        c_channels = c_channels,
-                                        num_layers= cfg["model"]["n_layers"],
+                                        output_dim=1,
+                                        c_channels=c_channels,
+                                        num_layers=cfg["model"]["n_layers"],
                                         kernel_size=(self.cfg["model"]["kernel"], self.cfg["model"]["kernel"]),
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],

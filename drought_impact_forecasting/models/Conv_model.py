@@ -12,14 +12,14 @@ from .model_parts.shared import Conv_Block, U_Net
 from torchmetrics import metric
 from ..losses import cloud_mask_loss
 
-from .model_parts.Peeph_Conv_LSTM import Conv_LSTM
+from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
  
 class Conv_model(pl.LightningModule):
     def __init__(self, cfg):
         """
-        Base prediction model. It is roughly based on the convolutional LSTM architecture.
-        (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
+        Base prediction model. It is just a U-Net that 
+        reads in all input time steps and outputs all future time steps at once
 
         Parameters:
             cfg (dict) -- model configuration parameters

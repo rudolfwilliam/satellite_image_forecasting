@@ -3,7 +3,7 @@ import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
-from .model_parts.Peeph_Conv_LSTM import Peephole_Conv_LSTM
+from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 class Peephole_LSTM_model(pl.LightningModule):
@@ -18,18 +18,19 @@ class Peephole_LSTM_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.save_hyperparameters()
-        self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
-                                        output_dim=cfg["model"]["output_channels"],
-                                        hidden_dims=cfg["model"]["hidden_channels"],
-                                        big_mem=cfg["model"]["big_mem"],
-                                        num_layers=cfg["model"]["n_layers"],
-                                        kernel_size=self.cfg["model"]["kernel"],
-                                        memory_kernel_size=self.cfg["model"]["memory_kernel"],
-                                        dilation_rate=self.cfg["model"]["dilation_rate"],
-                                        baseline=self.cfg["model"]["baseline"],
-                                        layer_norm_flag=cfg["model"]["layer_norm"],
-                                        img_width=cfg["model"]["img_width"],
-                                        img_height=cfg["model"]["img_height"])
+        self.model = Conv_LSTM(input_dim=cfg["model"]["input_channels"],
+                               output_dim=cfg["model"]["output_channels"],
+                               hidden_dims=cfg["model"]["hidden_channels"],
+                               big_mem=cfg["model"]["big_mem"],
+                               num_layers=cfg["model"]["n_layers"],
+                               kernel_size=self.cfg["model"]["kernel"],
+                               memory_kernel_size=self.cfg["model"]["memory_kernel"],
+                               dilation_rate=self.cfg["model"]["dilation_rate"],
+                               baseline=self.cfg["model"]["baseline"],
+                               layer_norm_flag=cfg["model"]["layer_norm"],
+                               img_width=cfg["model"]["img_width"],
+                               img_height=cfg["model"]["img_height"],
+                               peephole=True)
 
         self.baseline = self.cfg["model"]["baseline"]
         self.future_training = self.cfg["model"]["future_training"]
