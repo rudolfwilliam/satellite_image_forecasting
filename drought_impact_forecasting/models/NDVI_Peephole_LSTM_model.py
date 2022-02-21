@@ -26,14 +26,15 @@ class NDVI_Peephole_LSTM_model(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         c_channels = 1
-        self.model = Peephole_Conv_LSTM(input_dim=cfg["model"]["input_channels"],
+        self.model = Conv_LSTM(input_dim=cfg["model"]["input_channels"],
                                         output_dim=1,
                                         c_channels=c_channels,
                                         num_layers=cfg["model"]["n_layers"],
                                         kernel_size=(self.cfg["model"]["kernel"], self.cfg["model"]["kernel"]),
                                         memory_kernel_size=(self.cfg["model"]["memory_kernel"], self.cfg["model"]["memory_kernel"]),
                                         dilation_rate=self.cfg["model"]["dilation_rate"],
-                                        baseline=self.cfg["model"]["baseline"])
+                                        baseline=self.cfg["model"]["baseline"]
+                                        peephole=self.cfg["model"]["peephole"])
         self.training_loss = get_loss_from_name(self.cfg["model"]["training_loss"])
         self.test_loss = get_loss_from_name(self.cfg["model"]["test_loss"])
         self.baseline = self.cfg["model"]["baseline"]

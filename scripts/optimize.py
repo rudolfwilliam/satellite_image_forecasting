@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from config.config import train_line_parser
-from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
+from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 
@@ -95,7 +95,7 @@ def objective(trial):
                       num_sanity_val_steps=0)
 
     # Setup Model
-    model = Peephole_LSTM_model(cfg)
+    model = LSTM_model(cfg)
     
     # Run training
     trainer.fit(model, EN_dataset)

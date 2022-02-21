@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from config.config import train_line_parser
-from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
+from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 from datetime import datetime
@@ -35,10 +35,10 @@ def main():
     # setup model
     if cfg["training"]["checkpoint"] is not None:
         # Resume training from checkpoint
-        model = Peephole_LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
+        model = LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
         cfg = model.cfg
     else:
-        model = Peephole_LSTM_model(cfg)
+        model = LSTM_model(cfg)
 
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
         json.dump(cfg, fp)

@@ -13,6 +13,7 @@ def train_line_parser():
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
+    parser.add_argument('-mt', '--model_type', type=str, default='PeepholeConvLSTM', choices=['PeepholeConvLSTM', 'ConvLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
     parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
@@ -49,6 +50,16 @@ def train_line_parser():
             cfg["model"]["layer_norm"] = True
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
             cfg["model"]["layer_norm"] = False
+    
+    if args.model_type == "PeepholeConvLSTM" or args.model_type == "ConvLSTM":
+        if args.model_type == "PeepholeConvLSTM":
+            cfg["model"]["peephole"] = True
+        else:
+            cfg["model"]["peephole"] = False
+    else:
+        #TODO: Implement such that this works for all model types
+        raise(NotImplementedError)
+
     
     if args.fake_weather is not None:
         if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":

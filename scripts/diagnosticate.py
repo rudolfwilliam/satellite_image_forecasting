@@ -13,8 +13,7 @@ import matplotlib.pyplot as plt
 
 from config.config import diagnosticate_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
-from drought_impact_forecasting.models.Conv_model import Conv_model
-from drought_impact_forecasting.models.Peephole_LSTM_model import Peephole_LSTM_model
+from drought_impact_forecasting.models.U_Net_model import U_Net_model 
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -37,7 +36,7 @@ def main():
             test_target_path_list = pickle.load(f)
         dataset = Earthnet_Test_Dataset(test_context_path_list, test_target_path_list, mesoscale_cut)
 
-    model = Peephole_LSTM_model.load_from_checkpoint(cfg['model_path'])
+    model = LSTM_model.load_from_checkpoint(cfg['model_path'])
     model.eval()
     
     truth = dataset.__getitem__(cfg['index'])
@@ -82,7 +81,7 @@ def fake_weather(model, truth, t0, T):
     visualize_rgb(x_preds, truth, path + "/original.png")
     visualize_ndvi(x_preds, truth, path + "/original_ndvi.png")
     plot_time(x_preds, truth, path + "/original_time.png")
-    #No water 
+    # No water 
     npf_no_water = copy.deepcopy(npf)
     npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
     x_preds, x_deltas, baselines = model(x = context, 
@@ -93,7 +92,7 @@ def fake_weather(model, truth, t0, T):
     visualize_ndvi(x_preds, temp_truth, path + "/no_water_ndvi.png", False)
     plot_time(x_preds, temp_truth, path + "/no_water_time.png")
 
-    #always_rain
+    # always_rain
     npf_always_rain = copy.deepcopy(npf)
     npf_always_rain[:,1,:,:,:] = 0.1+0*npf_always_rain[:,1,:,:,:]
     x_preds, x_deltas, baselines = model(x = context, 
@@ -105,7 +104,7 @@ def fake_weather(model, truth, t0, T):
     visualize_ndvi(x_preds, temp_truth, "visualizations/fake_weather/too_always_rain_ndvi.png", False)
     plot_time(x_preds, temp_truth, "visualizations/fake_weather/too_always_rain_time.png")
 
-    #stronger_rain
+    # stronger_rain
     npf_stronger_rain = copy.deepcopy(npf)
     npf_stronger_rain[:,1,:,:,:] = 3*npf_stronger_rain[:,1,:,:,:]
     x_preds, x_deltas, baselines = model(x = context, 
