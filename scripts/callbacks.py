@@ -20,7 +20,7 @@ class SDVI_Train_callback(pl.Callback):
         return super().on_train_epoch_end(trainer, pl_module)
     
 class WandbTrain_callback(pl.Callback):
-    def __init__(self, cfg, print_preds = True):
+    def __init__(self, print_preds = True):
         self.print_preds = print_preds
         self.print_sample = None
         self.print_table = None

@@ -6,40 +6,40 @@ from ..optimizers import get_opt_from_name
 from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
-class LSTM_model(pl.LightningModule):
-    def __init__(self, cfg):
+class EN_model(pl.LightningModule):
+    def __init__(self, model_type, model_cfg, training_cfg):
         """
-        This architecture is roughly based on the convolutional LSTM architecture, optionally with an additional peephole.
-        (https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf)
+        This is the supermodel that wraps all the possible models to do satellite image forecasting.
 
         Parameters:
             cfg (dict) -- model configuration parameters
         """
         super().__init__()
-        self.cfg = cfg
         self.save_hyperparameters()
-        
-        if not "peephole" in cfg["model"]:
-            cfg["model"]["peephole"] = True
-        self.model = Conv_LSTM(input_dim=self.cfg["model"]["input_channels"],
-                               output_dim=self.cfg["model"]["output_channels"],
-                               hidden_dims=self.cfg["model"]["hidden_channels"],
-                               big_mem=self.cfg["model"]["big_mem"],
-                               num_layers=self.cfg["model"]["n_layers"],
-                               kernel_size=self.cfg["model"]["kernel"],
-                               memory_kernel_size=self.cfg["model"]["memory_kernel"],
-                               dilation_rate=self.cfg["model"]["dilation_rate"],
-                               baseline=self.cfg["model"]["baseline"],
-                               layer_norm_flag=self.cfg["model"]["layer_norm"],
-                               img_width=self.cfg["model"]["img_width"],
-                               img_height=self.cfg["model"]["img_height"],
-                               peephole=self.cfg["model"]["peephole"])
 
-        self.baseline = self.cfg["model"]["baseline"]
-        self.future_training = self.cfg["model"]["future_training"]
-        self.learning_rate = self.cfg["training"]["start_learn_rate"]
-        self.training_loss = get_loss_from_name(self.cfg["training"]["training_loss"])
-        self.test_loss = get_loss_from_name(self.cfg["training"]["test_loss"])
+        self.model_cfg = model_cfg
+        self.training_cfg = training_cfg
+        
+        if model_type == "ConvLSTM":
+            self.model = Conv_LSTM(input_dim=self.model_cfg["input_channels"],
+                                output_dim=self.model_cfg["output_channels"],
+                                hidden_dims=self.model_cfg["hidden_channels"],
+                                big_mem=self.model_cfg["big_mem"],
+                                num_layers=self.model_cfg["n_layers"],
+                                kernel_size=self.model_cfg["kernel"],
+                                memory_kernel_size=self.model_cfg["memory_kernel"],
+                                dilation_rate=self.model_cfg["dilation_rate"],
+                                baseline=self.training_cfg["baseline"],
+                                layer_norm_flag=self.model_cfg["layer_norm"],
+                                img_width=self.model_cfg["img_width"],
+                                img_height=self.model_cfg["img_height"],
+                                peephole=self.model_cfg["peephole"])
+
+        self.baseline = self.training_cfg["baseline"]
+        self.future_training = self.training_cfg["future_training"]
+        self.learning_rate = self.training_cfg["start_learn_rate"]
+        self.training_loss = get_loss_from_name(self.training_cfg["training_loss"])
+        self.test_loss = get_loss_from_name(self.training_cfg["test_loss"])
 
     def forward(self, x, prediction_count=1, non_pred_feat=None):
         """
@@ -75,14 +75,14 @@ class LSTM_model(pl.LightningModule):
             return loss(labels=target, prediction=x_preds)
 
     def configure_optimizers(self):        
-        optimizer = get_opt_from_name(self.cfg["training"]["optimizer"],
+        optimizer = get_opt_from_name(self.training_cfg["optimizer"],
                                       params=self.parameters(),
-                                      lr=self.cfg["training"]["start_learn_rate"])
+                                      lr=self.training_cfg["start_learn_rate"])
         scheduler = ReduceLROnPlateau(optimizer, 
                                       mode='min', 
-                                      factor=self.cfg["training"]["lr_factor"], 
-                                      patience= self.cfg["training"]["patience"],
-                                      threshold=self.cfg["training"]["lr_threshold"],
+                                      factor=self.training_cfg["lr_factor"], 
+                                      patience= self.training_cfg["patience"],
+                                      threshold=self.training_cfg["lr_threshold"],
                                       verbose=True)
         lr_sc = {
             'scheduler': scheduler,

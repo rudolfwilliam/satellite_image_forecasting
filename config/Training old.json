@@ -1,0 +1,46 @@
+{
+    "model":
+    {
+        "dilation_rate": 1,
+        "input_channels": 11,
+        "hidden_channels": 20,
+        "output_channels": 4,
+        "big_mem": true,
+        "img_width": 128,
+        "img_height": 128,
+        "layer_norm": false,
+        "kernel": 5,
+        "memory_kernel": 5,
+        "n_layers": 3
+    },
+    "data":
+    {
+        "pickle_dir": "Data/all_data",
+        "mesoscale_cut": [39, 41]
+    },
+    "training":
+    {
+        "baseline": "last_frame",
+        "future_training": 20,
+        "offline": false,
+        "print_predictions": true,
+        "epochs": 200,
+        "train_batch_size": 2,
+        "val_1_batch_size": 2,
+        "val_2_batch_size": 2,
+        "optimizer": "adamW",
+        "seed": 1,
+        "num_workers": 0,
+        "accelerator": "auto",
+        "gpus": 1,
+        "devices": 1,
+        "start_learn_rate": 0.001,
+        "patience": 100,
+        "lr_factor": 0.1,
+        "lr_threshold": 0.001,
+        "training_loss": "l2",
+        "test_loss": "ENS", 
+        "use_context": false,
+        "fake_weather": false
+    }
+}

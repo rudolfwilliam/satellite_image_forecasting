@@ -9,21 +9,21 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from config.config import train_line_parser
-from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 from datetime import datetime
 
 def main():
     # load configs
-    cfg = train_line_parser()
+    model_type, cfg_model, cfg_training = train_line_parser()
 
-    if not cfg["training"]["offline"]:
+    if not cfg_training["offline"]:
         os.environ["WANDB_MODE"]="online"
     else:
         os.environ["WANDB_MODE"]="offline"
 
-    wandb.init(entity="eth-ds-lab", project="Drought Impact Forecasting", config=cfg)
+    wandb.init(entity="eth-ds-lab", project="Drought Impact Forecasting", config={"model_type":model_type,"training":cfg_training,"model":cfg_model})
 
     # store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
@@ -33,33 +33,37 @@ def main():
             f.write("offline_run_" + str(datetime.now()))
 
     # setup model
-    if cfg["training"]["checkpoint"] is not None:
+    if cfg_training["checkpoint"] is not None:
         # Resume training from checkpoint
-        model = LSTM_model.load_from_checkpoint(cfg["training"]["checkpoint"])
-        cfg = model.cfg
+        model = EN_model.load_from_checkpoint(cfg_training["checkpoint"])
+        model_type = model.model_type
+        cfg_model = model.cfg_model
+        cfg_training = model.cfg_training
     else:
-        model = LSTM_model(cfg)
+        model = EN_model(model_type, cfg_model, cfg_training)
 
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
-        json.dump(cfg, fp)
+        json.dump(cfg_training, fp)    
+    with open(os.path.join(wandb.run.dir, model_type + ".json"), 'w') as fp:
+        json.dump(cfg_model, fp)
     
-    wandb_logger = WandbLogger(project='DS_Lab', config=cfg, job_type='train', offline=True)
+    wandb_logger = WandbLogger(project='DS_Lab', config={"model_type":model_type,"training":cfg_training,"model":cfg_model}, job_type='train', offline=True)
     
-    random.seed(cfg["training"]["seed"])
-    pl.seed_everything(cfg["training"]["seed"], workers=True)
+    random.seed(cfg_training["seed"])
+    pl.seed_everything(cfg_training["seed"], workers=True)
 
-    EN_dataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
-                                     train_batch_size = cfg["training"]["train_batch_size"],
-                                     val_batch_size = cfg["training"]["val_1_batch_size"], 
-                                     test_batch_size = cfg["training"]["val_2_batch_size"], 
-                                     mesoscale_cut = cfg["data"]["mesoscale_cut"],
-                                     fake_weather = cfg["training"]["fake_weather"])
+    EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
+                                     train_batch_size = cfg_training["train_batch_size"],
+                                     val_batch_size = cfg_training["val_1_batch_size"], 
+                                     test_batch_size = cfg_training["val_2_batch_size"], 
+                                     mesoscale_cut = cfg_training["mesoscale_cut"],
+                                     fake_weather = cfg_training["fake_weather"])
     
     # build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
     # load callbacks
-    wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
+    wd_callbacks = WandbTrain_callback(print_preds=True)
     # create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
     os.mkdir(runtime_model_folder)
@@ -69,16 +73,17 @@ def main():
                                           filename = 'model_{epoch:03d}')
 
     # set up trainer
-    trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
+    trainer = Trainer(max_epochs=cfg_training["epochs"], 
                       logger=wandb_logger,
-                      devices=cfg["training"]["devices"],
-                      accelerator=cfg["training"]["accelerator"],
-                      callbacks=[wd_callbacks, checkpoint_callback])
+                      devices=cfg_training["devices"],
+                      accelerator=cfg_training["accelerator"],
+                      callbacks=[wd_callbacks, checkpoint_callback], 
+                      num_sanity_val_steps=1)
 
     # run training
     trainer.fit(model, EN_dataset)
 
-    if not cfg["training"]["offline"]:
+    if not cfg_training["offline"]:
         wandb.finish()
     
 if __name__ == "__main__":
