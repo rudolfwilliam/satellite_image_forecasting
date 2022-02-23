@@ -1,3 +1,4 @@
+from turtle import forward
 import numpy as np
 import torch
 import torch.nn as nn
@@ -117,7 +118,8 @@ class PositionalEncoding(nn.Module):
             return_list = [torch.ones((self.configs["batch_size"],
                                        self.configs["img_width"],
                                        self.configs["img_width"]),
-                                       device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
+                                       device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")) * 
+                                       (position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
             return torch.stack(return_list, dim=1)
 
         sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(t)]
@@ -129,6 +131,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x, t):
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t, x.get_device()))
+
         return x + self.pos_table.clone().detach()
 
 
@@ -150,6 +153,7 @@ class Encoder(nn.Module):
         for attn, ff in self.layers:
             x = attn(x)
             x = ff(x)
+
         return x
 
 
@@ -165,7 +169,7 @@ class Decoder(nn.Module):
                 # (masked) query self-attention
                 Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
                                      ConvAttention(self.configs, self.num_hidden[-1], enc=True, mask=True))),
-                # convolutional attention
+                # encoder-decoder attention
                 Residual(PreNorm([self.num_hidden[-1], self.configs["img_width"], self.configs["img_width"]],
                                  ConvAttention(self.configs, self.num_hidden[-1], enc=False))),
                 # feed forward
@@ -174,20 +178,15 @@ class Decoder(nn.Module):
             ]))
 
     def forward(self, queries, enc_out):
-        if self.configs["query_self_attention"]:
-            for query_attn, attn, ff in self.layers:
-                queries = query_attn(queries)
-                x = attn(queries, enc_out=enc_out)
-                x = ff(x)
-        else:
-            for dec, attn, ff in self.layers:
-                x = dec(queries)
-                x = attn(queries, enc_out=enc_out)
-                x = ff(x)
+        for query_attn, attn, ff in self.layers:
+            queries = query_attn(queries)
+            x = attn(queries, enc_out=enc_out)
+            x = ff(x)
 
         return x
 
 class Conv_Transformer(nn.Module):
+    """Standard, single-headed ConvTransformer like in https://arxiv.org/pdf/2011.10185.pdf"""
     def __init__(self, configs):
         super().__init__()
         self.configs = configs
@@ -203,27 +202,25 @@ class Conv_Transformer(nn.Module):
                                                     self.configs["img_width"], self.configs["img_width"]),
                                                     # Quite ugly, maybe fix by passing all configs?
                                                     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))], dim=-1)
-        #TODO: replace this by SFFN
+        #TODO (optionally): replace this by SFFN
         self.back_to_pixel = nn.Sequential(
             nn.Conv2d(self.num_hidden[-1], 4, kernel_size=1)
         )
 
-    def forward(self, frames, prediction_count, non_pred_feat = None):
+    def forward(self, frames, n_predictions):
         _, _, _, _, t = frames.size()
         feature_map = self.feature_embedding(img=frames, network=self.input_feat_gen)
         enc_in = self.pos_embedding(feature_map, t)
-        enc_out = self.Encoder(enc_in)
-        # queries correspond to non_pred_feat
-        if non_pred_feat is not None:
-            non_pred_feat = torch.concat((self.blank, non_pred_feat), dim=-1)
-        else:
-            non_pred_feat = self.blank
+        enc_out = torch.concat(self.Encoder(enc_in)[..., -1], dim=-1)
 
-        dec_V = self.feature_embedding(img=non_pred_feat, network=self.query_feat_gen)
-        dec_out = self.Decoder(dec_V, enc_out)
         out_list = []
-        for i in range(prediction_count):
-            out_list.append(self.back_to_pixel(dec_out[..., i]))
+        queries = self.feature_embedding(img=feature_map[..., -1], network=self.query_feat_gen)
+        for _ in range(n_predictions):
+            dec_out = self.Decoder(queries, enc_out)
+            pred = self.feature_embedding(dec_out)
+            out_list.append(pred)
+            queries = torch.concat((queries, pred), dim=-1)
+        
         x = torch.stack(out_list, dim=-1)
 
         return x
@@ -234,4 +231,33 @@ class Conv_Transformer(nn.Module):
         for i in range(img.shape[-1]):
             gen_img.append(generator(img[..., i]))
         gen_img = torch.stack(gen_img, dim=-1)
+
         return gen_img
+
+class Delta_Conv_Transformer(Conv_Transformer):
+    """ConvTransformer that employs delta model"""
+    def __init__(self, configs):
+        super(Delta_Conv_Transformer).__init__(configs)
+        self.baseline = configs["baseline"]
+    
+    def forward(self, input_tensor, baseline, non_pred_feat=None, n_predictions=1):
+        _, _, _, _, T = input_tensor.size()
+
+        pred_deltas = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
+        preds = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
+        baselines = torch.zeros((b, self.h_channels[-1], height, width, prediction_count), device = self._get_device())
+        feature_map = self.feature_embedding(img=input_tensor, network=self.input_feat_gen)
+
+        enc_in = self.pos_embedding(feature_map, T)
+        enc_out = torch.concat(self.Encoder(enc_in)[..., -1], dim=-1)
+
+        out_list = []
+        first_emb = self.feature_embedding(img=feature_map[..., -1], network=self.query_feat_gen)
+        if self.baseline == "mean_cube":
+            baselines[..., t] = (preds[..., t-1] + (baselines[..., t-1] * (T + t)))/(T + t + 1)
+        if self.baseline == "zeros":
+            pass
+        else:
+            baselines[..., t]  = preds[..., t-1]
+
+
