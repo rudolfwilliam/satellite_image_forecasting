@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from .shared import Conv_Block
+from ..utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+
 
 
 class Residual(nn.Module):
@@ -261,7 +263,9 @@ class ENS_Conv_Transformer(Conv_Transformer):
         self.baseline = baseline
         self.output_dim = output_dim
     
-    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
+    def forward(self, input_tensor, non_pred_feat=None, prediction_count=1):
+        baseline = eval(self.baseline + "(input_tensor[:, 0:5, :, :, :], 4)")
+
         b, _, width, height, T = input_tensor.size()
 
         pred_deltas = torch.zeros((b, self.output_dim, height, width, prediction_count), device = self._get_device())
