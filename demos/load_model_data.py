@@ -17,7 +17,7 @@ from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def load_model(model_path = "trained_model/top_performant.ckpt"):
+def load_model(model_path = "trained_models/top_performant.ckpt"):
     """
         load a model from file for inference
     """
