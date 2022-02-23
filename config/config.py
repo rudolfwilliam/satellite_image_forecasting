@@ -34,7 +34,7 @@ def train_line_parser():
     args = parser.parse_args()
 
     cfg_training = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
-    cfg_model= json.load(open(os.getcwd() + "/config/"+args.model_type+".json", 'r'))
+    cfg_model= json.load(open(os.getcwd() + "/config/" + args.model_type + ".json", 'r'))
     model_type = args.model_type
 
     if args.batch_size is not None:
