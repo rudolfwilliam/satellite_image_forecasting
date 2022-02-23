@@ -6,14 +6,13 @@ from os.path import join
 
 def train_line_parser():
     # load default args from json
-    cfg = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
 
     # parse settable args from terminal
     parser = argparse.ArgumentParser(
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('-mt', '--model_type', type=str, default='PeepholeConvLSTM', choices=['PeepholeConvLSTM', 'ConvLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
+    parser.add_argument('-mt', '--model_type', type=str, default='ConvLSTM', choices=['ConvLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
     parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
@@ -34,84 +33,78 @@ def train_line_parser():
     parser.add_argument('-aw', '--all_weather', type=str, default=None, help='if true use all weather timesteps, else 5-day min/max/mean: t = true, f = false')
     args = parser.parse_args()
 
+    cfg_training = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
+    cfg_model= json.load(open(os.getcwd() + "/config/" + args.model_type + ".json", 'r'))
+    model_type = args.model_type
+
     if args.batch_size is not None:
-        cfg["training"]["train_batch_size"] = args.batch_size
-        cfg["training"]["val_1_batch_size"] = args.batch_size
-        cfg["training"]["val_2_batch_size"] = args.batch_size
+        cfg_training["train_batch_size"] = args.batch_size
+        cfg_training["val_1_batch_size"] = args.batch_size
+        cfg_training["val_2_batch_size"] = args.batch_size
 
     if args.big_memory is not None:
         if args.big_memory == "y" or args.big_memory == "Y" or args.big_memory == "T" or args.big_memory == "t":
-            cfg["model"]["big_mem"] = True
+            cfg_model["big_mem"] = True
         elif args.big_memory == "n" or args.big_memory == "N" or args.big_memory == "f" or args.big_memory == "F":
-            cfg["model"]["big_mem"] = False
+            cfg_model["big_mem"] = False
     
     if args.layer_normalization is not None:
         if args.layer_normalization == "y" or args.layer_normalization == "Y" or args.layer_normalization == "T" or args.layer_normalization == "t":
-            cfg["model"]["layer_norm"] = True
+            cfg_model["layer_norm"] = True
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
-            cfg["model"]["layer_norm"] = False
-    
-    if args.model_type == "PeepholeConvLSTM" or args.model_type == "ConvLSTM":
-        if args.model_type == "PeepholeConvLSTM":
-            cfg["model"]["peephole"] = True
-        else:
-            cfg["model"]["peephole"] = False
-    else:
-        #TODO: Implement such that this works for all model types
-        raise(NotImplementedError)
-
+            cfg_model["layer_norm"] = False
     
     if args.fake_weather is not None:
         if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":
-            cfg["training"]["fake_weather"] = True
+            cfg_training["fake_weather"] = True
         elif args.fake_weather == "n" or args.fake_weather == "N" or args.fake_weather == "f" or args.fake_weather == "F":
-            cfg["training"]["fake_weather"] = False
+            cfg_training["fake_weather"] = False
     
     if args.all_weather is not None:
         if args.all_weather == "y" or args.all_weather == "Y" or args.all_weather == "T" or args.all_weather == "t":
-            cfg["training"]["all_weather"] = True
+            cfg_training["all_weather"] = True
         elif args.all_weather == "n" or args.all_weather == "N" or args.all_weather == "f" or args.all_weather == "F":
-            cfg["training"]["all_weather"] = False
+            cfg_training["all_weather"] = False
     
     if args.hidden_channels is not None:
-        cfg["model"]["hidden_channels"] = args.hidden_channels
+        cfg_model["hidden_channels"] = args.hidden_channels
     
     if args.kernel_size is not None:
-        cfg["model"]["kernel"] = args.kernel_size
+        cfg_model["kernel"] = args.kernel_size
 
     if args.mem_kernel_size is not None:
-        cfg["model"]["memory_kernel"] = args.mem_kernel_size
+        cfg_model["memory_kernel"] = args.mem_kernel_size
 
     if args.num_layers is not None:
-        cfg["model"]["n_layers"] = args.num_layers
+        cfg_model["n_layers"] = args.num_layers
 
     if args.future_training is not None:
-        cfg["model"]["future_training"] = args.future_training
+        cfg_training["future_training"] = args.future_training
 
     if args.learning_rate is not None:
-        cfg["training"]["start_learn_rate"] = args.learning_rate
+        cfg_training["start_learn_rate"] = args.learning_rate
 
     if args.learning_factor is not None:
-        cfg["training"]["lr_factor"] = args.learning_factor
+        cfg_training["lr_factor"] = args.learning_factor
 
     if args.patience is not None:
-        cfg["training"]["patience"] = args.patience
+        cfg_training["patience"] = args.patience
 
     if args.epochs is not None:
-        cfg["training"]["epochs"] = args.epochs
+        cfg_training["epochs"] = args.epochs
 
     if args.baseline_function is not None:
-        cfg["model"]["baseline"] = args.baseline_function
+        cfg_training["baseline"] = args.baseline_function
 
     if args.training_loss is not None:
-        cfg["training"]["training_loss"] = args.training_loss
+        cfg_training["training_loss"] = args.training_loss
         
     if args.pickle_dir is not None:
-        cfg["data"]["pickle_dir"] = args.pickle_dir
+        cfg_training["pickle_dir"] = args.pickle_dir
 
-    cfg["training"]["checkpoint"] = args.checkpoint
+    cfg_training["checkpoint"] = args.checkpoint
     
-    return cfg
+    return model_type, cfg_model, cfg_training
 
 def validate_line_parser():
     parser = argparse.ArgumentParser(
@@ -131,6 +124,7 @@ def validate_line_parser():
         raise ValueError("Either use --check_point_path or --run_name, not both!")
 
     if args.run_name is not None and args.check_point_path is None:
+        name = args.run_name 
         dir_path = find_dir_path(args.run_name)
         model_path = join(dir_path, "files", "runtime_model")
         models = os.listdir(model_path)
@@ -138,13 +132,14 @@ def validate_line_parser():
         args.epoch_to_validate = (args.epoch_to_validate + len(models)) % len(models)
         model_path = join(model_path, models[args.epoch_to_validate])
         if args.validation_dataset is None:
-            cfg = json.load(open(join(dir_path, "files", "Training.json"), 'r'))
-            dataset_dir = cfg["data"]["pickle_dir"]
+            cfg_training = json.load(open(join(dir_path, "files", "Training.json"), 'r'))
+            dataset_dir = cfg_training["pickle_dir"]
         else:
             dataset_dir = args.validation_dataset
     
     if args.run_name is None and args.check_point_path is not None:
         model_path = args.check_point_path
+        name = "fromfile:{0}".format(model_path)
         if args.validation_dataset is None:
             raise ValueError("When using a checkpoint outside of a folder, one must specify the dataset_directory")
         else:
@@ -153,7 +148,7 @@ def validate_line_parser():
     cfg = dict(
         model_path = model_path,
         dataset_dir = dataset_dir,
-        run_name = args.run_name,
+        run_name = name,
         epoch_to_validate = args.epoch_to_validate,
         batch_size = args.batch_size,
         test_set = args.test_set

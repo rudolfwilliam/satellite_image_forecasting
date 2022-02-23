@@ -9,7 +9,7 @@ from os import listdir
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from config.config import validate_line_parser
-from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earth_net_DataModule
 from scripts.callbacks import WandbTest_callback
 
@@ -41,7 +41,7 @@ def main():
     trainer = Trainer(logger=wandb_logger, callbacks=[callbacks])
 
     # setup Model
-    model = LSTM_model.load_from_checkpoint(configs['model_path'])
+    model = EN_model.load_from_checkpoint(configs['model_path'])
     model.eval()
 
     # run validation

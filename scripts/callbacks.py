@@ -15,12 +15,11 @@ class SDVI_Train_callback(pl.Callback):
         os.mkdir(os.path.join(wandb.run.dir,"runtime_model"))
     
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused = None) -> None:
-        
-        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_"+str(trainer.current_epoch)+".torch"))
+        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_" + str(trainer.current_epoch) + ".torch"))
         return super().on_train_epoch_end(trainer, pl_module)
     
 class WandbTrain_callback(pl.Callback):
-    def __init__(self, cfg, print_preds = True):
+    def __init__(self, print_preds = True):
         self.print_preds = print_preds
         self.print_sample = None
         self.print_table = None
@@ -37,7 +36,7 @@ class WandbTrain_callback(pl.Callback):
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
 
         for dir_path in [self.runtime_prediction,
-                         self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
+                         self.r_pred, self.g_pred, self.b_pred, self.i_pred, self.img_pred]:
             if not path.isdir(dir_path):
                 os.mkdir(dir_path)
 
@@ -64,8 +63,8 @@ class WandbTrain_callback(pl.Callback):
             context = all_data[:5, :, :, :t0].unsqueeze(0) # b, c, h, w, t
             target = all_data[:5, :, :, t0:].unsqueeze(0) # b, c, h, w, t
 
-            preds_mean = mean_prediction(context, mask_channel=True).permute(0,3,1,2,4)
-            preds_last = last_prediction(context, mask_channel=4).permute(0,3,1,2,4)
+            preds_mean = mean_prediction(context, mask_channel=True).permute(0, 3, 1, 2, 4)
+            preds_last = last_prediction(context, mask_channel=4).permute(0, 3, 1, 2, 4)
 
             _, part_scores_mean = ENS(prediction = preds_mean, target = target)
             _, part_scores_last = ENS(prediction = preds_last, target = target)

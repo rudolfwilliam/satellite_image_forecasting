@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from config.config import diagnosticate_line_parser
 from drought_impact_forecasting.models.LSTM_model import LSTM_model
-from drought_impact_forecasting.models.U_Net_model import U_Net_model 
+from drought_impact_forecasting.models.EN_model import EN_model 
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -36,7 +36,7 @@ def main():
             test_target_path_list = pickle.load(f)
         dataset = Earthnet_Test_Dataset(test_context_path_list, test_target_path_list, mesoscale_cut)
 
-    model = LSTM_model.load_from_checkpoint(cfg['model_path'])
+    model = EN_model.load_from_checkpoint(cfg['model_path'])
     model.eval()
     
     truth = dataset.__getitem__(cfg['index'])
@@ -115,7 +115,6 @@ def fake_weather(model, truth, t0, T):
     visualize_rgb(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain.png",False)
     visualize_ndvi(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain_ndvi.png",False)
     plot_time(x_preds, temp_truth, "visualizations/fake_weather/stronger_rain_time.png")
-    pass
 
 def visualize_rgb(pred, truth, filename = None, gt = True):
     pred = pred.detach().numpy()
