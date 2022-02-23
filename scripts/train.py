@@ -1,6 +1,8 @@
 import imp
 import sys
 import os
+from os import listdir
+from pathlib import Path
 import json
 import wandb
 import random
@@ -14,6 +16,7 @@ from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 from datetime import datetime
+from demos.load_model_data import *
 
 def main():
     # load configs
@@ -23,8 +26,32 @@ def main():
         os.environ["WANDB_MODE"]="online"
     else:
         os.environ["WANDB_MODE"]="offline"
+    
+    if cfg_training["checkpoint"] is not None:
+        old_wandb_dir = str(Path(cfg_training["checkpoint"]).parents[2])
+        old_run_id = [f for f in listdir(old_wandb_dir) if 'run-' in f][0][4:-6]
 
-    wandb.init(entity="eth-ds-lab", project="Drought Impact Forecasting", config={"model_type":model_type,"training":cfg_training,"model":cfg_model})
+        wandb.init(entity="eth-ds-lab",
+                   project="Drought Impact Forecasting",
+                   config={"model_type":model_type,"training":cfg_training,"model":cfg_model},
+                   id=old_run_id,
+                   resume="must")
+
+        wandb_logger = WandbLogger(project='DS_Lab',
+                                   config={"model_type":model_type,"training":cfg_training,"model":cfg_model},
+                                   job_type='train',
+                                   offline=True,
+                                   id=old_run_id)
+
+    else:
+        wandb.init(entity="eth-ds-lab",
+                   project="Drought Impact Forecasting",
+                   config={"model_type":model_type,"training":cfg_training,"model":cfg_model})
+
+        wandb_logger = WandbLogger(project='DS_Lab',
+                                   config={"model_type":model_type,"training":cfg_training,"model":cfg_model},
+                                   job_type='train',
+                                   offline=True)
 
     # store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
@@ -34,22 +61,19 @@ def main():
             f.write("offline_run_" + str(datetime.now()))
 
     # setup model
-    if cfg_training["checkpoint"] is not None:
-        # Resume training from checkpoint
-        model = EN_model.load_from_checkpoint(cfg_training["checkpoint"])
-        model_type = model.model_type
-        cfg_model = model.cfg_model
-        cfg_training = model.cfg_training
-    else:
-        model = EN_model(model_type, cfg_model, cfg_training)
+    model = EN_model(model_type, cfg_model, cfg_training)
 
+    model_old = load_model()
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
         json.dump(cfg_training, fp)    
     with open(os.path.join(wandb.run.dir, model_type + ".json"), 'w') as fp:
         json.dump(cfg_model, fp)
     
-    wandb_logger = WandbLogger(project='DS_Lab', config={"model_type":model_type,"training":cfg_training,"model":cfg_model}, job_type='train', offline=True)
-    
+    for i in range(3):
+        model.model.cell_list[i].conv_cc.weight = model_old.model.cell_list[i].conv_cc.weight 
+        model.model.cell_list[i].conv_ll.weight = model_old.model.cell_list[i].conv_ll.weight 
+        model.model.cell_list[i].conv_cc.bias = model_old.model.cell_list[i].conv_cc.bias 
+
     random.seed(cfg_training["seed"])
     pl.seed_everything(cfg_training["seed"], workers=True)
 
@@ -73,19 +97,31 @@ def main():
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
 
-    # set up trainer
+    cb = Fake_Callback()
+    # set up trainer    
     trainer = Trainer(max_epochs=cfg_training["epochs"], 
                       logger=wandb_logger,
                       devices=cfg_training["devices"],
                       accelerator=cfg_training["accelerator"],
-                      callbacks=[wd_callbacks, checkpoint_callback], 
+                      callbacks=[wd_callbacks, checkpoint_callback, cb], 
                       num_sanity_val_steps=1)
 
     # run training
-    trainer.fit(model, EN_dataset)
+    if cfg_training["checkpoint"] is None:
+        trainer.fit(model, EN_dataset)
+    else:
+        trainer.fit(model, datamodule=EN_dataset, ckpt_path=cfg_training["checkpoint"])
 
     if not cfg_training["offline"]:
         wandb.finish()
     
+class Fake_Callback(pl.Callback):
+    def __init__(self) -> None:
+        super().__init__()
+    def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        trainer.save_checkpoint("BEST_MODEL")
+        return super().on_train_start(trainer, pl_module)
+
 if __name__ == "__main__":
     main()
+    

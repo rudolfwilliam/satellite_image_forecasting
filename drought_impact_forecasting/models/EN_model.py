@@ -52,10 +52,8 @@ class EN_model(pl.LightningModule):
         :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.
         Do not use these for computing a loss!
         """
-        # compute the baseline
-        baseline = eval(self.baseline + "(x[:, 0:5, :, :, :], 4)")
 
-        preds, pred_deltas, baselines = self.model(x, baseline=baseline, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
+        preds, pred_deltas, baselines = self.model(x, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
         return preds, pred_deltas, baselines
 
