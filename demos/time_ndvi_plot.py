@@ -11,7 +11,7 @@ from load_model_data import *
 
 def main():
     filename = None
-    truth, context, target, npf = load_data_point()
+    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/seasonal_context_data_paths.pkl", test_target_dataset = "Data/small_data/seasonal_target_data_paths.pkl")
     model = load_model()
     pred, _, _ = model(x = context, 
                        prediction_count = int((2/3)*truth.shape[-1]), 

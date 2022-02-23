@@ -17,15 +17,15 @@ from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def load_model(model_path = "wandb/model_epoch=007.ckpt"):
+def load_model(model_path = "trained_model/top_performant.ckpt"):
     """
         load a model from file for inference
     """
-    model = LSTM_model.load_from_checkpoint(model_path)
+    model = EN_model.load_from_checkpoint(model_path)
     model.eval()
     return model
 
-def load_data_point(train_dataset = "Data/small_data/train_data_paths.pkl", 
+def load_data_point(train_dataset = None, 
                     test_context_dataset = None, 
                     test_target_dataset = None,
                     index = 0):
@@ -60,7 +60,7 @@ def load_data_point(train_dataset = "Data/small_data/train_data_paths.pkl",
             test_context_path_list = pickle.load(f)
         with open(join(os.getcwd(), test_target_dataset),'rb') as f:
             test_target_path_list = pickle.load(f)
-        dataset = Earthnet_Test_Dataset(test_context_dataset, test_target_dataset, [39,41])
+        dataset = Earthnet_Test_Dataset(test_context_path_list, test_target_path_list, [39,41])
     # get cube
     truth = dataset.__getitem__(index)
     # cube splitting
