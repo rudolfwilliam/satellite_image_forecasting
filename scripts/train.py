@@ -1,4 +1,3 @@
-import imp
 import sys
 import os
 from os import listdir
@@ -16,7 +15,6 @@ from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 from datetime import datetime
-from demos.load_model_data import *
 
 def main():
     # load configs
@@ -63,16 +61,10 @@ def main():
     # setup model
     model = EN_model(model_type, cfg_model, cfg_training)
 
-    model_old = load_model()
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
         json.dump(cfg_training, fp)    
     with open(os.path.join(wandb.run.dir, model_type + ".json"), 'w') as fp:
         json.dump(cfg_model, fp)
-    
-    for i in range(3):
-        model.model.cell_list[i].conv_cc.weight = model_old.model.cell_list[i].conv_cc.weight 
-        model.model.cell_list[i].conv_ll.weight = model_old.model.cell_list[i].conv_ll.weight 
-        model.model.cell_list[i].conv_cc.bias = model_old.model.cell_list[i].conv_cc.bias 
 
     random.seed(cfg_training["seed"])
     pl.seed_everything(cfg_training["seed"], workers=True)
@@ -97,13 +89,12 @@ def main():
                                           save_top_k = -1,
                                           filename = 'model_{epoch:03d}')
 
-    cb = Fake_Callback()
     # set up trainer    
     trainer = Trainer(max_epochs=cfg_training["epochs"], 
                       logger=wandb_logger,
                       devices=cfg_training["devices"],
                       accelerator=cfg_training["accelerator"],
-                      callbacks=[wd_callbacks, checkpoint_callback, cb], 
+                      callbacks=[wd_callbacks, checkpoint_callback], 
                       num_sanity_val_steps=1)
 
     # run training
@@ -114,13 +105,6 @@ def main():
 
     if not cfg_training["offline"]:
         wandb.finish()
-    
-class Fake_Callback(pl.Callback):
-    def __init__(self) -> None:
-        super().__init__()
-    def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        trainer.save_checkpoint("BEST_MODEL")
-        return super().on_train_start(trainer, pl_module)
 
 if __name__ == "__main__":
     main()
