@@ -50,10 +50,12 @@ class ConvAttention(nn.Module):
         self.num_hidden = num_hidden
         # important note: shared convolution is intentional here
         if self.enc:
+            # 3 times num_hidden for out_channels due to queries, keys & values
             self.conv1 = nn.Sequential(
                 nn.Conv2d(in_channels=self.num_hidden, out_channels=3*self.num_hidden, kernel_size=1, padding="same", padding_mode="reflect")
             )
         else:
+            # only 2 times num_hidden for keys & values
             self.conv1 = nn.Sequential(
                 nn.Conv2d(in_channels=self.num_hidden, out_channels=2*self.num_hidden, kernel_size=1, padding="same", padding_mode="reflect")
             )
