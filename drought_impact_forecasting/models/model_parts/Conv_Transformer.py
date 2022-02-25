@@ -8,7 +8,6 @@ from .shared import Conv_Block
 from ..utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 
-
 class Residual(nn.Module):
     def __init__(self, fn):
         super().__init__()
@@ -63,46 +62,40 @@ class ConvAttention(nn.Module):
         )
 
     def forward(self, x, enc_out=None):
+        # s is num queries, t is num keys/values
         b, _, _, _, s = x.shape
         if self.enc:
-            qkv_setlist = []
             t = s
-            for i in range(t):
-                qkv_setlist.append(self.conv1(x[..., i]))
-            qkv_set = torch.stack(qkv_setlist, dim=-1)
+            qkv_set = torch.stack([self.conv1(x[..., i]) for i in range(t)], dim=-1)
             Q, K, V = torch.split(qkv_set, self.num_hidden, dim=1)
         else:
-            # x corresponds to the query
-            kv_setlist = []
+            # x correspond to queries
             t = enc_out.size()[-1]
-            for i in range(t):
-                kv_setlist.append(self.conv1(enc_out[..., i]))
-            kv_set = torch.stack(kv_setlist, dim=-1)
+            kv_set = torch.stack([self.conv1(enc_out[..., i]) for i in range(t)], dim=-1) 
             K, V = torch.split(kv_set, self.num_hidden, dim=1)
             Q = x
 
-        K_rep = torch.stack([K] * s, dim=-1)
+        K_rep = torch.stack([K] * s, dim=-2)
         V_rep = torch.stack([V] * s, dim=-1)
         Q_rep = torch.stack([Q] * t, dim=-1)
-        K_flip = rearrange(K_rep, 'b c h w t s -> b c h w s t')
-        Q_K = torch.concat((Q_rep, K_flip), dim=1) 
+        # concatenate queries and keys for cross-channel convolution
+        Q_K = torch.concat((Q_rep, K_rep), dim=1) 
         if self.mask:
             # only feed in 'previous' keys & values for computing softmax
             V_out = []
+            # for each query
             for i in range(t):
-                Q_K_temp = Q_K[..., :i+1, i]
-                Q_K_temp = rearrange(Q_K_temp, 'b c h w t -> (b t) c h w') # no convolution across time dim!
+                Q_K_temp = rearrange(Q_K[..., :i+1, i], 'b c h w t -> (b t) c h w')
                 extr_feat = rearrange(torch.squeeze(self.conv2(Q_K_temp), dim=1), '(b t) h w -> b h w t', b=b, t=i+1)
                 attn_mask = F.softmax(extr_feat, dim=-1)
-                V_pre = torch.stack([torch.mul(attn_mask, V_rep[:, c, :, :, i, :i+1]) for c in range(V_rep.size()[1])], dim=1)
-                V_out.append(torch.sum(V_pre, dim=-1))
+                # convex combination over values using weights from attention mask, per channel c
+                V_out.append(torch.stack([torch.sum(torch.mul(attn_mask, V_rep[:, c, :, :, i, :i+1]), dim=-1) for c in range(V_rep.size()[1])], dim=1))
             V_out = torch.stack(V_out, dim=-1)
         else:
             Q_K = rearrange(Q_K, 'b c h w s t -> (b s t) c h w') # no convolution across time dim!
             extr_feat = rearrange(torch.squeeze(self.conv2(Q_K), dim=1), '(b s t) h w -> b h w t s', b=b, t=t)
             attn_mask = F.softmax(extr_feat, dim=-2)
-            V_pre = torch.stack([torch.mul(attn_mask, V_rep[:, c, ...]) for c in range(V_rep.size()[1])], dim=1)
-            V_out = torch.sum(V_pre, dim=-2)
+            V_out = torch.stack([torch.sum(torch.mul(attn_mask, V_rep[:, c, ...]), dim=-2) for c in range(V_rep.size()[1])], dim=1)
 
         return V_out
 
