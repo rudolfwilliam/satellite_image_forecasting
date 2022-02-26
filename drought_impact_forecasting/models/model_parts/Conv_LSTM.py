@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from ..utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from ..utils.utils import zeros, mean_cube, last_frame, ENS
 
 
 class Conv_LSTM_Cell(nn.Module):

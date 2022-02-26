@@ -6,7 +6,7 @@ from drought_impact_forecasting.models.model_parts.Conv_Transformer import ENS_C
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import ENS
 
 class EN_model(pl.LightningModule):
     def __init__(self, model_type, model_cfg, training_cfg):
@@ -65,7 +65,6 @@ class EN_model(pl.LightningModule):
         :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.
         Do not use these for computing a loss!
         """
-        # compute the baseline
 
         preds, pred_deltas, baselines = self.model(x, non_pred_feat=non_pred_feat, prediction_count=prediction_count)
 
