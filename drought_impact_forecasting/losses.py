@@ -1,9 +1,7 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 import numpy as np
 import earthnet as en
-from tqdm import tqdm
 
 def get_loss_from_name(loss_name):
     if loss_name == "l2":
@@ -14,18 +12,24 @@ def get_loss_from_name(loss_name):
         return Cube_loss(nn.HuberLoss())
     elif loss_name == "ENS":
         return ENS_loss()
+    elif loss_name == "NDVI":
+        return NDVI_loss()
 
+# simple L2 loss on the RGBI channels, mostly used for training
 class Cube_loss(nn.Module):
     def __init__(self, loss):
         super().__init__()
         self.l = loss
+    
     def forward(self, labels: torch.Tensor, prediction: torch.Tensor):
+        # only compute loss on non-cloudy pixels
         mask = 1 - labels[:,4:5] # [b, 1, h, w, t]
         mask = mask.repeat(1, 4, 1, 1, 1)
         masked_prediction = prediction * mask
         masked_labels = labels[:, :4] * mask
         return self.l(masked_prediction, masked_labels)
 
+# loss using the EarthNet challenge ENS score
 class ENS_loss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -81,52 +85,55 @@ class ENS_loss(nn.Module):
             else:
                 score[i] = partial_score[i, 0] = 4 / (
                             1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])
-
+        
         return score, partial_score
         # score is a np array with all the scores
         # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
 
-class L2_disc_cube_loss(nn.Module):
+# NDVI l2 loss on non-cloudy pixels
+class NDVI_loss(nn.Module):
     def __init__(self):
         super().__init__()
-    def forward(self, outputs, labels):
-        return 1
+    
+    def forward(self, labels: torch.Tensor, prediction: torch.Tensor):
+        # only compute loss on non-cloudy pixels
+        # numpy conversion
+        labels = labels.permute(0, 2, 3, 1, 4)
+        prediction = prediction.permute(0, 2, 3, 1, 4)
 
-# Linearly anneal the LK loss weight for certain epochs
-def kl_weight(epoch, finalWeight, annealStart, annealEnd):
-    if epoch <= annealStart:
-        return 0
-    elif epoch > annealEnd:
-        return finalWeight
-    else:
-        return finalWeight * (epoch - annealStart)/(annealEnd - annealStart)
+        # mask
+        ndvi_mask = labels[:, :, :, 4:, :]
+        labels = labels[:, :, :, :4, :]
 
-# Add up (and weight) the different loss components
-def base_line_total_loss(y_preds, batch_y, epoch, lambda1, lambda_kl_factor, annealStart, annealEnd):
-    l1_criterion = nn.L1Loss() 
-    kl_criterion = nn.KLDivLoss()
-    GAN_criterion = nn.CrossEntropyLoss()
-    VAE_GAN_Criterion = nn.CrossEntropyLoss()
+        # NDVI
+        ndvi_labels = ((labels[:, :, :, 3, :] - labels[:, :, :, 2, :]) / (
+                    labels[:, :, :, 3, :] + labels[:, :, :, 2, :] + 1e-6))[:, :, :, np.newaxis, :]
+        ndvi_prediction = ((prediction[:, :, :, 3, :] - prediction[:, :, :, 2, :]) / (
+                    prediction[:, :, :, 3, :] + prediction[:, :, :, 2, :] + 1e-6))[:, :, :, np.newaxis, :]
 
-    lambda_kl_final = lambda1 * lambda_kl_factor
-    curlambda_kl = kl_weight(epoch, lambda_kl_final, annealStart, annealEnd)
+        # floor and ceiling
+        prediction[prediction < 0] = 0
+        prediction[prediction > 1] = 1
 
-    L1 = l1_criterion(y_preds, batch_y).mul(lambda1)
-    L_KL = kl_criterion(y_preds, batch_y).mul(curlambda_kl)
-    L_GAN = GAN_criterion(y_preds, batch_y)
-    # Later on these will have to come from the 2nd discriminator
-    # I suggest we start by making it work with just the GAN discriminator for now
-    L_VAE_GAN = VAE_GAN_Criterion(y_preds, batch_y)
+        score = np.zeros((labels.shape[0], 5))
+        weight = np.zeros(ndvi_labels.shape[0])
+        l2_loss = nn.MSELoss()
 
-    # TODO: Add variants (GAN only, VAE only)
-    loss_total = L1.add(L_KL).add(L_GAN).add(L_VAE_GAN)
-    return loss_total
+        for i in range(ndvi_labels.shape[0]):
+            # mask which data is cloudy and shouldn't be used for calculating the score
+            masked_ndvi_labels = torch.mul(ndvi_labels[i], ndvi_mask[i])
+            masked_ndvi_prediction = torch.mul(ndvi_prediction[i], ndvi_mask[i])
+            score[i,0] = score[i,1] = score[i,2] = score[i,3] = score[i,4] = l2_loss(masked_ndvi_prediction, masked_ndvi_labels)
+
+            # weight the loss by the 
+            weight[i] = 1 - torch.sum(ndvi_mask[i])/torch.numel(ndvi_mask[i])
+        return weight, score
 
 def cloud_mask_loss(y_preds, y_truth, cloud_mask):
     l2_loss = nn.MSELoss()
 
     mask = torch.repeat_interleave(1-cloud_mask, 4, axis=1)
-    # Mask which data is cloudy and shouldn't be used for averaging
+    # mask which data is cloudy and shouldn't be used for averaging
     masked_y_pred = torch.mul(y_preds, mask)
     masked_y_truth = torch.mul(y_truth, mask)
-    return l2_loss(masked_y_pred,masked_y_truth)
+    return l2_loss(masked_y_pred, masked_y_truth)
