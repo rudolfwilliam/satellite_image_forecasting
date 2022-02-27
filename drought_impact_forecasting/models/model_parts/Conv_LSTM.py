@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from ..utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
 
 
 class Conv_LSTM_Cell(nn.Module):
@@ -124,7 +125,7 @@ class Conv_LSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-    def forward(self, input_tensor, baseline, non_pred_feat=None, prediction_count=1):
+    def forward(self, input_tensor, non_pred_feat=None, prediction_count=1):
         """
         Parameters
         ----------
@@ -139,6 +140,8 @@ class Conv_LSTM(nn.Module):
         -------
         pred_deltas
         """
+
+        baseline = eval(self.baseline + "(input_tensor[:, 0:5, :, :, :], 4)")
         b, _, width, height, T = input_tensor.size()
         hs = []
         cs = []

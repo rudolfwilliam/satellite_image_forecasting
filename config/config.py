@@ -33,7 +33,6 @@ def train_line_parser():
     parser.add_argument('-aw', '--all_weather', type=str, default=None, help='if true use all weather timesteps, else 5-day min/max/mean: t = true, f = false')
     args = parser.parse_args()
 
-
     cfg_training = json.load(open(os.getcwd() + "/config/Training.json", 'r'))
     cfg_model= json.load(open(os.getcwd() + "/config/" + args.model_type + ".json", 'r'))
     model_type = args.model_type
@@ -54,9 +53,6 @@ def train_line_parser():
             cfg_model["layer_norm"] = True
         elif args.layer_normalization == "n" or args.layer_normalization == "N" or args.layer_normalization == "f" or args.layer_normalization == "F":
             cfg_model["layer_norm"] = False
-    
-    
-
     
     if args.fake_weather is not None:
         if args.fake_weather == "y" or args.fake_weather == "Y" or args.fake_weather == "T" or args.fake_weather == "t":
