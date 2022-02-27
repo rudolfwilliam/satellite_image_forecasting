@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from config.config import train_line_parser
-from drought_impact_forecasting.models.LSTM_model import LSTM_model
+from drought_impact_forecasting.models.EN_model import EN_model
 from Data.data_preparation import Earth_net_DataModule
 from callbacks import WandbTrain_callback
 
@@ -26,29 +26,31 @@ warnings.filterwarnings('ignore')
 
 def objective(trial):
 
-    # Load configs
-    cfg = train_line_parser()
+    # load configs
+    model_type, cfg_model, cfg_training = train_line_parser()
 
-    # Set up search space
-    cfg["model"]["n_layers"] = trial.suggest_int('nl', 2, 4)
-    cfg["model"]["hidden_channels"] = trial.suggest_int('hc', 15, 22)
-    cfg["training"]["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
-    cfg["training"]["patience"] = trial.suggest_int("pa", 3, 20)
-    cfg["training"]["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
-    cfg["training"]["layer_norm"] = trial.suggest_categorical("lm", [True,False])
+    # set up search space
+    cfg_model["n_layers"] = trial.suggest_int('nl', 2, 4)
+    cfg_model["hidden_channels"] = trial.suggest_int('hc', 15, 22)
+    cfg_model["layer_norm"] = trial.suggest_categorical("lm", [True,False])
+    cfg_training["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
+    cfg_training["patience"] = trial.suggest_int("pa", 3, 20)
+    cfg_training["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
 
-    # Kernel sizes must be odd to be symmetric
-    cfg["model"]["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
-    cfg["model"]["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
+    # kernel sizes must be odd to be symmetric
+    cfg_model["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
+    cfg_model["memroy_kernel"] = 3 + 2 * trial.suggest_int('mk', 0, 2)
 
-    if not cfg["training"]["offline"]:
+    if not cfg_training["offline"]:
         os.environ["WANDB_MODE"]="online"
     else:
         os.environ["WANDB_MODE"]="offline"
 
-    wandb.init(entity="eth-ds-lab", project="DIF Optimization", config=cfg)
+    wandb.init(entity="eth-ds-lab",
+               project="DIF Optimization",
+               config={"model_type":model_type,"training":cfg_training,"model":cfg_model})
 
-    # Store the model name to wandb
+    # store the model name to wandb
     with open(os.path.join(wandb.run.dir, "run_name.txt"), 'w') as f:
         try:
             f.write(wandb.run.name)
@@ -56,26 +58,31 @@ def objective(trial):
             f.write("offline_run_" + str(datetime.now()))
 
     with open(os.path.join(wandb.run.dir, "Training.json"), 'w') as fp:
-        json.dump(cfg, fp)
+        json.dump(cfg_training, fp)    
+    with open(os.path.join(wandb.run.dir, model_type + ".json"), 'w') as fp:
+        json.dump(cfg_model, fp)
     
-    wandb_logger = WandbLogger(project='DS_Lab', config=cfg, job_type='train', offline=True)
+    wandb_logger = WandbLogger(project='DS_Lab',
+                               config={"model_type":model_type,"training":cfg_training,"model":cfg_model},
+                               job_type='train',
+                               offline=True)
     
-    random.seed(cfg["training"]["seed"])
-    pl.seed_everything(cfg["training"]["seed"], workers=True)
+    random.seed(cfg_training["seed"])
+    pl.seed_everything(cfg_training["seed"], workers=True)
 
-    EN_dataset = Earth_net_DataModule(data_dir = cfg["data"]["pickle_dir"], 
-                                     train_batch_size = cfg["training"]["train_batch_size"],
-                                     val_batch_size = cfg["training"]["val_1_batch_size"], 
-                                     test_batch_size = cfg["training"]["val_2_batch_size"], 
-                                     mesoscale_cut = cfg["data"]["mesoscale_cut"])
+    EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
+                                     train_batch_size = cfg_training["train_batch_size"],
+                                     val_batch_size = cfg_training["val_1_batch_size"], 
+                                     test_batch_size = cfg_training["val_2_batch_size"], 
+                                     mesoscale_cut = cfg_training["mesoscale_cut"])
     
-    # To build back the datasets for safety
+    # to build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
-    # Load Callbacks
-    wd_callbacks = WandbTrain_callback(cfg = cfg, print_preds=True)
+    # load Callbacks
+    wd_callbacks = WandbTrain_callback(print_preds=True)
     # Create folder for runtime models
-    runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
+    runtime_model_folder = os.path.join(wandb.run.dir, "runtime_model")
 
     if not os.path.isdir(runtime_model_folder):
         os.mkdir(runtime_model_folder)
@@ -86,21 +93,21 @@ def objective(trial):
                                           filename = 'model_{epoch:03d}')
     prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_validation_ENS')
 
-    # Setup Trainer
-    trainer = Trainer(max_epochs=cfg["training"]["epochs"], 
+    # setup Trainer
+    trainer = Trainer(max_epochs=cfg_training["epochs"], 
                       logger=wandb_logger,
-                      devices = cfg["training"]["devices"],
-                      accelerator=cfg["training"]["accelerator"],
+                      devices=cfg_training["devices"],
+                      accelerator=cfg_training["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback, prun_callback],
                       num_sanity_val_steps=0)
 
-    # Setup Model
-    model = LSTM_model(cfg)
+    # setup model
+    model = EN_model(model_type, cfg_model, cfg_training)
     
-    # Run training
+    # run training
     trainer.fit(model, EN_dataset)
 
-    if not cfg["training"]["offline"]:
+    if not cfg_training["offline"]:
         wandb.finish()
     
     return trainer.callback_metrics["epoch_validation_ENS"].item()

@@ -26,6 +26,7 @@ def main():
         os.environ["WANDB_MODE"]="offline"
     
     if cfg_training["checkpoint"] is not None:
+        # resume training from where we left off
         old_wandb_dir = str(Path(cfg_training["checkpoint"]).parents[2])
         old_run_id = [f for f in listdir(old_wandb_dir) if 'run-' in f][0][4:-6]
 
@@ -70,11 +71,11 @@ def main():
     pl.seed_everything(cfg_training["seed"], workers=True)
 
     EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
-                                     train_batch_size = cfg_training["train_batch_size"],
-                                     val_batch_size = cfg_training["val_1_batch_size"], 
-                                     test_batch_size = cfg_training["val_2_batch_size"], 
-                                     mesoscale_cut = cfg_training["mesoscale_cut"],
-                                     fake_weather = cfg_training["fake_weather"])
+                                      train_batch_size = cfg_training["train_batch_size"],
+                                      val_batch_size = cfg_training["val_1_batch_size"], 
+                                      test_batch_size = cfg_training["val_2_batch_size"], 
+                                      mesoscale_cut = cfg_training["mesoscale_cut"],
+                                      fake_weather = cfg_training["fake_weather"])
     
     # build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)

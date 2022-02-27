@@ -4,68 +4,7 @@ from torch.utils.data import DataLoader
 import torch
 import os
 from os.path import join
-import random
 import pickle
-import math
-
-def prepare_train_data(ms_cut, data_dir, device, training_samples = None, val_1_samples = None, val_2_samples = None, undersample = False):
-    
-    if training_samples is not None:
-        train_files = []
-        if not undersample:
-            for path, subdirs, files in os.walk(os.getcwd() + data_dir):    
-                for name in files:
-                    # Ignore any licence, progress, etc. files
-                    if '.npz' in name:
-                        train_files.append(join(path, name))
-            
-            train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
-            train_set = random.sample(train_files, training_samples)
-            val_set = [x for x in train_files if x not in train_set]
-            val_1_set = random.sample(val_set, val_1_samples)
-            val_2_set = [x for x in val_set if x not in val_1_set]
-            return Earthnet_Dataset(train_set, ms_cut, device=device), \
-                Earthnet_Dataset(val_1_set, ms_cut, device=device), \
-                Earthnet_Dataset(val_2_set, ms_cut, device=device)
-        
-        else: # Sample a subset of cube in each tile
-            sampling_factor = 5
-            for dir in os.scandir(os.getcwd() + data_dir):
-                tile_files = []
-                for path, subdirs, files in os.walk(dir.path):
-                    for name in files:
-                        if '.npz' in name:
-                            tile_files.append(join(path, name))
-                tile_files = random.sample(tile_files, math.ceil(len(tile_files)/sampling_factor))
-                train_files = train_files + tile_files
-        
-            train_files = train_files[:min([training_samples+val_1_samples+val_2_samples, len(train_files)])]
-            train_set = random.sample(train_files, math.ceil(training_samples/sampling_factor))
-            val_set = [x for x in train_files if x not in train_set]
-            val_1_set = random.sample(val_set, math.ceil(val_1_samples/sampling_factor))
-            val_2_set = [x for x in val_set if x not in val_1_set]
-            return Earthnet_Dataset(train_set, ms_cut, device=device), \
-                Earthnet_Dataset(val_1_set, ms_cut, device=device), \
-                Earthnet_Dataset(val_2_set, ms_cut, device=device)
-
-def prepare_test_data(ms_cut, data_dir, device):
-    
-    test_context_files = []
-    test_target_files = []
-    for path, subdirs, files in os.walk(os.getcwd() + data_dir):
-        for name in files:
-            if '.npz' in name:
-                full_name = join(path, name)
-                if 'context' in full_name:
-                    test_context_files.append(full_name)
-                elif 'target' in full_name:
-                    test_target_files.append(full_name)
-
-    # Sort file names just in case (so we glue together the right context & target)
-    test_context_files.sort()
-    test_target_files.sort()
-
-    return Earthnet_Test_Dataset(test_context_files, test_target_files, ms_cut=ms_cut)
 
 class Earthnet_Test_Dataset(torch.utils.data.Dataset):
     def __init__(self, context_paths, target_paths, ms_cut, fake_weather = False, all_weather = False) -> None:
@@ -80,18 +19,18 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
         return len(self.context_paths)
 
     def __getitem__(self, index):
-        # Load the item from data
+        # load the item from data
         context = np.load(self.context_paths[index], allow_pickle=True)
 
-        # For test samples glue together context & target
+        # for test samples glue together context & target
         target = np.load(self.target_paths[index], allow_pickle=True)
         highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
 
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
-        # For mesoscale data cut out overlapping section of interest
+        # for mesoscale data cut out overlapping section of interest
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
 
-        # Stick all data together
+        # stick all data together
         all_data = np.append(highres_dynamic, highres_static,axis=-2)
 
         meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
@@ -112,53 +51,6 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
         all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
         
         return all_data
-
-class Earthnet_Context_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_paths, ms_cut, device, fake_weather = False, all_weather = False) -> None:
-        self.device = device
-        self.context_paths = context_paths
-        self.ms_cut = ms_cut
-        self.fake_weather = fake_weather
-        super().__init__()
-
-    def __len__(self):
-        return len(self.context_paths)
-
-    def __getitem__(self, index):
-        # Load the item from data
-        context = np.load(self.context_paths[index], allow_pickle=True)
-        highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
-        if (highres_dynamic.shape[2] != 5):
-            highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
-            # Ignore Cloud mask and ESA scene Classification channels
-            highres_dynamic = highres_dynamic[:,:,0:5,:]
-
-        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
-        # For mesoscale data cut out overlapping section of interest
-        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
-
-        # Stick all data together
-        all_data = np.append(highres_dynamic, highres_static,axis=-2)
-
-        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
-                                                       all_data.shape[1],
-                                                       meso_dynamic.shape[2],
-                                                       all_data.shape[3]]))
-        if self.fake_weather:
-            meso_dynamic = 0*meso_dynamic                             
-        all_data = np.append(all_data, meso_dynamic, axis=-2)
-        
-        ''' 
-            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
-            w = width
-            h = height
-            c = channel
-            t = time
-        '''
-        all_data = torch.Tensor(all_data).to(self.device).permute(2, 0, 1, 3)
-        all_data = all_data[:,:,:,:10] # Take only context data
-
-        return all_data        
 
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, paths, ms_cut, fake_weather = False, all_weather = False):
@@ -193,20 +85,20 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         return len(self.paths)
  
     def __getitem__(self, index):
-        # Load the item from data
+        # load the item from data
         context = np.load(self.paths[index], allow_pickle=True)
         
         highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
-        # Make data quality mask the 5th channel
+        # make data quality mask the 5th channel
         highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
-        # Ignore Cloud mask and ESA scene Classification channels
+        # ignore Cloud mask and ESA scene Classification channels
         highres_dynamic = highres_dynamic[:,:,0:5,:]
 
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
-        # For mesoscale data cut out overlapping section of interest
+        # for mesoscale data cut out overlapping section of interest
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
 
-        # Stick all data together
+        # stick all data together
         all_data = np.append(highres_dynamic, highres_static,axis=-2)
 
         meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
@@ -235,7 +127,7 @@ def process_md(md, target_shape):
     interval = round(md.shape[3] / target_shape[3])
 
     md_new = np.empty((tuple([md.shape[0], md.shape[1], md.shape[2], target_shape[3]])))
-    # Make avg, min, max vals over 5 day intervals
+    # make avg, min, max vals over 5 day intervals
     for i in range(target_shape[3]):
         days = [d for d in range(i*interval, i*interval + interval)]
         for j in range(md.shape[0]):
@@ -246,13 +138,13 @@ def process_md(md, target_shape):
                 md_new[j,k,3,i] = np.min(md[j,k,3,days])    # min temp
                 md_new[j,k,4,i] = np.max(md[j,k,4,days])    # max temp
 
-    # Move weather data 1 image forward
+    # move weather data 1 image forward
     # => the nth image is predicted based on the (n-1)th image and nth weather data
     # the last weather inputed will hence be a null prediction (this should never be used by the model!)
     null_weather = md_new[:,:,:,-1:] * 0
     md_new = np.append(md_new[:,:,:,1:], null_weather, axis=-1)
 
-    # Reshape to 128 x 128
+    # reshape to 128 x 128
     md_reshaped = np.empty((tuple([target_shape[0], target_shape[1], md.shape[2], md_new.shape[3]])))
     for i in range(target_shape[0]):
         for j in range(target_shape[1]):
@@ -296,14 +188,14 @@ class Earth_net_DataModule(pl.LightningDataModule):
                 self.test_target_path_list = pickle.load(f)
 
     def setup(self, stage):
-        # Assign Train/val split(s) for use in Dataloaders
+        # assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
             # training
             self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
             # validation
             self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
 
-        # Assign Test split(s) for use in Dataloaders
+        # assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
             if self.test_set == 'val_2':
                 self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)

@@ -14,6 +14,7 @@ def train_line_parser():
     )
     parser.add_argument('-mt', '--model_type', type=str, default='ConvLSTM', choices=['ConvLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
     parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
+    parser.add_argument('-vl', '--validation_loss', type=str, default='ENS', choices=['ENS','NDVI'], help='loss function used for validation/testing')
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
     parser.add_argument('-nl', '--num_layers', type=int, default=None, help='number of layers')
@@ -98,6 +99,9 @@ def train_line_parser():
 
     if args.training_loss is not None:
         cfg_training["training_loss"] = args.training_loss
+
+    if args.validation_loss is not None:
+        cfg_training["test_loss"] = args.validation_loss
         
     if args.pickle_dir is not None:
         cfg_training["pickle_dir"] = args.pickle_dir

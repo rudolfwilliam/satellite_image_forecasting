@@ -13,7 +13,7 @@ from torchmetrics import metric
 from ..losses import cloud_mask_loss
 
 from .model_parts.Conv_LSTM import Conv_LSTM
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import zeroz, mean_cube, last_frame, ENS
  
 class U_Net_model(pl.LightningModule):
     def __init__(self, cfg):
@@ -82,7 +82,7 @@ class U_Net_model(pl.LightningModule):
             prev = torch.cat((prev, non_pred_feat[:,:,:,:,0]), axis=1)
 
             for counter in range(prediction_count - 1):
-                #Only works with last!
+                # only works with last!
                 baseline = prev[:,:4,:,:]
                 pred_delta = self.model(prev)
                 next = torch.add(baseline, pred_delta)
@@ -99,7 +99,7 @@ class U_Net_model(pl.LightningModule):
         if self.cfg["training"]["optimizer"] == "adam":
             self.optimizer = optim.Adam(self.parameters(), lr=self.cfg["training"]["start_learn_rate"])
             
-            # Decay learning rate according for last (epochs - decay_point) iterations
+            # decay learning rate according for last (epochs - decay_point) iterations
             lambda_all = lambda epoch: self.cfg["training"]["start_learn_rate"] \
                           if epoch <= self.cfg["model"]["decay_point"] \
                           else ((self.cfg["training"]["epochs"]-epoch) / (self.cfg["training"]["epochs"]-self.cfg["model"]["decay_point"])
@@ -139,7 +139,6 @@ class U_Net_model(pl.LightningModule):
             
         return loss
     
-    # We could try early stopping here later on
     def validation_step(self, batch, batch_idx):
         '''
             The validation step also uses the L2 loss, but on a prediction of all non-context images

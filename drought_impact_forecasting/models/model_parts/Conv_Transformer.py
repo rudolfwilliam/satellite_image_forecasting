@@ -5,8 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from .shared import Conv_Block
-from ..utils.utils import zeros, last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
-
+from ..utils.utils import zeros, mean_cube, last_frame, ENS
 
 class Residual(nn.Module):
     def __init__(self, fn):
@@ -15,7 +14,6 @@ class Residual(nn.Module):
 
     def forward(self, x, **kwargs):
         return self.fn(x, **kwargs) + x
-        
 
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
@@ -25,7 +23,6 @@ class PreNorm(nn.Module):
 
     def forward(self, x, **kwargs):
         return self.fn(torch.stack([self.norm(x[..., i]) for i in range(x.size()[-1])], dim=-1), **kwargs)
-
 
 class FeedForward(nn.Module):
     def __init__(self, kernel_size, num_hidden, dilation_rate, num_conv_layers):
@@ -39,7 +36,6 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return torch.stack([self.conv(x[..., i]) for i in range(x.size()[-1])], dim=-1)
-
 
 class ConvAttention(nn.Module):
     def __init__(self, num_hidden, kernel_size, enc=True, mask=False):
@@ -101,7 +97,6 @@ class ConvAttention(nn.Module):
 
         return V_out
 
-
 class PositionalEncoding(nn.Module):
     def __init__(self, num_hidden, img_width):
         # no differentiation should happen with respect to the params in here!
@@ -136,7 +131,6 @@ class PositionalEncoding(nn.Module):
             else:
                 return x + torch.unsqueeze(torch.cos(self._get_position_angle_vec(t)), dim=-1).clone().detach() 
 
-
 class Encoder(nn.Module):
     def __init__(self, num_hidden, depth, dilation_rate, num_conv_layers, kernel_size, img_width):
         super().__init__()
@@ -163,7 +157,6 @@ class Encoder(nn.Module):
             x = ff(x)
 
         return x
-
 
 class Decoder(nn.Module):
     def __init__(self, num_hidden, depth, dilation_rate, num_conv_layers, kernel_size, img_width, non_pred_channels):

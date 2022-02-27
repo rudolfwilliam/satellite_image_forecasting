@@ -11,7 +11,7 @@ from .model_parts.adapters.Conv_Transformer_adapter import Conv_Transformer_adap
 from torch.optim.lr_scheduler import LambdaLR
 from torch.optim.lr_scheduler import LambdaLR
 from ..losses import cloud_mask_loss
-from .utils.utils import last_cube, mean_cube, last_frame, mean_prediction, last_prediction, get_ENS, ENS
+from .utils.utils import zeros, mean_cube, last_frame, ENS
 
 class Transformer_model(pl.LightningModule):
     def __init__(self, cfg):
