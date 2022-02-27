@@ -109,33 +109,37 @@ class ConvAttention(nn.Module):
 
 class PositionalEncoding(nn.Module):
     def __init__(self, num_hidden, img_width):
+        # no differentiation should happen with respect to the params in here!
         super(PositionalEncoding, self).__init__()
         self.num_hidden = num_hidden
         self.img_width = img_width
 
     def _get_sinusoid_encoding_table(self, t, device):
         ''' Sinusoid position encoding table '''
-        # no differentiation should happen with respect to the params in here!
-
-        def get_position_angle_vec(position):
-            return_list = [torch.ones((1,
-                                       self.img_width,
-                                       self.img_width),
-                                       device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")) * 
-                                       (position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
-            return torch.stack(return_list, dim=1)
-
-        sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(t)]
-        sinusoid_table = torch.stack(sinusoid_table, dim=0)
+        sinusoid_table = torch.stack([self._get_position_angle_vec(pos_i) for pos_i in range(t)], dim=0)
         sinusoid_table[:, :, 0::2] = torch.sin(sinusoid_table[:, :, 0::2])  # even dim
         sinusoid_table[:, :, 1::2] = torch.cos(sinusoid_table[:, :, 1::2])  # odd dim
 
         return torch.moveaxis(sinusoid_table, 0, -1)
+    
+    def _get_position_angle_vec(self, position):
+        return_list = [torch.ones((1,
+                                   self.img_width,
+                                   self.img_width),
+                                   device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")) * 
+                                   (position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden[-1])) for hid_j in range(self.num_hidden[-1])]
+        return torch.stack(return_list, dim=1)
 
-    def forward(self, x, t):
-        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t, x.get_device()))
-
-        return torch.squeeze(x + self.pos_table.clone().detach(), dim=0)
+    def forward(self, x, t, single=False):
+        """Returns entire positional encoding until step T if not single, otherwise only encoding of time step T."""
+        if not single:
+            self.register_buffer('pos_table', self._get_sinusoid_encoding_table(t, x.get_device()))
+            return torch.squeeze(x + self.pos_table.clone().detach(), dim=0)
+        else:
+            if t % 2 == 0:
+                return x + torch.unsqueeze(torch.sin(self._get_position_angle_vec(t)), dim=-1).clone().detach()
+            else:
+                return x + torch.unsqueeze(torch.cos(self._get_position_angle_vec(t)), dim=-1).clone().detach() 
 
 
 class Encoder(nn.Module):
@@ -293,8 +297,9 @@ class ENS_Conv_Transformer(Conv_Transformer):
             else:
                 baselines[..., t]  = preds[..., t - 1]
 
-            # concatenate with non-pred features & feature embedding
-            queries = torch.concat((queries, self.feature_embedding(torch.concat((preds[..., t-1:t], non_pred_feat[..., t-1:t]), dim=1), network=self.input_feat_gen)), dim=-1)
+            # concatenate with non-pred features & feature embedding & do positional encoding
+            query = self.pos_embedding(self.feature_embedding(torch.concat((preds[..., t-1:t], non_pred_feat[..., t-1:t]), dim=1), network=self.input_feat_gen), t, single=True)
+            queries = torch.concat((queries, query), dim=-1)
             pred_deltas[..., :t] = torch.stack([self.back_to_pixel(self.Decoder(queries, enc_out)[..., i]) for i in range(t)], dim=-1)
 
             preds[..., t] = pred_deltas[..., t] + baselines[..., t]
