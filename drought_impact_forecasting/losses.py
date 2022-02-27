@@ -23,7 +23,7 @@ class Cube_loss(nn.Module):
     
     def forward(self, labels: torch.Tensor, prediction: torch.Tensor):
         # only compute loss on non-cloudy pixels
-        mask = 1 - labels[:,4:5] # [b, 1, h, w, t]
+        mask = 1 - labels[:, 4:5] # [b, 1, h, w, t]
         mask = mask.repeat(1, 4, 1, 1, 1)
         masked_prediction = prediction * mask
         masked_labels = labels[:, :4] * mask
@@ -90,7 +90,7 @@ class ENS_loss(nn.Module):
         # score is a np array with all the scores
         # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
 
-# NDVI l2 loss on non-cloudy pixels
+# NDVI l2 loss on non-cloudy pixels weighted by the proportion of valid pixels
 class NDVI_loss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -115,7 +115,7 @@ class NDVI_loss(nn.Module):
         prediction[prediction < 0] = 0
         prediction[prediction > 1] = 1
 
-        score = np.zeros((labels.shape[0], 5))
+        score = np.zeros((labels.shape[0], 6))
         weight = np.zeros(ndvi_labels.shape[0])
         l2_loss = nn.MSELoss()
 
@@ -123,10 +123,11 @@ class NDVI_loss(nn.Module):
             # mask which data is cloudy and shouldn't be used for calculating the score
             masked_ndvi_labels = torch.mul(ndvi_labels[i], ndvi_mask[i])
             masked_ndvi_prediction = torch.mul(ndvi_prediction[i], ndvi_mask[i])
-            score[i,0] = score[i,1] = score[i,2] = score[i,3] = score[i,4] = l2_loss(masked_ndvi_prediction, masked_ndvi_labels)
+            score[i, 0] = score[i, 1] = score[i, 2] = score[i, 3] = score[i, 4] = l2_loss(masked_ndvi_prediction, masked_ndvi_labels)
 
-            # weight the loss by the 
-            weight[i] = 1 - torch.sum(ndvi_mask[i])/torch.numel(ndvi_mask[i])
+            # the loss should carry a weight corresponding to the number of valid pixels
+            weight[i] = 1 - torch.sum(ndvi_mask[i]) / torch.numel(ndvi_mask[i])
+            score[i,5] = weight[i]
         return weight, score
 
 def cloud_mask_loss(y_preds, y_truth, cloud_mask):

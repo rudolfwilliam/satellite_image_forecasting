@@ -59,7 +59,7 @@ class EN_model(pl.LightningModule):
         :param x: All features of the input time steps.
         :param prediction_count: The amount of time steps that should be predicted all at once.
         :param non_pred_feat: Only need if prediction_count > 1. All features that are not predicted
-        by the model for all the future to be predicted time steps.
+            by the model for all the future to be predicted time steps.
         :return: preds: Full predicted images.
         :return: predicted deltas: Predicted deltas with respect to baselines.
         :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.

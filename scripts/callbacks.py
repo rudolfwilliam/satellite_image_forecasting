@@ -4,19 +4,9 @@ import torch
 import os
 from os import path
 import numpy as np
-from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from drought_impact_forecasting.models.utils.utils import mean_prediction, last_prediction, ENS
 import wandb
-
-class SDVI_Train_callback(pl.Callback):
-    def __init__(self):
-        self.runtime_model_folder = os.path.join(wandb.run.dir,"runtime_model")
-        os.mkdir(os.path.join(wandb.run.dir,"runtime_model"))
-    
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused = None) -> None:
-        torch.save(trainer.model.state_dict(), os.path.join(self.runtime_model_folder, "model_" + str(trainer.current_epoch) + ".torch"))
-        return super().on_train_epoch_end(trainer, pl_module)
     
 class WandbTrain_callback(pl.Callback):
     def __init__(self, print_preds = True):
@@ -59,7 +49,7 @@ class WandbTrain_callback(pl.Callback):
 
             t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
 
-            # For last/mean baseline we don't need weather
+            # for last/mean baseline we don't need weather
             context = all_data[:5, :, :, :t0].unsqueeze(0) # b, c, h, w, t
             target = all_data[:5, :, :, t0:].unsqueeze(0) # b, c, h, w, t
 
@@ -75,17 +65,17 @@ class WandbTrain_callback(pl.Callback):
         avg_scores_mean = np.mean(scores_mean, axis = 0)
         avg_scores_last = np.mean(scores_last, axis = 0)
         wandb.log({ 
-                                'baseline_ENS_mean':  avg_scores_mean[0],
-                                'baseline_mad_mean':  avg_scores_mean[1],
-                                'baseline_ssim_mean': avg_scores_mean[2],
-                                'baseline_ols_mean':  avg_scores_mean[3],
-                                'baseline_emd_mean':  avg_scores_mean[4],
-                                'baseline_ENS_last':  avg_scores_last[0],
-                                'baseline_mad_last':  avg_scores_last[1],
-                                'baseline_ssim_last': avg_scores_last[2],
-                                'baseline_ols_last':  avg_scores_last[3],
-                                'baseline_emd_last':  avg_scores_last[4]
-                            })
+                        'baseline_ENS_mean':  avg_scores_mean[0],
+                        'baseline_mad_mean':  avg_scores_mean[1],
+                        'baseline_ssim_mean': avg_scores_mean[2],
+                        'baseline_ols_mean':  avg_scores_mean[3],
+                        'baseline_emd_mean':  avg_scores_mean[4],
+                        'baseline_ENS_last':  avg_scores_last[0],
+                        'baseline_mad_last':  avg_scores_last[1],
+                        'baseline_ssim_last': avg_scores_last[2],
+                        'baseline_ols_last':  avg_scores_last[3],
+                        'baseline_emd_last':  avg_scores_last[4]
+                    })
                 
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         tr_loss = float(outputs['loss'])
@@ -111,7 +101,7 @@ class WandbTrain_callback(pl.Callback):
     
     def on_validation_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         self.step_validation_loss.append(outputs)
-        # Assigning the picture
+        # assigning the picture
         if self.print_preds:
             if self.print_sample is None:
                 self.print_sample = batch[0:,...]
@@ -122,13 +112,18 @@ class WandbTrain_callback(pl.Callback):
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
 
         if not trainer.sanity_checking:
-            v_loss = np.mean(np.vstack(self.step_validation_loss), axis = 0)
+            batch_loss = np.vstack(self.step_validation_loss)
+            # for ndvi loss, we have an extra weight parameter
+            if batch_loss.shape[1] == 6:
+                batch_loss[:,:5] = batch_loss[:,:5] * batch_loss[:,5:]
+                
+            v_loss = np.mean(batch_loss, axis = 0)
             if np.min(v_loss[1:]) == 0:
                 v_loss[0] = 0
             else:
                 v_loss[0] = 4 / (1 / v_loss[1] + 1 / v_loss[2] + 1 / v_loss[3] + 1 / v_loss[4])
 
-            trainer.logger.experiment.log({ 
+            trainer.logger.experiment.log({
                                     'epoch': trainer.current_epoch,
                                     'epoch_validation_ENS':  v_loss[0],
                                     'epoch_validation_mad':  v_loss[1],
@@ -197,12 +192,14 @@ class WandbTest_callback(pl.Callback):
         self.epoch = epoch
         self.test_set = test_set
         super().__init__()
+
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+'_'+self.test_set[:3]+".csv"), 'a') as f:
             for i in range(len(outputs)):
-                f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3])+ "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
+                f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3]) + "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
 
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         return super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
 
@@ -220,8 +217,7 @@ class Prediction_Callback(pl.Callback):
         self.i_pred = self.runtime_prediction + "/i"
         self.img_pred = self.runtime_prediction + "/img"
 
-
-        # Set up Prediction directory structure if necessary
+        # set up prediction directory structure if necessary
         for dir_path in [self.instance_folder,
                          self.runtime_model_folder,self.runtime_prediction,
                          self.r_pred,self.g_pred,self.b_pred,self.i_pred,self.img_pred]:
@@ -234,7 +230,6 @@ class Prediction_Callback(pl.Callback):
         
         self.channel_list = [self.r_pred, self.g_pred, self.b_pred, self.i_pred]
     
-
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: "Optional" = None
     ) -> None:
@@ -266,7 +261,6 @@ class Prediction_Callback(pl.Callback):
                 ims.append(wandb.Image(plt.imread(c + "/epoch_" + str(self.epoch) + ".png"), 
                                        caption = "epoch: {0} c: {1}".format(self.epoch, c[-1])))
                     
-
             wandb.log({"Runtime Predictions":ims})
 
             # values need to be between 0 and 1
@@ -314,13 +308,8 @@ class Prediction_Callback(pl.Callback):
             wandb.log({"Runtime Predictions":ims})
             # in the very first epoch, store ground truth
 
-
             self.epoch += 1
+
     def on_train_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
 
         return super().on_train_end(trainer, pl_module)
-
-
-
-
-
