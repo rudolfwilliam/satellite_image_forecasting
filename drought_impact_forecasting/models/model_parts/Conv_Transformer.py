@@ -1,4 +1,3 @@
-from turtle import forward
 import numpy as np
 import torch
 import torch.nn as nn
@@ -36,6 +35,7 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return torch.stack([self.conv(x[..., i]) for i in range(x.size()[-1])], dim=-1)
+
 
 class ConvAttention(nn.Module):
     def __init__(self, num_hidden, kernel_size, enc=True, mask=False):
@@ -295,4 +295,4 @@ class ENS_Conv_Transformer(Conv_Transformer):
         return preds, pred_deltas, baselines
     
     def _get_device(self):
-        return next(self.parameters()).device 
+        return next(self.parameters()).device

@@ -1,0 +1,14 @@
+{
+    "dilation_rate": 1,
+    "input_channels": 11,
+    "hidden_channels": 22,
+    "output_channels": 4,
+    "big_mem": true,
+    "img_width": 128,
+    "img_height": 128,
+    "layer_norm": false,
+    "kernel": 5,
+    "memory_kernel": 5,
+    "n_layers": 3,
+    "peephole": true
+}

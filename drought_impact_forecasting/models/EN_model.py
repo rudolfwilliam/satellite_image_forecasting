@@ -1,11 +1,11 @@
 import pytorch_lightning as pl
 import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-from drought_impact_forecasting.models.model_parts.Conv_Transformer import ENS_Conv_Transformer
+from .model_parts.AutoencLSTM import AutoencLSTM
+from .model_parts.Conv_Transformer import ENS_Conv_Transformer
+from .model_parts.Conv_LSTM import Conv_LSTM
 from ..losses import get_loss_from_name
 from ..optimizers import get_opt_from_name
-from .model_parts.Conv_LSTM import Conv_LSTM
 from .utils.utils import ENS
 
 class EN_model(pl.LightningModule):
@@ -36,6 +36,20 @@ class EN_model(pl.LightningModule):
                                    img_width=self.model_cfg["img_width"],
                                    img_height=self.model_cfg["img_height"],
                                    peephole=self.model_cfg["peephole"])
+        elif model_type == "AutoencLSTM":
+            self.model = AutoencLSTM(input_dim=self.model_cfg["input_channels"],
+                                     output_dim=self.model_cfg["output_channels"],
+                                     hidden_dims=self.model_cfg["hidden_channels"],
+                                     big_mem=self.model_cfg["big_mem"],
+                                     num_layers=self.model_cfg["n_layers"],
+                                     kernel_size=self.model_cfg["kernel"],
+                                     memory_kernel_size=self.model_cfg["memory_kernel"],
+                                     dilation_rate=self.model_cfg["dilation_rate"],
+                                     baseline=self.training_cfg["baseline"],
+                                     layer_norm_flag=self.model_cfg["layer_norm"],
+                                     img_width=self.model_cfg["img_width"],
+                                     img_height=self.model_cfg["img_height"],
+                                     peephole=self.model_cfg["peephole"])
         elif model_type == "ConvTransformer":
             self.model = ENS_Conv_Transformer(num_hidden=self.model_cfg["num_hidden"],
                                               output_dim=self.model_cfg["output_channels"],
