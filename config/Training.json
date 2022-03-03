@@ -25,5 +25,6 @@
     "training_loss": "l2",
     "test_loss": "ENS",
     "use_context": false,
-    "fake_weather": false
+    "fake_weather": false,
+    "precision": 16
 }
