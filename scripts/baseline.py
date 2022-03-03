@@ -2,10 +2,9 @@ import sys
 import os
 from os.path import join
 import json
+import torch
 
 sys.path.append(os.getcwd())
-
-import torch
 
 from Data.data_preparation import Earth_net_DataModule
 from drought_impact_forecasting.models.utils.utils import zeros, mean_cube, last_frame, ENS
@@ -46,7 +45,7 @@ def main():
         all_data = test_DL.dataset.__getitem__(i)
 
         T = all_data.size()[3]
-        t0 = round(all_data.shape[-1]/3) #t0 is the length of the context part
+        t0 = round(all_data.shape[-1]/3) # t0 is the length of the context part
 
         # for last/mean baseline we don't need weather
         context = all_data[:5, :, :, :t0].unsqueeze(0) # b, c, h, w, t

@@ -12,7 +12,7 @@ def train_line_parser():
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('-mt', '--model_type', type=str, default='ConvLSTM', choices=['ConvLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
+    parser.add_argument('-mt', '--model_type', type=str, default='ConvLSTM', choices=['ConvLSTM', 'AutoencLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
     parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
     parser.add_argument('-vl', '--validation_loss', type=str, default='ENS', choices=['ENS','NDVI'], help='loss function used for validation/testing')
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
