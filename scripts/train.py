@@ -96,7 +96,8 @@ def main():
                       devices=cfg_training["devices"],
                       accelerator=cfg_training["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback], 
-                      num_sanity_val_steps=1)
+                      num_sanity_val_steps=1,
+                      precision = cfg_training["precision"])
 
     # run training
     if cfg_training["checkpoint"] is None:

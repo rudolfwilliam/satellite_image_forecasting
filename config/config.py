@@ -26,6 +26,7 @@ def train_line_parser():
     parser.add_argument('-lr', '--learning_rate', type=float, default=None, help='starting learning rate')
     parser.add_argument('-lf', '--learning_factor', type=float, default=None, help='learning rate factor')
     parser.add_argument('-p',  '--patience', type=int, default=None, help='patience')
+    parser.add_argument('-pr',  '--precision', type=int, default=None,choices=[16,32,64], help='bit precision')
     parser.add_argument('-e',  '--epochs', type=int, default=200, help='training epochs')
     parser.add_argument('-bf', '--baseline_function', type=str, default=None, choices=['mean_cube', 'last_frame', 'zeros'], help='baseline function')
     parser.add_argument('-pd', '--pickle_dir', type=str, default=None, help='directory with the desired pickle files')
@@ -90,6 +91,9 @@ def train_line_parser():
 
     if args.patience is not None:
         cfg_training["patience"] = args.patience
+
+    if args.precision is not None:
+        cfg_training["precision"] = args.patience
 
     if args.epochs is not None:
         cfg_training["epochs"] = args.epochs
