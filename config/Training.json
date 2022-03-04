@@ -26,5 +26,5 @@
     "test_loss": "ENS",
     "use_context": false,
     "fake_weather": false,
-    "precision": 16
+    "precision": 32
 }
