@@ -30,12 +30,13 @@ def objective(trial):
     model_type, cfg_model, cfg_training = train_line_parser()
 
     # set up search space
-    cfg_model["n_layers"] = trial.suggest_int('nl', 2, 4)
-    cfg_model["hidden_channels"] = trial.suggest_int('hc', 15, 22)
-    cfg_model["layer_norm"] = trial.suggest_categorical("lm", [True,False])
-    cfg_training["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
-    cfg_training["patience"] = trial.suggest_int("pa", 3, 20)
-    cfg_training["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    #cfg_model["n_layers"] = trial.suggest_int('nl', 2, 4)
+    #cfg_model["hidden_channels"] = trial.suggest_int('hc', 15, 22)
+    #cfg_model["layer_norm"] = trial.suggest_categorical("lm", [True,False])
+    cfg_model["dilation_rate"] = trial.suggest_int('dl', 1, 3)
+    #cfg_training["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
+    #cfg_training["patience"] = trial.suggest_int("pa", 3, 20)
+    #cfg_training["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
 
     # kernel sizes must be odd to be symmetric
     cfg_model["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)

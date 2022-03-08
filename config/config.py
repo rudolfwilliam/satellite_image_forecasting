@@ -22,6 +22,7 @@ def train_line_parser():
     parser.add_argument('-ln', '--layer_normalization', type=str, default=None, help='layer normalization: t = true, f = false')
     parser.add_argument('-k',  '--kernel_size', type=int, default=None, help='convolution kernel size')
     parser.add_argument('-mk', '--mem_kernel_size', type=int, default=None, help='memory kernel size')
+    parser.add_argument('-dl', '--dilation_rate', type=int, default=None, help='diliation rate')
     parser.add_argument('-ft', '--future_training', type=int, default=None, help='future steps for training')
     parser.add_argument('-lr', '--learning_rate', type=float, default=None, help='starting learning rate')
     parser.add_argument('-lf', '--learning_factor', type=float, default=None, help='learning rate factor')
@@ -76,6 +77,9 @@ def train_line_parser():
 
     if args.mem_kernel_size is not None:
         cfg_model["memory_kernel"] = args.mem_kernel_size
+    
+    if args.dilation_rate is not None:
+        cfg_model["dilation_rate"] = args.dilation_rate
 
     if args.num_layers is not None:
         cfg_model["n_layers"] = args.num_layers
