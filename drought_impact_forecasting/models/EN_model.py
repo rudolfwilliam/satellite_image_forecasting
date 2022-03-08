@@ -73,7 +73,7 @@ class EN_model(pl.LightningModule):
         :param x: All features of the input time steps.
         :param prediction_count: The amount of time steps that should be predicted all at once.
         :param non_pred_feat: Only need if prediction_count > 1. All features that are not predicted
-            by the model for all the future to be predicted time steps.
+            by the model for all the future time steps we want to predict.
         :return: preds: Full predicted images.
         :return: predicted deltas: Predicted deltas with respect to baselines.
         :return: baselines: All future baselines as computed by the predicted deltas. Note: These are NOT the ground truth baselines.
@@ -84,7 +84,7 @@ class EN_model(pl.LightningModule):
 
         return preds, pred_deltas, baselines
 
-    def batch_loss(self, batch, t_future = 20, loss = None):
+    def batch_loss(self, batch, t_future=20, loss=None):
         cmc = 4 # cloud_mask channel
         T = batch.size()[4]
         t0 = T - t_future
@@ -106,7 +106,7 @@ class EN_model(pl.LightningModule):
         scheduler = ReduceLROnPlateau(optimizer, 
                                       mode='min', 
                                       factor=self.training_cfg["lr_factor"], 
-                                      patience= self.training_cfg["patience"],
+                                      patience=self.training_cfg["patience"],
                                       threshold=self.training_cfg["lr_threshold"],
                                       verbose=True)
         lr_sc = {
@@ -124,7 +124,7 @@ class EN_model(pl.LightningModule):
             h = height
             t = time
         '''
-        l = self.batch_loss(batch, t_future=self.future_training, loss = self.training_loss)
+        l = self.batch_loss(batch, t_future=self.future_training, loss=self.training_loss)
         return l
     
     def validation_step(self, batch, batch_idx):
@@ -136,7 +136,7 @@ class EN_model(pl.LightningModule):
             h = height
             t = time
         '''
-        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss = self.test_loss)
+        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss=self.test_loss)
         v_loss = np.mean(np.vstack(l), axis = 0)
         if np.min(v_loss[1:]) == 0:
             v_loss[0] = 0
@@ -155,5 +155,5 @@ class EN_model(pl.LightningModule):
             t = time
         '''
         # across all test sets 1/3 is context, 2/3 target
-        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss = self.test_loss)
+        _, l = self.batch_loss(batch, t_future=2*int(batch.size()[4]/3), loss=self.test_loss)
         return l

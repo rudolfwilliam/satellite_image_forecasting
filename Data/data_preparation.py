@@ -164,6 +164,19 @@ class Earth_net_DataModule(pl.LightningDataModule):
                  test_set = 'val_2',
                  fake_weather = False,
                  all_weather = False):
+        """
+        This is wrapper for all of our datasets. It preprocesses the data into a format that can be fed into our model.
+
+        Parameters:
+            data_dir: Location of pickle file with paths to the train/validation/test datapoints
+            mesoscale_cut: The coordinates of the mesoscale data channels that overlap with our satellite image data
+            train_batch_size: Number of data points in a single train batch
+            val_batch_size: Number of data points in a single validation batch
+            test_batch_size: Number of data points in a single test batch
+            test_set: Which test set to use
+            fake_weather: Whether to use 'fake_weather'
+            train_batch_size: Number of data points in a single train batch
+        """
         super().__init__()
         self.data_dir = data_dir
         self.mesoscale_cut = mesoscale_cut
@@ -214,6 +227,7 @@ class Earth_net_DataModule(pl.LightningDataModule):
         else:
             return DataLoader(self.test_data, batch_size=self.test_batch_size)
 
+    # store pickle files together with model for reproducibility
     def serialize_datasets(self, directory):
         with open(join(directory, "train_data_paths.pkl"), "wb") as fp:
             pickle.dump(self.training_path_list, fp)

@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch
 from ..utils.utils import zeros, mean_cube, last_frame, ENS
 
-
 class Conv_LSTM_Cell(nn.Module):
     def __init__(self, input_dim, h_channels, big_mem, kernel_size, memory_kernel_size, dilation_rate, layer_norm_flag, img_width, img_height, peephole):
         
@@ -81,6 +80,10 @@ class Conv_LSTM(nn.Module):
             kernel_size: Size of kernel in convolutions (Note: Will do same padding)
             memory_kernel_size: Size of kernel in convolutions when the memory influences the output
             dilation_rate: Size of holes in convolutions
+            img_width: Width of the image in pixels
+            img_height: Height of the image in pixels
+            layer_norm_flag: Whether to perform layer normalization
+            baseline: What baseline function to use
             num_layers: Number of LSTM layers stacked on each other
             peephole: Whether to include peephole connections or not
         Input:
@@ -90,8 +93,6 @@ class Conv_LSTM(nn.Module):
         """
         super(Conv_LSTM, self).__init__()
         self._check_kernel_size_consistency(kernel_size)
-
-        # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
 
         self.input_dim = input_dim                                                  # n of channels in input pics
         self.h_channels = self._extend_for_multilayer(hidden_dims, num_layers - 1)  # n of hidden channels   

@@ -71,18 +71,18 @@ def objective(trial):
     random.seed(cfg_training["seed"])
     pl.seed_everything(cfg_training["seed"], workers=True)
 
-    EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
-                                     train_batch_size = cfg_training["train_batch_size"],
-                                     val_batch_size = cfg_training["val_1_batch_size"], 
-                                     test_batch_size = cfg_training["val_2_batch_size"], 
-                                     mesoscale_cut = cfg_training["mesoscale_cut"])
+    EN_dataset = Earth_net_DataModule(data_dir=cfg_training["pickle_dir"], 
+                                      train_batch_size=cfg_training["train_batch_size"],
+                                      val_batch_size=cfg_training["val_1_batch_size"], 
+                                      test_batch_size=cfg_training["val_2_batch_size"], 
+                                      mesoscale_cut=cfg_training["mesoscale_cut"])
     
     # to build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
     # load Callbacks
-    wd_callbacks = WandbTrain_callback(print_preds=True)
-    # Create folder for runtime models
+    wd_callbacks = WandbTrain_callback(print_preds=False)
+    # create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir, "runtime_model")
 
     if not os.path.isdir(runtime_model_folder):
@@ -90,8 +90,8 @@ def objective(trial):
     
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
-                                          save_top_k = -1,
-                                          filename = 'model_{epoch:03d}')
+                                          save_top_k=-1,
+                                          filename='model_{epoch:03d}')
     prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_validation_ENS')
 
     # setup Trainer

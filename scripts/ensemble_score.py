@@ -16,7 +16,7 @@ output_file = join(score_dir, "ensemble_scores_" + t + ".txt")
 with open(output_file, 'w') as f:
     f.write("Evaluating ensemble at time " + t + "\n")
 
-# Collect all csv files (model scores)
+# collect all csv files (model scores)
 for path, subdirs, files in os.walk(join(os.getcwd(), score_dir)):
     for name in files:
         if '.csv' in name:
@@ -26,14 +26,14 @@ for path, subdirs, files in os.walk(join(os.getcwd(), score_dir)):
 nm = len(names)
 
 scr = np.nan_to_num(np.stack(scores, axis=0), nan=0)
-# Calculate the harmonic mean of ENS components
+# calculate the harmonic mean of ENS components
 def hm(scores):
     if np.min(scores) == 0:
         return 0
     else:
         return 4 / np.sum(1/scores)
 
-# Evaluate each model individually
+# evaluate each model individually
 for i in range(nm):
     components = np.mean(scr[i], axis=0)
     with open(output_file, 'a') as f:
@@ -42,7 +42,7 @@ for i in range(nm):
         f.write("    Lazy ENS " + str(hm(components[:4])) + "\n")
         f.write("    MAD: {0} OLS: {1} EMD: {2} SSIM: {3}".format(components[0], components[2], components[3], components[1]) + "\n")
 
-# Compute the ENS (+ component) for best prediction for each sample
+# compute the ENS (+ component) for best prediction for each sample
 def en_score(s):
     best_score = np.zeros((s.shape[1], 6))
     for i in range(s.shape[1]):
@@ -61,7 +61,7 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-# Compute scores of each subset ensemble of models
+# compute scores of each subset ensemble of models
 lst = list(powerset(list(range(nm))))[1+nm:]
 e_scores = []
 for l in lst:

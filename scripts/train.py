@@ -70,12 +70,12 @@ def main():
     random.seed(cfg_training["seed"])
     pl.seed_everything(cfg_training["seed"], workers=True)
 
-    EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
-                                      train_batch_size = cfg_training["train_batch_size"],
-                                      val_batch_size = cfg_training["val_1_batch_size"], 
-                                      test_batch_size = cfg_training["val_2_batch_size"], 
-                                      mesoscale_cut = cfg_training["mesoscale_cut"],
-                                      fake_weather = cfg_training["fake_weather"])
+    EN_dataset = Earth_net_DataModule(data_dir=cfg_training["pickle_dir"], 
+                                      train_batch_size=cfg_training["train_batch_size"],
+                                      val_batch_size=cfg_training["val_1_batch_size"], 
+                                      test_batch_size=cfg_training["val_2_batch_size"], 
+                                      mesoscale_cut=cfg_training["mesoscale_cut"],
+                                      fake_weather=cfg_training["fake_weather"])
     
     # build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
@@ -87,8 +87,8 @@ def main():
     os.mkdir(runtime_model_folder)
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
-                                          save_top_k = -1,
-                                          filename = 'model_{epoch:03d}')
+                                          save_top_k=-1,
+                                          filename='model_{epoch:03d}')
 
     # set up trainer    
     trainer = Trainer(max_epochs=cfg_training["epochs"], 
@@ -97,7 +97,7 @@ def main():
                       accelerator=cfg_training["accelerator"],
                       callbacks=[wd_callbacks, checkpoint_callback], 
                       num_sanity_val_steps=1,
-                      precision = cfg_training["precision"])
+                      precision=cfg_training["precision"])
 
     # run training
     if cfg_training["checkpoint"] is None:

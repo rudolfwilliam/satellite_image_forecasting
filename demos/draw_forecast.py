@@ -14,7 +14,7 @@ def main():
     truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/extreme_context_data_paths.pkl", 
                                                   test_target_dataset = "Data/small_data/extreme_target_data_paths.pkl")
     model = load_model()
-    # No water 
+    # no water 
     npf_no_water = copy.deepcopy(npf)
     npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
     preds, x_deltas, baselines = model(x = context, 
@@ -41,7 +41,7 @@ def visualize_rgb(preds, truth, filename = None):
     
     
     truth = truth.detach().numpy()
-    # For smaller iid visualizations
+    # for smaller iid visualizations
     '''truth_idxs = [0,5,10,15,20,25]
     pred_idxs = [0,5,10,15]
     truth = np.take(truth, truth_idxs, axis=-1)
@@ -56,8 +56,8 @@ def visualize_rgb(preds, truth, filename = None):
                 img[:, 128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = preds[j][:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
     if filename == None:
-        plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
-        plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
+        plt.imsave('visualizations/rgb.png', np.clip(img.transpose(1,2,0),0,1))
+        plt.imsave('visualizations/rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img.transpose(1,2,0),0,1))
@@ -93,13 +93,11 @@ def visualize_ndvi(preds, truth, filename = None, gt = True):
             for j in range(len(ndvi_preds)):
                 img[128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = ndvi_preds[i][0, :, :, i - t]
     if filename == None:
-        plt.imsave('ndvi.png', np.clip(img,0,1))
+        plt.imsave('visualizations/ndvi.png', np.clip(img,0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img,0,1))
     
     print("Done")
-
-
 
 main()
