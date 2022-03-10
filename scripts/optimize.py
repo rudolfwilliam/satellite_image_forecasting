@@ -30,12 +30,13 @@ def objective(trial):
     model_type, cfg_model, cfg_training = train_line_parser()
 
     # set up search space
-    cfg_model["n_layers"] = trial.suggest_int('nl', 2, 4)
-    cfg_model["hidden_channels"] = trial.suggest_int('hc', 15, 22)
-    cfg_model["layer_norm"] = trial.suggest_categorical("lm", [True,False])
-    cfg_training["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
-    cfg_training["patience"] = trial.suggest_int("pa", 3, 20)
-    cfg_training["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
+    #cfg_model["n_layers"] = trial.suggest_int('nl', 2, 4)
+    #cfg_model["hidden_channels"] = trial.suggest_int('hc', 15, 22)
+    #cfg_model["layer_norm"] = trial.suggest_categorical("lm", [True,False])
+    cfg_model["dilation_rate"] = trial.suggest_int('dl', 1, 3)
+    #cfg_training["start_learn_rate"] = trial.suggest_float("lr", 1e-5, 1e-4, log=True)
+    #cfg_training["patience"] = trial.suggest_int("pa", 3, 20)
+    #cfg_training["optimizer"] = trial.suggest_categorical("op", ["adam","adamW"])
 
     # kernel sizes must be odd to be symmetric
     cfg_model["kernel"] = 3 + 2 * trial.suggest_int('k', 0, 2)
@@ -70,18 +71,18 @@ def objective(trial):
     random.seed(cfg_training["seed"])
     pl.seed_everything(cfg_training["seed"], workers=True)
 
-    EN_dataset = Earth_net_DataModule(data_dir = cfg_training["pickle_dir"], 
-                                     train_batch_size = cfg_training["train_batch_size"],
-                                     val_batch_size = cfg_training["val_1_batch_size"], 
-                                     test_batch_size = cfg_training["val_2_batch_size"], 
-                                     mesoscale_cut = cfg_training["mesoscale_cut"])
+    EN_dataset = Earth_net_DataModule(data_dir=cfg_training["pickle_dir"], 
+                                      train_batch_size=cfg_training["train_batch_size"],
+                                      val_batch_size=cfg_training["val_1_batch_size"], 
+                                      test_batch_size=cfg_training["val_2_batch_size"], 
+                                      mesoscale_cut=cfg_training["mesoscale_cut"])
     
     # to build back the datasets for safety
     EN_dataset.serialize_datasets(wandb.run.dir)
     
     # load Callbacks
-    wd_callbacks = WandbTrain_callback(print_preds=True)
-    # Create folder for runtime models
+    wd_callbacks = WandbTrain_callback(print_preds=False)
+    # create folder for runtime models
     runtime_model_folder = os.path.join(wandb.run.dir, "runtime_model")
 
     if not os.path.isdir(runtime_model_folder):
@@ -89,8 +90,8 @@ def objective(trial):
     
     checkpoint_callback = ModelCheckpoint(dirpath=runtime_model_folder, 
                                           save_on_train_epoch_end=True, 
-                                          save_top_k = -1,
-                                          filename = 'model_{epoch:03d}')
+                                          save_top_k=-1,
+                                          filename='model_{epoch:03d}')
     prun_callback = PyTorchLightningPruningCallback(trial, monitor='epoch_validation_ENS')
 
     # setup Trainer

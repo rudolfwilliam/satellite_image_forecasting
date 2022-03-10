@@ -12,7 +12,6 @@ sys.path.append(os.getcwd())
 import matplotlib.pyplot as plt
 
 from config.config import diagnosticate_line_parser
-from drought_impact_forecasting.models.LSTM_model import LSTM_model
 from drought_impact_forecasting.models.EN_model import EN_model 
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -43,7 +42,7 @@ def load_data_point(train_dataset = None,
             target: the part of the cube that must be forecasted
             npf: non predictive features (weather) in the future
     """
-    # Parameter checking
+    # parameter checking
     if train_dataset is not None and (test_context_dataset is not None or test_context_dataset is not None): 
         raise ValueError("You can either use data from training dataset or from testing dataset, not both")
     if (test_context_dataset is not None and test_target_dataset is None) or (test_context_dataset is None and test_target_dataset is not None): 
@@ -61,6 +60,7 @@ def load_data_point(train_dataset = None,
         with open(join(os.getcwd(), test_target_dataset),'rb') as f:
             test_target_path_list = pickle.load(f)
         dataset = Earthnet_Test_Dataset(test_context_path_list, test_target_path_list, [39,41])
+    
     # get cube
     truth = dataset.__getitem__(index)
     # cube splitting

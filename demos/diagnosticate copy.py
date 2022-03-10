@@ -63,9 +63,9 @@ def main():
     elif cfg['action'] == 'synthetic weather':
         fake_weather(model, truth, t0, T)
     '''real_deltas = target[:, :4, ...] - truth[:,:4,:,:,t0-1:-1]
-    full_mit_baselines = truth
-    full_mit_baselines[:, :4, :, :, t0:] = real_deltas
-    generate_plot(x_deltas, full_mit_baselines)'''
+    full_with_baselines = truth
+    full_with_baselines[:, :4, :, :, t0:] = real_deltas
+    generate_plot(x_deltas, full_with_baselines)'''
 
 def fake_weather(model, truth, t0, T):
     path = "visualizations/fake_weather"
@@ -120,7 +120,7 @@ def visualize_rgb(pred, truth, filename = None, gt = True):
     pred = pred.detach().numpy()
     truth = truth.detach().numpy()
 
-    # For smaller iid visualizations
+    # for smaller iid visualizations
     '''truth_idxs = [0,5,10,15,20,25]
     pred_idxs = [0,5,10,15]
     truth = np.take(truth, truth_idxs, axis=-1)
@@ -160,7 +160,6 @@ def visualize_ndvi(pred, truth, filename = None, gt = True):
     ndvi_truth = ndvi_truth*cloud_mask
     ndvi_pred = ((pred[:, 3, ...] - pred[ :, 2, ...]) / (
                 pred[:, 3, ...] + pred[:, 2, ...] + 1e-6))
-
 
     T = truth.shape[-1]
     t = int(T/3)

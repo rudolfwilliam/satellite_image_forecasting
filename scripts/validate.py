@@ -3,9 +3,6 @@ import os
 import wandb
 import numpy as np
 sys.path.append(os.getcwd())
-from logging import Logger
-from shutil import copy2
-from os import listdir
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from config.config import validate_line_parser
@@ -28,12 +25,12 @@ def main():
     wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
     # always use same val_2 data from Data folder
-    EN_dataset = Earth_net_DataModule(data_dir = configs['dataset_dir'],
-                                     train_batch_size = configs['batch_size'],
-                                     val_batch_size = configs['batch_size'],
-                                     test_batch_size = configs['batch_size'],
-                                     test_set = configs['test_set'],
-                                     mesoscale_cut = [39,41])
+    EN_dataset = Earth_net_DataModule(data_dir=configs['dataset_dir'],
+                                     train_batch_size=configs['batch_size'],
+                                     val_batch_size=configs['batch_size'],
+                                     test_batch_size=configs['batch_size'],
+                                     test_set=configs['test_set'],
+                                     mesoscale_cut=[39,41])
     
     callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'], configs['test_set'])
 
@@ -45,7 +42,7 @@ def main():
     model.eval()
 
     # run validation
-    trainer.test(model = model, dataloaders = EN_dataset)
+    trainer.test(model=model, dataloaders=EN_dataset)
 
     wandb.finish()
 

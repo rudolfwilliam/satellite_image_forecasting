@@ -90,7 +90,7 @@ def main():
     # remove vertical gap between subplots
     plt.subplots_adjust(hspace=.0)
     if filename == None:
-        plt.savefig('NDVI_time_series.png')
+        plt.savefig('visualizations/NDVI_time_series.png')
         plt.show()
     else:
         plt.savefig(filename)
