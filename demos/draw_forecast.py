@@ -47,7 +47,6 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
     
     
     truth = truth.detach().numpy()
-
     T = truth.shape[-1]
     t = T-pred.shape[-1]
 
@@ -72,8 +71,8 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
                 img[:, 128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = preds[j][:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
     if filename == None:
-        plt.imsave('rgb.png', np.clip(img.transpose(1,2,0),0,1))
-        plt.imsave('rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
+        plt.imsave('visualizations/rgb.png', np.clip(img.transpose(1,2,0),0,1))
+        plt.imsave('visualizations/rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img.transpose(1,2,0),0,1))
@@ -109,13 +108,11 @@ def visualize_ndvi(preds, truth, filename = None, gt = True):
             for j in range(len(ndvi_preds)):
                 img[128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = ndvi_preds[i][0, :, :, i - t]
     if filename == None:
-        plt.imsave('ndvi.png', np.clip(img,0,1))
+        plt.imsave('visualizations/ndvi.png', np.clip(img,0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img,0,1))
     
     print("Done")
-
-
 
 main()
