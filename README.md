@@ -26,9 +26,9 @@ Prerequisites: Create a python environment as defined in ```config/dif_env.yml``
 
     ```python scripts/data_collection.py -s training/dir -tf test/dir -d dir/to/store/paths -td no/of/training/samples/ -v1 no/of/val1/samples -v2 no/of/val2/samples```
 
-3. Train the model (use ```config/Training.json``` to edit tunable parameters):
+3. Train the model. Use the -mt flag to specify the model type (ConvLSTM, AutoencLSTM, ConvTransformer). Use ```config/Training.json``` and relevant ```<Model_Name.json>``` to edit tunable parameters:
 
-    ```python scripts/train.py ```
+    ```python scripts/train.py -mt ConvLSTM```
 
 4. Validate the model on the val2 set (the wandb run name can be found in the wandb/run-XYZ/files/run_name.txt file):
 
@@ -38,7 +38,7 @@ Prerequisites: Create a python environment as defined in ```config/dif_env.yml``
 
     ```python scripts/validate.py -rn wandb/run/name -e epoch/to/validate/on -ts iid_test_split```
 
-6. Evaluate your (ensemble of) model:
+6. Evaluate your (ensemble of) model(s):
 
     ```python scripts/ensemble_score.py```
 
@@ -50,5 +50,10 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 
 ```demos/data_observation_demo.ipynb``` for visualizing the dataset
 
+```demos/draw_forecast.py ``` for visualizing predictions against ground truth
+
+```demos/time_ndvi_plot.py``` for vizualizing the evolution of NDVI over time
+
 ```scripts/diagnosticate.py -rn wandb/run/name -e epoch/to/validate/on``` for visualizing the model's predictions
 
+```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
