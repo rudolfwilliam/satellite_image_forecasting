@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 from load_model_data import *
-
+year = "2020"
 def main():
     filename = None
     truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/extreme_context_data_paths.pkl", 
@@ -26,11 +26,11 @@ def main():
     #pred2, _, _ = model2(x = context, 
     #                   prediction_count = int((2/3)*truth.shape[-1]), 
     #                   non_pred_feat = npf)
-    truth_2017 = np.load("demos/sentinel_data.npy").astype(float)
-    truth_ndvi = truth_2017.transpose(2,0,1,3)[np.newaxis,...]
+    truth_old= np.load("demos/sentinel_data_"+year+".npy").astype(float)
+    truth_old = truth_old.transpose(2,0,1,3)[np.newaxis,...]
 
 
-    plot_ndvi_mt(truth_ndvi, truth, [pred1], dates_bound = dates_strings, model_names=["ConvLSTM","EncoderDecoderConvLSTM"])
+    plot_ndvi_mt(truth_old, truth, [pred1], dates_bound = dates_strings, model_names=["ConvLSTM","EncoderDecoderConvLSTM"])
 
 
     # take out cloudy days
@@ -46,6 +46,8 @@ def plot_ndvi_mt(old_truth, truth, preds, dates_bound = None, filename = None, m
 
     old_truth_ndvi = ((old_truth[:, 3, ...] - old_truth[ :, 2, ...]) / (
                 old_truth[:, 3, ...] + old_truth[:, 2, ...] + 1e-6))
+    cloud_mask = 1 - old_truth[:, 4, ...]/255
+    old_truth_ndvi = old_truth_ndvi*cloud_mask
 
     if not isinstance(preds, list):
         preds = [preds]
@@ -71,7 +73,7 @@ def plot_ndvi_mt(old_truth, truth, preds, dates_bound = None, filename = None, m
     valid_ndvi_time = q_t[0]!=0
     q_t[0,valid_ndvi_time]
 
-    valid_ndvi_time_old = q_t_old[0]>=.13
+    valid_ndvi_time_old = q_t_old[0]!=0
     q_t_old[0,valid_ndvi_time_old]
 
     x_t = np.arange(truth.shape[-1])[valid_ndvi_time]
@@ -106,7 +108,7 @@ def plot_ndvi_mt(old_truth, truth, preds, dates_bound = None, filename = None, m
         ax0.plot(x_p, q_p[1,:], '--',color = color, label = mod_name)
 
     ax0.plot(x_t, q_t[1,valid_ndvi_time], '-',color = 'k', label = 'true median')
-    ax0.plot(x_old, q_t_old[1,valid_ndvi_time_old], '-',color = 'g', label = '2017 median')
+    ax0.plot(x_old, q_t_old[1,valid_ndvi_time_old], '-',color = 'g', label = year + ' median')
     ax0.legend(loc="upper right")
     for q_p, color in zip(q_ps, colors):
         ax0.fill_between(x_p, q_p[0,:],q_p[2,:], color = color, alpha=.1)
@@ -172,7 +174,7 @@ def plot_ndvi_mt(old_truth, truth, preds, dates_bound = None, filename = None, m
     plt.xlim([x_t[0],x_t[-1]]) #only to see the legal part.
 
     if filename == None:
-        plt.savefig('NDVI_time_series.pdf', format="pdf")
+        plt.savefig("NDVI_time_series"+year+".pdf", format="pdf")
         plt.show()
     else:
         plt.savefig(filename)
