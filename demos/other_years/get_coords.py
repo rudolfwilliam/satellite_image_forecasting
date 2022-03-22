@@ -4,7 +4,6 @@ import matplotlib as mpl
 import earthnet as en
 from os import walk
 import os
-from my_coord import get_coords_from_cube as my_coord
 
 
 import os
@@ -33,8 +32,25 @@ NEWCOORD = {
         'EPSG': 32632
     }
 }
-
-def get_coords(cubename: str, return_meso: bool = False):
+locs = {
+    "32UQC_2018-01-28_2018-11-23_5305_5433_4665_4793_82_162_72_152":{
+        "lon_max": 13.243973,
+        "lon_min": 13.208011,
+        "lat_max": 51.321081, 
+        "lat_min": 51.297443
+    },
+    "32UQC_2018-01-28_2018-11-23_5305_5433_4409_4537_82_162_68_148":{
+        "lon_max": 13.172049,
+        "lon_min": 13.136258,
+        "lat_max": 51.323078, 
+        "lat_min": 51.299554
+    }
+}
+def get_limited_coords(cubename: str):
+    coord = locs[cubename]
+    return coord["lon_min"], coord["lat_min"], coord["lon_max"], coord["lat_max"]
+    
+def get_coords(cubename: str):
     cubetile,_, _,  hr_y_min, hr_y_max,hr_x_min, hr_x_max, meso_x_min, meso_x_max, meso_y_min, meso_y_max = os.path.splitext(cubename)[0].split("_")
 
     tile = NEWCOORD[cubetile]
