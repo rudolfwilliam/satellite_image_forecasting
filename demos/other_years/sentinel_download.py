@@ -78,7 +78,7 @@ def get_data(coords, start = datetime.datetime(2020,1,28), end = datetime.dateti
 
     # download data with multiple threads
     data = SentinelHubDownloadClient(config=config).download(list_of_requests, max_threads=5)
-    dataNew = np.asarray(data).transpose(1,2,3,0).astype(float)
+    dataNew = np.asarray(data).transpose(1,2,3,0)
     return dataNew
 
 if __name__ == "__main__":

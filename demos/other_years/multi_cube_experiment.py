@@ -30,10 +30,10 @@ def main():
                     "32UQC_2018-01-28_2018-11-23_5305_5433_3257_3385_82_162_50_130",
                     "32UQC_2018-01-28_2018-11-23_5305_5433_4537_4665_82_162_70_150",
                     "32UQC_2018-01-28_2018-11-23_5305_5433_3385_3513_82_162_52_132"]"""
-    N = 10
+    N = 100
     locations = sample(locations,N)
-    years = [[datetime.datetime(2016,1,28), datetime.datetime(2016,11,28)]]#,
-             #[datetime.datetime(2017,1,28), datetime.datetime(2017,11,28)],
+    years = [[datetime.datetime(2016,1,28), datetime.datetime(2016,11,28)],
+             [datetime.datetime(2017,1,28), datetime.datetime(2017,11,28)]]
              #[datetime.datetime(2018,1,28), datetime.datetime(2018,11,28)],
              #[datetime.datetime(2019,1,28), datetime.datetime(2019,11,28)],
              #[datetime.datetime(2020,1,28), datetime.datetime(2020,11,28)],
@@ -56,9 +56,14 @@ def main():
         for loc in data_locs:
             if loc.shape == (128,128,5,60):
                 data_good.append(loc)
+            else:
+                print("ILLEGAL IMAGE FOUND!")
         years_data.append(np.stack(data_good, axis = 0))
-        
+
     full_data = np.stack(years_data, axis = 0)
+    np.savez_compressed("full_data", full_data)
+
+    full_data = full_data.astype(float)
 
 
     '''full_data.shape:
@@ -69,8 +74,9 @@ def main():
         - channel
         - time (within year)
     '''
+    np.sum(np.isnan(full_data))
     # NDVI computations
-    full_data_ndvi = np.nan_to_num((full_data[:,:,:,:,3,:] - full_data[:,:,:,:,0,:]) / (full_data[:,:,:,:,3,:] + full_data[:,:,:,:,0,:]), 0)
+    full_data_ndvi = np.nan_to_num((full_data[:,:,:,:,3,:] - full_data[:,:,:,:,0,:]) / (full_data[:,:,:,:,3,:] + full_data[:,:,:,:,0,:] + 1e-6), 0)
     '''full_data_ndvi.shape:
         - years
         - location 
@@ -78,28 +84,29 @@ def main():
         - height
         - time (within year)
     '''
-    full_data_mask = full_data[:,:,:,:,4,:] / 255
+    full_data_mask = get_mask(full_data) # full_data_mask = 1 => valid
+
     full_data_ndvi_masked = np.ma.masked_array(full_data_ndvi, full_data_mask)
     # Quantiles
     splits = np.array([.25,.5,.75])
     axis_quantile = (1,2,3) # locations width height
     q = np.quantile(full_data_ndvi_masked, q = splits, axis = axis_quantile)
-    valid_pixels = np.sum(1 - full_data_mask, axis = axis_quantile)
+    valid_pixels = np.sum(full_data_mask, axis = axis_quantile)
     ''' q.shape
         - splits
         - years
         - time
     '''
-    np.savez_compressed("quantiles", q)
-    np.save("valid_pixels", valid_pixels)
-    valid_pixels_threshold = (valid_pixels > thr * np.max(valid_pixels)) & (q[2,...] != 0)
+    thr = .7
+    valid_pixels_threshold = (valid_pixels > thr * np.max(valid_pixels)) 
 
     # Date axis
-    dates_bound = years[0] 
-    dates = date_linspace(dates_bound[0],dates_bound[1], 60)
+    #dates_bound = years[0] 
+    #dates = date_linspace(dates_bound[0],dates_bound[1], 60)
+    dates = np.arange(60)
 
     # Plots
-    Y = 3
+    Y = 0
 
     plt.plot(dates[valid_pixels_threshold[Y,:]], q[:, Y ,valid_pixels_threshold[Y,:]].T,'-*')
     plt.plot(dates, valid_pixels[Y, :]/(np.max(valid_pixels)) , ':*')
@@ -121,4 +128,13 @@ def date_linspace(start, end, steps):
     increments = range(0, steps) * np.array([delta]*steps)
     return start + increments
 
+def get_mask(full_cube):
+    full_data_mask = 1 - full_cube[:,:,:,:,4,:] / 255
+    for y in range(full_cube.shape[0]):
+        for l in range(full_cube.shape[1]):
+            for t in range(full_cube.shape[5]):
+                if np.sum(full_cube[y, l, :, :, 0, t]) == 0:
+                    print("Hello")
+                    full_data_mask[y,l,:, :,t] = np.zeros((full_cube.shape[2],full_cube.shape[3]))
+    return full_data_mask
 main()
