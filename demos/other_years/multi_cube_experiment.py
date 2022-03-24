@@ -111,9 +111,6 @@ def main():
     plt.plot(dates[valid_pixels_threshold[Y,:]], q[:, Y ,valid_pixels_threshold[Y,:]].T,'-*')
     plt.plot(dates, valid_pixels[Y, :]/(np.max(valid_pixels)) , ':*')
 
-    plt.plot(dates, q[:, Y ,:].T,'-*')
-    plt.plot(dates, valid_pixels[Y, :]/(np.max(valid_pixels)) , ':*')
-
     plt.show()
 
     # Plot against years
