@@ -4,6 +4,7 @@ import matplotlib as mpl
 from random import sample
 import earthnet as en
 from os import walk
+from os.path import join
 import os
 import datetime
 import time
@@ -13,11 +14,13 @@ from pandas import date_range
 from get_coords import get_coords, get_limited_coords
 from sentinel_download import get_data
 import pickle
+import random
 
 thr = .8
 
 def main():
     warnings.simplefilter('once', RuntimeWarning)
+    random.seed(1)
 
     with open("demos/extreme_test_split_context_data_paths.pkl",'rb') as f:
         filenames = pickle.load(f)
@@ -32,12 +35,15 @@ def main():
                     "32UQC_2018-01-28_2018-11-23_5305_5433_3385_3513_82_162_52_132"]"""
     N = 100
     locations = sample(locations,N)
+    with open(join(os.getcwd(), "demos", "sampled_extreme_cubes.pkl"), "wb") as fp:
+        pickle.dump(locations, fp)
+
     years = [[datetime.datetime(2016,1,28), datetime.datetime(2016,11,28)],
-             [datetime.datetime(2017,1,28), datetime.datetime(2017,11,28)]]
-             #[datetime.datetime(2018,1,28), datetime.datetime(2018,11,28)],
-             #[datetime.datetime(2019,1,28), datetime.datetime(2019,11,28)],
-             #[datetime.datetime(2020,1,28), datetime.datetime(2020,11,28)],
-             #[datetime.datetime(2021,1,28), datetime.datetime(2021,11,28)]]
+             [datetime.datetime(2017,1,28), datetime.datetime(2017,11,28)],
+             [datetime.datetime(2018,1,28), datetime.datetime(2018,11,28)],
+             [datetime.datetime(2019,1,28), datetime.datetime(2019,11,28)],
+             [datetime.datetime(2020,1,28), datetime.datetime(2020,11,28)],
+             [datetime.datetime(2021,1,28), datetime.datetime(2021,11,28)]]
 
 
     # Download
@@ -64,7 +70,6 @@ def main():
     np.savez_compressed("full_data", full_data)
 
     full_data = full_data.astype(float)
-
 
     '''full_data.shape:
         - years
@@ -118,7 +123,6 @@ def main():
         plt.plot(dates[valid_pixels_threshold[Y,:]], q[2, Y ,valid_pixels_threshold[Y,:]].T,'-*')
     plt.legend(["2016","2017","2018","2019","2020","2021"])
     plt.show()
-
 
 def date_linspace(start, end, steps):
     delta = (end - start) / steps
