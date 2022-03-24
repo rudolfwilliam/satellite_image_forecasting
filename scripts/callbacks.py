@@ -196,6 +196,7 @@ class WandbTest_callback(pl.Callback):
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+'_'+self.test_set[:3]+".csv"), 'a') as f:
             for i in range(len(outputs)):
+                # in csv we have MAD, SSIM, OLS, EMD, ENS
                 f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3]) + "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
 
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)

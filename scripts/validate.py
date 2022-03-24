@@ -12,10 +12,10 @@ from scripts.callbacks import WandbTest_callback
 
 def main():
     
-    configs = validate_line_parser()
+    cfg = validate_line_parser()
 
-    print("Validating experiment {0}".format(configs['run_name']))
-    print("Validating model at epoch {0}".format(configs['epoch_to_validate']))
+    print("Validating experiment {0}".format(cfg['run_name']))
+    print("Validating model at epoch {0}".format(cfg['epoch_to_validate']))
 
     wandb.login()
 
@@ -25,20 +25,20 @@ def main():
     wandb_logger = WandbLogger(entity="eth-ds-lab", project="DIF Testing", offline=True)
 
     # always use same val_2 data from Data folder
-    EN_dataset = Earth_net_DataModule(data_dir=configs['dataset_dir'],
-                                     train_batch_size=configs['batch_size'],
-                                     val_batch_size=configs['batch_size'],
-                                     test_batch_size=configs['batch_size'],
-                                     test_set=configs['test_set'],
-                                     mesoscale_cut=[39,41])
+    EN_dataset = Earth_net_DataModule(data_dir=cfg['dataset_dir'],
+                                      train_batch_size=cfg['batch_size'],
+                                      val_batch_size=cfg['batch_size'],
+                                      test_batch_size=cfg['batch_size'],
+                                      test_set=cfg['test_set'],
+                                      mesoscale_cut=[39,41])
     
-    callbacks = WandbTest_callback(configs['run_name'], configs['epoch_to_validate'], configs['test_set'])
+    callbacks = WandbTest_callback(cfg['run_name'], cfg['epoch_to_validate'], cfg['test_set'])
 
     # setup Trainer
-    trainer = Trainer(logger=wandb_logger, callbacks=[callbacks])
+    trainer = Trainer(logger=wandb_logger, callbacks=[callbacks], accelerator='auto')
 
     # setup Model
-    model = EN_model.load_from_checkpoint(configs['model_path'])
+    model = EN_model.load_from_checkpoint(cfg['model_path'])
     model.eval()
 
     # run validation
