@@ -13,15 +13,15 @@ from load_model_data import *
 
 def main():
     filename = None
-    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/extreme_context_data_paths.pkl", 
-                                                  test_target_dataset = "Data/small_data/extreme_target_data_paths.pkl",
-                                                  index=4)
+    truth, context, target, npf = load_data_point(test_context_dataset = "Data/portugal/seasonal_data_context_data_paths.pkl", 
+                                                  test_target_dataset = "Data/portugal/seasonal_data_target_data_paths.pkl",
+                                                  index = 100)
 
-    dates_strings = ['2018-01-28','2018-11-23'] 
+    dates_strings = ['2017-05-29','2020-04-12'] # seasonal
     #dates_strings = ['2017-05-28','2020-04-11'] 
 
-    model1 = load_model()
-    #model2 = load_model("trained_models/autoencoder_26.ckpt")
+    model1 = load_model("trained_models/top_performant_autoenc.ckpt")
+    model2 = load_model("trained_models/top_performant.ckpt")
     pred1, _, _ = model1(x = context, 
                        prediction_count = int((2/3)*truth.shape[-1]), 
                        non_pred_feat = npf)
@@ -29,7 +29,7 @@ def main():
                        #prediction_count = int((2/3)*truth.shape[-1]), 
                        #non_pred_feat = npf)
     plot_ndvi(truth, [pred1], dates_bound = dates_strings, model_names=["ConvLSTM","EncoderDecoderConvLSTM"])
-
+    print("Done")
 
     # take out cloudy days
     #splits = np.linspace(0.1,1,10)
