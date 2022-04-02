@@ -11,25 +11,25 @@ from load_model_data import *
 
 def main():
     filename = None
-    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/extreme_context_data_paths.pkl", 
-                                                  test_target_dataset = "Data/small_data/extreme_target_data_paths.pkl",
-                                                  index = 4)
+    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/seasonal_context_data_paths.pkl", 
+                                                  test_target_dataset = "Data/small_data/seasonal_target_data_paths.pkl",
+                                                  index = 0)
     model1 = load_model()
-    model2 = load_model("trained_models/model_epoch=031.ckpt")
+    model2 = load_model("trained_models/top_performant_autoenc.ckpt")
     #pred2, _, _ = model2(x = context, 
     #                   prediction_count = int((2/3)*truth.shape[-1]), 
     #                   non_pred_feat = npf)
     # No water 
-    npf_no_water = copy.deepcopy(npf)
-    npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
+    #npf_no_water = copy.deepcopy(npf)
+    #npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
 
     pred1, _, _ = model1(x = context, 
                        prediction_count = int((2/3)*truth.shape[-1]), 
                        non_pred_feat = npf)
-    #pred2, _, _ = model2(x = context, 
-    #                   prediction_count = int((2/3)*truth.shape[-1]), 
-    #                   non_pred_feat = npf)
-    visualize_rgb([pred1], truth)#, undersample_indexs = [4,14,19,29,39,49,59])
+    pred2, _, _ = model2(x = context, 
+                       prediction_count = int((2/3)*truth.shape[-1]), 
+                       non_pred_feat = npf)
+    visualize_rgb([pred1,pred2], truth, filename="demos/visualizations/enc_dec_vs_convlstm.pdf")#, undersample_indexs = [4,14,19,29,39,49,59])
     print("Done")
 
 def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
@@ -71,13 +71,11 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
                 img[:, 128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = preds[j][:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
     if filename == None:
-        plt.imsave('visualizations/rgb.png', np.clip(img.transpose(1,2,0),0,1))
-        plt.imsave('visualizations/rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
+        plt.imsave('demos/visualizations/rgb.png', np.clip(img.transpose(1,2,0),0,1))
+        plt.imsave('demos/visualizations/rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img.transpose(1,2,0),0,1))
-    
-    print("Done")
 
 def visualize_ndvi(preds, truth, filename = None, gt = True):
     if not isinstance(preds, list):
@@ -108,11 +106,9 @@ def visualize_ndvi(preds, truth, filename = None, gt = True):
             for j in range(len(ndvi_preds)):
                 img[128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = ndvi_preds[i][0, :, :, i - t]
     if filename == None:
-        plt.imsave('visualizations/ndvi.png', np.clip(img,0,1))
+        plt.imsave('demos/visualizations/ndvi.png', np.clip(img,0,1))
         plt.show()
     else:
         plt.imsave(filename, np.clip(img,0,1))
-    
-    print("Done")
 
 main()

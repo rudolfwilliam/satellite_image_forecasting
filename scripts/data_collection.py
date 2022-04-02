@@ -25,6 +25,7 @@ parser.add_argument('-td', '--training_data', type=int,  help='number of trainin
 parser.add_argument('-v1', '--val_1_data', type=int,  help='number of validation 1 data points')
 parser.add_argument('-v2', '--val_2_data', type=int,  help='number of validation 2 data points', default=-1)
 parser.add_argument('-se', '--seed', type=int,  help='seed for train/validation split', default=1)
+parser.add_argument('-t', '--tile', type=str,  help='specific tile name', default=None)
 parser.add_argument('-dc', '--data_cleaning', type=float,  help='level of data cleaning (-1: none, 0: cubes giving NaN, (0,1]: min score)', default=-1)
 args = parser.parse_args()
 
@@ -96,6 +97,11 @@ if args.test_folder is not None:
                     test_context_files.append(full_name)
                 elif 'target' in full_name:
                     test_target_files.append(full_name)
+
+    # fileter a specific tile
+    if args.tile is not None:
+        test_context_files = [i for i in test_context_files if args.tile in i]
+        test_target_files = [i for i in test_target_files if args.tile in i]
 
     # for 'small_data' dataset take out user-dependent part of paths
     if args.dest_folder == 'Data/small_data':
