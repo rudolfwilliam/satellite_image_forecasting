@@ -24,8 +24,8 @@ for comp, idx in zip(score_components, idxs):
     lastframe, = ax.plot(lastframe, label='last frame', color='b')
 
     ax.legend((zero, lastframe), ('zero', 'last frame'), loc='lower right')
-    plt.xlabel(comp)
-    plt.ylabel('Epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel(comp)
 
     # store image into visualizations directory by default
     plt.savefig(os.getcwd() + '/visualizations/' + comp + '.pdf') 
