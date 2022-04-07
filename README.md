@@ -1,22 +1,20 @@
-# Satellite Image Forecasting - EarthNet 2021
+# Satellite Image Forecasting - EarthNet2021
 
-Climate change has a large impact on our environment :earth_americas:. We notice this all around the world due to catastrophic events such as droughts occuring more and more frequently. In this project, we develop various deep learning models for the EarthNet2021 challenge (https://www.earthnet.tech/), where our task is to predict future satellite images from past ones using features such as weather and elevation maps. With one of our models, a Peephole Convolutional LSTM, we manage to beat the current best model on the EarthNet challenge leaderboard. 
+Climate change has a large impact on our environment :earth_americas:. We notice that all around the world, catastrophic events such as droughts occur more and more frequently as the years pass. In this repository, you can find three deep learning models that we developed for the [EarthNet2021 challenge](https://www.earthnet.tech/), where the task is to predict future satellite images from past ones using features such as precipitation and elevation maps. With one of our models, a Peephole [Convolutional LSTM](https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf), we beat the current best model on the EarthNet challenge leaderboard. 
 
-In all our models, we employ what refer to as "Delta model". This means that the model only outputs the deviation ("delta") to a precomputed baseline instead of computing outputs directly. In our experiments, this simple trick enables faster convergence and generally yields a more robust model. Here is a visualization of how it works:
+In all of our models, we employ a technique we refer to as *Delta Framework*. Here, the model only predicts the deviation (*delta*) onto a precomputed baseline instead of predicting the satellite image directly. In our experiments, this simple trick leads to notably faster convergence. Here is a visualization of how it works:
 
 <p align="center">
 <img src="/assets/DS_lab_vis_github.svg" width="400">
 </p>
- 
 
-Feel free to reach out to us if you have any questions!
-
+We use [PyTorch](https://pytorch.org/) for the implementation.
 
 ## User Guide
 
 ### Training, testing and evaluating the model
 
-Prerequisites: Create a python environment as defined in ```config/dif_env.yml```
+Prerequisites: Create a conda environment from ```config/dif_env.yml```. Optionally, you may create a pip environment from ```config/dif_env.txt```.
 
 1. Download the dataset (train/iid/ood/extreme/seasonal splits):
 
@@ -57,3 +55,6 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 ```scripts/diagnosticate.py -rn wandb/run/name -e epoch/to/validate/on``` for visualizing the model's predictions
 
 ```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
+
+
+***Feel free to reach out to us if you still have any questions!***

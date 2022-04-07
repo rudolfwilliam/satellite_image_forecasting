@@ -33,7 +33,7 @@ def main():
                     "32UQC_2018-01-28_2018-11-23_5305_5433_3257_3385_82_162_50_130",
                     "32UQC_2018-01-28_2018-11-23_5305_5433_4537_4665_82_162_70_150",
                     "32UQC_2018-01-28_2018-11-23_5305_5433_3385_3513_82_162_52_132"]"""
-    N = 100
+    N = 80
     locations = sample(locations,N)
     with open(join(os.getcwd(), "demos", "sampled_extreme_cubes.pkl"), "wb") as fp:
         pickle.dump(locations, fp)
