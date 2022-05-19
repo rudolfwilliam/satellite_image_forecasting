@@ -188,7 +188,10 @@ class WandbTrain_callback(pl.Callback):
         
 class WandbTest_callback(pl.Callback):
     def __init__(self, wandb_name_model_to_test, epoch, test_set) -> None:
-        self.wandb_name_model_to_test = wandb_name_model_to_test
+        if ':' not in wandb_name_model_to_test:
+            self.wandb_name_model_to_test = wandb_name_model_to_test
+        else:
+            self.wandb_name_model_to_test = wandb_name_model_to_test.split(":")[1].split("/")[1][:-5]
         self.epoch = epoch
         self.test_set = test_set
         super().__init__()

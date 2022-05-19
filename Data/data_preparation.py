@@ -6,52 +6,6 @@ import os
 from os.path import join
 import pickle
 
-class Earthnet_Test_Dataset(torch.utils.data.Dataset):
-    def __init__(self, context_paths, target_paths, ms_cut, fake_weather = False, all_weather = False) -> None:
-        self.context_paths = context_paths
-        self.target_paths = target_paths
-        self.ms_cut = ms_cut
-        self.fake_weather = fake_weather
-        assert len(self.context_paths) == len(self.target_paths)
-        super().__init__()
-
-    def __len__(self):
-        return len(self.context_paths)
-
-    def __getitem__(self, index):
-        # load the item from data
-        context = np.load(self.context_paths[index], allow_pickle=True)
-
-        # for test samples glue together context & target
-        target = np.load(self.target_paths[index], allow_pickle=True)
-        highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
-
-        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
-        # for mesoscale data cut out overlapping section of interest
-        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
-
-        # stick all data together
-        all_data = np.append(highres_dynamic, highres_static,axis=-2)
-
-        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
-                                                       all_data.shape[1],
-                                                       meso_dynamic.shape[2],
-                                                       all_data.shape[3]]))
-        if self.fake_weather:
-            meso_dynamic = 0*meso_dynamic 
-        all_data = np.append(all_data, meso_dynamic, axis=-2)
-        
-        ''' 
-            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
-            w = width
-            h = height
-            c = channel
-            t = time
-        '''
-        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
-        
-        return all_data
-
 class Earthnet_Dataset(torch.utils.data.Dataset):
     def __init__(self, paths, ms_cut, fake_weather = False, all_weather = False):
         '''
@@ -107,6 +61,52 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
                                                        all_data.shape[3]]))
         if self.fake_weather:
             meso_dynamic = 0*meso_dynamic
+        all_data = np.append(all_data, meso_dynamic, axis=-2)
+        
+        ''' 
+            Permute data so that it fits the Pytorch conv2d standard. From (w, h, c, t) to (c, w, h, t)
+            w = width
+            h = height
+            c = channel
+            t = time
+        '''
+        all_data = torch.Tensor(all_data).permute(2, 0, 1, 3)
+        
+        return all_data
+
+class Earthnet_Test_Dataset(torch.utils.data.Dataset):
+    def __init__(self, context_paths, target_paths, ms_cut, fake_weather = False, all_weather = False) -> None:
+        self.context_paths = context_paths
+        self.target_paths = target_paths
+        self.ms_cut = ms_cut
+        self.fake_weather = fake_weather
+        assert len(self.context_paths) == len(self.target_paths)
+        super().__init__()
+
+    def __len__(self):
+        return len(self.context_paths)
+
+    def __getitem__(self, index):
+        # load the item from data
+        context = np.load(self.context_paths[index], allow_pickle=True)
+
+        # for test samples glue together context & target
+        target = np.load(self.target_paths[index], allow_pickle=True)
+        highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
+
+        highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
+        # for mesoscale data cut out overlapping section of interest
+        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
+
+        # stick all data together
+        all_data = np.append(highres_dynamic, highres_static,axis=-2)
+
+        meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
+                                                       all_data.shape[1],
+                                                       meso_dynamic.shape[2],
+                                                       all_data.shape[3]]))
+        if self.fake_weather:
+            meso_dynamic = 0*meso_dynamic 
         all_data = np.append(all_data, meso_dynamic, axis=-2)
         
         ''' 
@@ -200,6 +200,15 @@ class Earth_net_DataModule(pl.LightningDataModule):
             with open(join(os.getcwd(), self.data_dir, self.test_set+"_target_data_paths.pkl"),'rb') as f:
                 self.test_target_path_list = pickle.load(f)
 
+        if 'train_targ_data_paths.pkl' in os.listdir(join(os.getcwd(), self.data_dir)):
+            with open(join(os.getcwd(), self.data_dir, "train_targ_data_paths.pkl"),'rb') as f:
+                self.training_targ_path_list = pickle.load(f)
+            with open(join(os.getcwd(), self.data_dir, "val_1_targ_data_paths.pkl"),'rb') as f:
+                self.val_1_targ_path_list = pickle.load(f)
+            # in the seasonal training data case there is no 'extra' test set
+            with open(join(os.getcwd(), self.data_dir, "val_2_targ_data_paths.pkl"),'rb') as f:
+                self.val_2_targ_path_list = pickle.load(f)
+
     def setup(self, stage):
         # assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
@@ -208,12 +217,19 @@ class Earth_net_DataModule(pl.LightningDataModule):
             # validation
             self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
 
+            if hasattr(self, 'training_targ_path_list'):
+                self.training_data = Earthnet_Test_Dataset(self.training_path_list, self.training_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+                self.val_1_data = Earthnet_Test_Dataset(self.val_1_path_list, self.val_1_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+
         # assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
             if self.test_set == 'val_2':
                 self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
             else:
                 self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+            
+            if hasattr(self, 'training_targ_path_list'):
+                self.val_2_data = Earthnet_Test_Dataset(self.val_2_path_list, self.val_2_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
 
     def train_dataloader(self):
         return DataLoader(self.training_data, batch_size=self.train_batch_size)
