@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 from matplotlib import gridspec
+import datetime as dt
 
 sys.path.append(os.getcwd())
 
@@ -9,13 +10,24 @@ import matplotlib.pyplot as plt
 
 from load_model_data import *
 
+
+
 def main():
+    mode = "extreme"
+
     filename = None
-    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/seasonal_context_data_paths.pkl", 
-                                                  test_target_dataset = "Data/small_data/seasonal_target_data_paths.pkl",
+    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/{0}_context_data_paths.pkl".format(mode), 
+                                                  test_target_dataset = "Data/small_data/{0}_target_data_paths.pkl".format(mode),
                                                   index = 0)
     model1 = load_model()
     model2 = load_model("trained_models/top_performant_autoenc.ckpt")
+
+    dates = {
+        "extreme": ['2018-01-28','2018-11-23'],
+        "seasonal": ['2017-05-28','2020-04-11'],
+        "ood": ['2017-07-02','2017-11-28'],
+        "iid" : ['2017-06-20','2017-11-16'] 
+    }
     #pred2, _, _ = model2(x = context, 
     #                   prediction_count = int((2/3)*truth.shape[-1]), 
     #                   non_pred_feat = npf)
@@ -29,15 +41,22 @@ def main():
     pred2, _, _ = model2(x = context, 
                        prediction_count = int((2/3)*truth.shape[-1]), 
                        non_pred_feat = npf)
-    visualize_rgb([pred1,pred2], truth, filename="demos/visualizations/enc_dec_vs_convlstm.pdf")#, undersample_indexs = [4,14,19,29,39,49,59])
+
+    visualize_rgb([pred1,pred2], 
+                    truth, 
+                    filename="demos/visualizations/forecast_{0}.pdf".format(mode), 
+                    undersample_indexs = [4,14,20,29,38,51,59],
+                    dates_bounds = dates[mode])
     print("Done")
 
-def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
+def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, dates_bounds = None):
     """
     inputs:
         - preds is a list of predicted cubes (or only one)
         - truth is the ground truth
     """
+    T0 = truth.shape[-1]
+
     if not isinstance(preds, list):
         preds = [preds]
     pred_numpy = []
@@ -70,12 +89,20 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None):
             for j in range(len(preds)):
                 img[:, 128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = preds[j][:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
-    if filename == None:
-        plt.imsave('demos/visualizations/rgb.png', np.clip(img.transpose(1,2,0),0,1))
-        plt.imsave('demos/visualizations/rgb_landscape.png', np.clip(img.transpose(2,1,0),0,1))
-        plt.show()
-    else:
-        plt.imsave(filename, np.clip(img.transpose(1,2,0),0,1))
+    if dates_bounds is not None:
+        dates_b = [dt.datetime.strptime(dates_bounds[0], '%Y-%m-%d'),dt.datetime.strptime(dates_bounds[1], '%Y-%m-%d')] 
+        dates = date_linspace(dates_b[0],dates_b[1],T0)
+        undersample_dates = dates[undersample_indexs]
+        dates_strings = []
+        for date in undersample_dates:
+            dates_strings.append(date.strftime("%d %b"))
+        plt.figure(figsize=(10, 5))
+        plt.imshow(np.clip(img.transpose(2,1,0),0,1)*2)
+        plt.yticks((128/2)+(np.arange(3)*128), ["Ground Truth","SGConvLSTM","SGEDConvLSTM"],rotation='vertical',horizontalalignment="right", verticalalignment="center")
+        plt.tick_params(axis='both', which='both',length=0)
+        plt.xticks((128/2)+(np.arange(len(undersample_indexs))*128),dates_strings)
+        plt.savefig(filename, dpi =300, bbox_inches='tight')
+
 
 def visualize_ndvi(preds, truth, filename = None, gt = True):
     if not isinstance(preds, list):
@@ -110,5 +137,10 @@ def visualize_ndvi(preds, truth, filename = None, gt = True):
         plt.show()
     else:
         plt.imsave(filename, np.clip(img,0,1))
+
+def date_linspace(start, end, steps):
+    delta = (end - start) / steps
+    increments = range(0, steps) * np.array([delta]*steps)
+    return start + increments
 
 main()
