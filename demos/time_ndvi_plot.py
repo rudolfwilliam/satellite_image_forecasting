@@ -210,6 +210,6 @@ def plot_ndvi(truth, preds, dates_bound = None, filename = None, model_names = N
     else:
         plt.savefig(filename)
     
-    print("Done")
 
-main()
+if __name__ == "__main__":
+    main()
