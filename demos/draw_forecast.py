@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 
 from load_model_data import *
 
-
-
 def main():
     mode = "extreme"
 
@@ -70,7 +68,6 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labe
         pred_numpy.append(pred.detach().numpy())
     preds = pred_numpy
     
-    
     truth = truth.detach().numpy()
     T = truth.shape[-1]
     t = T-pred.shape[-1]
@@ -120,9 +117,6 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labe
             plt.plot()
         else:
             plt.savefig(filename, dpi =300, bbox_inches='tight')
-
-
-
 
 def visualize_ndvi(preds, truth, filename = None, gt = True):
     if not isinstance(preds, list):
