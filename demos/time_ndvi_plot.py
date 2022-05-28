@@ -202,14 +202,13 @@ def plot_ndvi(truth, preds, dates_bound = None, filename = None, model_names = N
         X.set_major_formatter(fmt)
         ax0.grid()
 
-    plt.xlim([x_t[0],x_t[-1]]) #only to see the legal part.
+    plt.xlim([x_t[0],x_t[-1]]) # only to see the legal part
 
     if filename == None:
-        plt.savefig('NDVI_time_series.pdf', format="pdf")
+        plt.savefig('visualizations/NDVI_time_series.pdf', format="pdf")
         plt.show()
     else:
         plt.savefig(filename)
     
-    print("Done")
-
-main()
+if __name__ == "__main__":
+    main()

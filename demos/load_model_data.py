@@ -1,22 +1,15 @@
 import sys
 import os
 from os.path import join
-import numpy as np
 import pickle
-from matplotlib.widgets import Slider, RadioButtons
-from matplotlib import gridspec
-import copy
 
 sys.path.append(os.getcwd())
 
-import matplotlib.pyplot as plt
 
-from config.config import diagnosticate_line_parser
 from drought_impact_forecasting.models.EN_model import EN_model 
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def load_model(model_path = "trained_models/top_performant.ckpt"):
+def load_model(model_path = "trained_models/SGConvLSTM.ckpt"):
     """
         load a model from file for inference
     """

@@ -13,9 +13,9 @@ from load_model_data import *
 
 def main():
     filename = None
-    truth, context, target, npf = load_data_point(test_context_dataset = "Data/holland/seasonal_data_context_data_paths.pkl", 
-                                                  test_target_dataset = "Data/holland/seasonal_data_target_data_paths.pkl",
-                                                  index=0)
+    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/seasonal_context_data_paths.pkl", 
+                                                  test_target_dataset = "Data/small_data/seasonal_target_data_paths.pkl",
+                                                  index=4)
 
     off_1 = 49
     off_2 = 49+73
@@ -36,7 +36,7 @@ def main():
     #dates_strings = ['2017-05-28','2020-04-11'] 
 
     model1 = load_model()
-    #model2 = load_model("trained_models/top_performant_autoenc.ckpt")
+    model2 = load_model("trained_models/top_performant_autoenc.ckpt")
 
     pred1_1, _, _ = model1(x = year_1_context, 
                        prediction_count = year_1_npf.shape[-1], 
@@ -44,14 +44,17 @@ def main():
     pred2_1, _, _ = model1(x = year_2_context, 
                        prediction_count = year_1_npf.shape[-1], 
                        non_pred_feat = year_2_npf)
-    '''pred1_2, _, _ = model2(x = year_1_context, 
+    pred1_2, _, _ = model2(x = year_1_context, 
                        prediction_count = year_1_npf.shape[-1], 
                        non_pred_feat = year_1_npf)
     pred2_2, _, _ = model2(x = year_2_context, 
                        prediction_count = year_1_npf.shape[-1], 
-                       non_pred_feat = year_2_npf)'''
-    plot_ndvi(year_1_truth, [pred1_1], dates_bound = year_1_dates_strings,filename = "y1.pdf", model_names=["ConvLSTM","Enc-DecConvLSTM"])
-    plot_ndvi(year_2_truth, [pred2_1], dates_bound = year_2_dates_strings,filename = "y2.pdf", model_names=["ConvLSTM","Enc-DecConvLSTM"])
+                       non_pred_feat = year_2_npf)
+    #pred2, _, _ = model2(x = context, 
+                       #prediction_count = int((2/3)*truth.shape[-1]), 
+                       #non_pred_feat = npf)
+    plot_ndvi(year_1_truth, [pred1_1,pred1_2], dates_bound = year_1_dates_strings,filename = "y1.pdf", model_names=["ConvLSTM","Enc-DecConvLSTM"])
+    plot_ndvi(year_2_truth, [pred2_1,pred2_2], dates_bound = year_2_dates_strings,filename = "y2.pdf", model_names=["ConvLSTM","Enc-DecConvLSTM"])
 
 
     # take out cloudy days
