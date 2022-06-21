@@ -26,9 +26,9 @@
      inkscape:window-maximized="1"
      inkscape:window-y="-9"
      inkscape:window-x="-9"
-     inkscape:cy="-2"
-     inkscape:cx="1708"
-     inkscape:zoom="0.25"
+     inkscape:cy="711"
+     inkscape:cx="1438"
+     inkscape:zoom="0.5"
      showgrid="false"
      id="namedview3533"
      inkscape:window-height="1001"
@@ -2066,12 +2066,12 @@
     <text
        id="text5751"
        y="-279.25388"
-       x="61.919724"
+       x="79.911407"
        style="font-size:25.4px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
        xml:space="preserve"><tspan
          style="fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
          y="-279.25388"
-         x="61.919724"
+         x="79.911407"
          id="tspan5749"
          sodipodi:role="line"><tspan
    style="font-size:22.5778px"
@@ -2089,17 +2089,17 @@
          sodipodi:role="line">NN</tspan></text>
     <path
        id="path2396-0-2-4-6"
-       d="m 6.986864,-226.51905 c -2.944233,-47.57916 85.557196,10.2363 91.411837,-45.71548 6.063289,55.32565 92.881259,2.35615 92.944329,47.04109"
+       d="m 42.000014,-226.51905 c -2.385061,-47.57916 69.308066,10.2363 74.050786,-45.71548 4.91174,55.32565 75.24114,2.35615 75.29223,47.04109"
        style="fill:none;stroke:#1ba139;stroke-width:3;stroke-linecap:butt;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        xml:space="preserve"
        style="font-size:22.5778px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
-       x="311.71286"
+       x="311.18369"
        y="-279.21075"
        id="text5751-4"><tspan
          sodipodi:role="line"
          id="tspan5749-1"
-         x="311.71286"
+         x="311.18369"
          y="-279.21075"
          style="font-size:22.5778px;fill:#1ba139;stroke:#1ba139;stroke-width:0.264583">Target </tspan></text>
     <path
@@ -2653,12 +2653,12 @@
     <text
        id="text5751-7"
        y="-279.67087"
-       x="558.54474"
+       x="591.35358"
        style="font-size:25.4px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
        xml:space="preserve"><tspan
          style="fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
          y="-279.67087"
-         x="558.54474"
+         x="591.35358"
          id="tspan5749-54"
          sodipodi:role="line"><tspan
    style="font-size:22.5778px"
@@ -2676,17 +2676,17 @@
          sodipodi:role="line">NN</tspan></text>
     <path
        id="path2396-0-2-4-6-5"
-       d="m 518.95725,-226.93542 c -2.92357,-47.57889 84.95675,10.23624 90.7703,-45.71522 6.02073,55.32533 92.22941,2.35613 92.29204,47.04082"
+       d="m 554.17501,-226.93542 c -2.36113,-47.57889 68.61266,10.23624 73.3078,-45.71522 4.86245,55.32533 74.4862,2.35613 74.53678,47.04082"
        style="fill:none;stroke:#1ba139;stroke-width:3;stroke-linecap:butt;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        xml:space="preserve"
        style="font-size:22.5778px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';fill:#1ba139;stroke:#1ba139;stroke-width:0.264583"
-       x="808.86688"
+       x="823.1546"
        y="-279.62775"
        id="text5751-4-9"><tspan
          sodipodi:role="line"
          id="tspan5749-1-7"
-         x="808.86688"
+         x="823.1546"
          y="-279.62775"
          style="font-size:22.5778px;fill:#1ba139;stroke:#1ba139;stroke-width:0.264583">Target </tspan></text>
     <path
