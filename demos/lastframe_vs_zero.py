@@ -27,7 +27,7 @@ axes.set_xlim([0, final_epoch+1])
 axes.set_ylim([0.251, 0.315])
 
 plt.plot(data['zero'], label='no baseline', color='r')
-plt.plot(data['last_frame'], label='last frame', color='b')
+plt.plot(data['last_frame'], label='baseline', color='b')
 plt.plot(35, 0.2902, 'o', color='lime', label='U-Net')
 plt.plot(35, 0.2803, 'o', color='c', label='Arcon')
 
