@@ -14,10 +14,10 @@ data = data.iloc[:final_epoch]
 # we want epochs to start from 1 in graph
 data.index += 1
 
-# Set up figure
+# set up figure
 fig = plt.figure(figsize=(6, 4)) 
 
-plt.title("ENS convergence comparison for models" + "\n" + "with and without a baseline")
+#plt.title("ENS convergence comparison for models" + "\n" + "with and without a baseline")
 plt.ylabel("ENS")
 plt.xlabel("Epoch")
 plt.grid(True)
