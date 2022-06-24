@@ -28,14 +28,14 @@
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:window-width="3440"
-     inkscape:window-height="1440"
+     inkscape:window-height="1412"
      id="namedview3533"
      showgrid="false"
      inkscape:zoom="0.37556718"
-     inkscape:cx="-377.72468"
-     inkscape:cy="910.91506"
+     inkscape:cx="-1403.4014"
+     inkscape:cy="462.3727"
      inkscape:window-x="1440"
-     inkscape:window-y="0"
+     inkscape:window-y="28"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -1193,7 +1193,7 @@
        style="overflow:visible">
       <path
          id="path25920-0-8"
-         style="fill:#000000;fill-rule:evenodd;stroke:none;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1;fill-opacity:1"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
          d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
          transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
     </marker>
@@ -1207,7 +1207,7 @@
        style="overflow:visible">
       <path
          id="path25673-24-8"
-         style="fill:#000000;fill-rule:evenodd;stroke:none;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1;fill-opacity:1"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
          d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
          transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
     </marker>
@@ -1230,7 +1230,7 @@
          style="stop-color:#000000;stop-opacity:1;" />
     </linearGradient>
     <linearGradient
-       gradientTransform="translate(-487.30191,90.059954)"
+       gradientTransform="translate(-487.30191,90.05995)"
        gradientUnits="userSpaceOnUse"
        y2="14.552005"
        x2="776.55212"
@@ -1332,6 +1332,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -1345,7 +1346,7 @@
      xml:space="preserve"
      id="text5777"
      style="font-size:25.39999999999999858px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';white-space:pre;shape-inside:url(#rect5779);"
-     transform="translate(-545.25604,87.943286)" />
+     transform="translate(-545.25604,87.943282)" />
   <g
      id="layer1"
      transform="translate(-467.86265,331.9724)">
@@ -2450,10 +2451,10 @@
      xml:space="preserve"
      id="text5787"
      style="font-size:25.39999999999999858px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';white-space:pre;shape-inside:url(#rect5789);"
-     transform="translate(-545.25604,87.943286)" />
+     transform="translate(-545.25604,87.943282)" />
   <text
      xml:space="preserve"
      id="text5797"
      style="font-size:25.39999999999999858px;line-height:1.25;font-family:serif;-inkscape-font-specification:'serif, Normal';white-space:pre;shape-inside:url(#rect5799);"
-     transform="translate(-545.25604,87.943286)" />
+     transform="translate(-545.25604,87.943282)" />
 </svg>
