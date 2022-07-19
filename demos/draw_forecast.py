@@ -48,7 +48,7 @@ def main():
                     dates_bounds = dates[mode])
     print("Done")
 
-def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labels = None, dates_bounds = None):
+def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labels = None, dates_bounds = None, draw_axis = True):
     """
     inputs:
         - preds is a list of predicted cubes (or only one)
@@ -107,8 +107,8 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labe
         if filename is None:
             plt.plot()
         else:
-            plt.savefig(filename, dpi =300, bbox_inches='tight')
-    elif dates_bounds is None and filename is None:
+            plt.savefig(filename, dpi=300, bbox_inches='tight')
+    elif dates_bounds is None and filename is not None:
         plt.imshow(np.clip(img.transpose(2,1,0),0,1)*2)
         plt.yticks((128/2)+(np.arange(3)*128), labels,rotation='vertical',horizontalalignment="right", verticalalignment="center")
         plt.tick_params(axis='both', which='both',length=0)
@@ -116,7 +116,7 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labe
         if filename is None:
             plt.plot()
         else:
-            plt.savefig(filename, dpi =300, bbox_inches='tight')
+            plt.savefig(filename, dpi=300, bbox_inches='tight')
 
 def visualize_ndvi(preds, truth, filename = None, gt = True):
     if not isinstance(preds, list):

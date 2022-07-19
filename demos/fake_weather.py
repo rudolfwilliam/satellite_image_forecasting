@@ -6,17 +6,25 @@ from matplotlib import gridspec
 sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt
+import copy
 
 from load_model_data import *
+from draw_forecast import *
 
 def main():
-    filename = None
+    filename = "demos/visualizations/extreme_forcast.pdf"
     truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/extreme_context_data_paths.pkl", 
                                                   test_target_dataset = "Data/small_data/extreme_target_data_paths.pkl",
-                                                  index = 0)
+                                                  index = 4)
     
-    model1 = load_model()
-    model2 = load_model("trained_models/top_performant_autoenc.ckpt")
+    # only use this with the complete dataset
+    #truth, context, target, npf = load_data_point(test_context_dataset = "Data/extreme_data/extreme_data_context_data_paths.pkl", 
+    #                                              test_target_dataset = "Data/extreme_data/extreme_data_target_data_paths.pkl",
+    #                                              index = 1200)
+    
+
+    model1 = load_model("trained_models/SGConvLSTM.ckpt")
+    #model2 = load_model("trained_models/SGEDConvLSTM.ckpt") # This one sometimes crashes due to lack of memory
     #pred2, _, _ = model2(x = context, 
     #                   prediction_count = int((2/3)*truth.shape[-1]), 
     #                   non_pred_feat = npf)
@@ -41,10 +49,11 @@ def main():
     pred_mo, _, _ = model1(x = context_modified, 
                     prediction_count = int((2/3)*truth.shape[-1]), 
                     non_pred_feat = npf_modified)
-    pred2, _, _ = model2(x = context, 
-                       prediction_count = int((2/3)*truth.shape[-1]), 
-                       non_pred_feat = npf)
-    visualize_rgb([pred_mo, pred1,pred2], truth,filename="demos/visualizations/extreme_forcast.pdf", draw_axis=False)
+    #pred2, _, _ = model2(x = context, 
+    #                   prediction_count = int((2/3)*truth.shape[-1]), 
+    #                   non_pred_feat = npf)
+    #visualize_rgb([pred_mo, pred1, pred2], truth, filename="demos/visualizations/extreme_forcast.pdf", draw_axis=False)
+    fake_weather([pred_mo, pred1], truth, filename=filename, draw_axis=False)
     print("Done")
 
 def fake_weather(preds, truth, filename = None, undersample_indexs = None, factor = 2, draw_axis = True):
@@ -59,7 +68,6 @@ def fake_weather(preds, truth, filename = None, undersample_indexs = None, facto
     for pred in preds:
         pred_numpy.append(pred.detach().numpy())
     preds = pred_numpy
-    
     
     truth = truth.detach().numpy()
     T = truth.shape[-1]
@@ -117,6 +125,5 @@ def fake_weather(preds, truth, filename = None, undersample_indexs = None, facto
         plt.tick_params(axis='y', which='both', length=0)
         plt.xlabel("Time")
         plt.savefig(filename, bbox_inches = "tight")'''
-
 
 main()

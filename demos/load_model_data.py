@@ -5,7 +5,6 @@ import pickle
 
 sys.path.append(os.getcwd())
 
-
 from drought_impact_forecasting.models.EN_model import EN_model 
 from Data.data_preparation import Earthnet_Dataset, Earthnet_Test_Dataset
 
@@ -20,7 +19,8 @@ def load_model(model_path = "trained_models/SGConvLSTM.ckpt"):
 def load_data_point(train_dataset = None, 
                     test_context_dataset = None, 
                     test_target_dataset = None,
-                    index = 0):
+                    index = 0,
+                    tile = None):
     """
         load a data cube from file to the common used structure. You can either pick a datapoint from a training dataset or a test dataset. 
         Parameters:
@@ -37,21 +37,27 @@ def load_data_point(train_dataset = None,
     """
     # parameter checking
     if train_dataset is not None and (test_context_dataset is not None or test_context_dataset is not None): 
-        raise ValueError("You can either use data from training dataset or from testing dataset, not both")
+        raise ValueError("You can either use data from training dataset or from testing dataset, not both!")
     if (test_context_dataset is not None and test_target_dataset is None) or (test_context_dataset is None and test_target_dataset is not None): 
-        raise ValueError("When using test dataset both context and target must be specified")
+        raise ValueError("When using test dataset both context and target must be specified.")
     
     # train_dataset case
     if train_dataset is not None:
         with open(join(os.getcwd(), train_dataset),'rb') as f:
             training_path_list = pickle.load(f)
+            if tile is not None:
+                training_path_list = [path for path in training_path_list if tile in path]
         dataset = Earthnet_Dataset(training_path_list, [39,41])
     # test_dataset case
     else:
         with open(join(os.getcwd(), test_context_dataset),'rb') as f:
             test_context_path_list = pickle.load(f)
+            if tile is not None:
+                test_context_path_list = [path for path in test_context_path_list if tile in path]
         with open(join(os.getcwd(), test_target_dataset),'rb') as f:
             test_target_path_list = pickle.load(f)
+            if tile is not None:
+                test_target_path_list = [path for path in test_target_path_list if tile in path]
         dataset = Earthnet_Test_Dataset(test_context_path_list, test_target_path_list, [39,41])
     
     # get cube
