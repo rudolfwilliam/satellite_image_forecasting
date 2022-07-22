@@ -1,22 +1,26 @@
 import sys
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import datetime as dt
 
 sys.path.append(os.getcwd())
 
-import matplotlib.pyplot as plt
-
 from load_model_data import *
 
 def main():
     mode = "extreme"
+    index = 1
+    filename = "demos/visualizations/forecast_{0}_{1}.pdf".format(mode, index)
 
-    filename = None
-    truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/{0}_context_data_paths.pkl".format(mode), 
-                                                  test_target_dataset = "Data/small_data/{0}_target_data_paths.pkl".format(mode),
-                                                  index = 0)
+    truth, context, _, npf = load_data_point(test_context_dataset = "Data/small_data/{0}_context_data_paths.pkl".format(mode), 
+                                             test_target_dataset = "Data/small_data/{0}_target_data_paths.pkl".format(mode),
+                                             index = index)
+    # only use this with the complete dataset
+    #truth, context, _, npf = load_data_point(test_context_dataset = "Data/{0}_data/{0}_data_context_data_paths.pkl".format(mode), 
+    #                                         test_target_dataset = "Data/{0}_data/{0}_data_target_data_paths.pkl".format(mode),
+    #                                         index = index)
     SGConvLSTM = load_model("trained_models/SGConvLSTM.ckpt")
     SGEDConvLSTM = load_model("trained_models/SGEDConvLSTM.ckpt")
 
@@ -34,18 +38,18 @@ def main():
     #npf_no_water[:,1,:,:,:] = 0*npf_no_water[:,1,:,:,:]
 
     pred1, _, _ = SGConvLSTM(x = context, 
-                       prediction_count = int((2/3)*truth.shape[-1]), 
-                       non_pred_feat = npf)
+                             prediction_count = int((2/3)*truth.shape[-1]), 
+                             non_pred_feat = npf)
     pred2, _, _ = SGEDConvLSTM(x = context, 
-                       prediction_count = int((2/3)*truth.shape[-1]), 
-                       non_pred_feat = npf)
+                               prediction_count = int((2/3)*truth.shape[-1]), 
+                               non_pred_feat = npf)
 
     visualize_rgb([pred1,pred2], 
-                    truth, 
-                    filename="demos/visualizations/forecast_{0}.pdf".format(mode), 
-                    labels = ["SGConvLSTM","SGEDConvLSTM"],
-                    undersample_indexs = [4,14,20,29,38,51,59],
-                    dates_bounds = dates[mode])
+                  truth, 
+                  filename = filename, 
+                  labels = ["SGConvLSTM","SGEDConvLSTM"],
+                  undersample_indexs = [4,14,20,29,38,51,59],
+                  dates_bounds = dates[mode])
     print("Done")
 
 def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labels = None, dates_bounds = None, draw_axis = True):
@@ -92,6 +96,7 @@ def visualize_rgb(preds, truth, filename = None, undersample_indexs = None, labe
             for j in range(len(preds)):
                 img[:, 128*i: 128*(i + 1),128*(j + 1):128*(j + 2)] = preds[j][:, :3, :, :, i - t]
     img = np.flip(img[:,:,:].astype(float),0)*2
+
     if dates_bounds is not None:
         dates_b = [dt.datetime.strptime(dates_bounds[0], '%Y-%m-%d'),dt.datetime.strptime(dates_bounds[1], '%Y-%m-%d')] 
         dates = date_linspace(dates_b[0],dates_b[1],T0)
