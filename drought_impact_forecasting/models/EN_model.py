@@ -11,7 +11,9 @@ from .utils.utils import ENS
 class EN_model(pl.LightningModule):
     def __init__(self, model_type, model_cfg, training_cfg):
         """
-        This is the supermodel that wraps all the possible models to do satellite image forecasting.
+        This is the supermodel that wraps all the possible models to do satellite image forecasting. 
+        It uses the model (specified by 'model_type') that it wraps to predict a deviation onto the 
+        specified baseline (specified in 'self.training_cfg["baseline"]').
 
         Parameters:
             cfg (dict) -- model configuration parameters
