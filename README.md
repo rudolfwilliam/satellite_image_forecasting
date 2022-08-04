@@ -2,7 +2,7 @@
 
 Climate change has a large impact on our environment :earth_americas:. We notice that all around the world, catastrophic events such as droughts occur more and more frequently as the years pass. In this repository, you can find three deep learning models that we developed for the [EarthNet2021 challenge](https://www.earthnet.tech/), where the task is to predict future satellite images from past ones using features such as precipitation and elevation maps. With one of our models, a Peephole [Convolutional LSTM](https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf), we beat the current best model on the EarthNet challenge leaderboard. 
 
-In all of our models, we employ a technique we refer to as *Delta Framework*. Here, the model only predicts the deviation (*delta*) onto a precomputed baseline instead of predicting the satellite image directly. In our experiments, this simple trick leads to notably faster convergence. Here is a visualization of how it works:
+In all of our models, we employ a technique we refer to as *Baseline Framework*. Here, the model only predicts the deviation (*delta*) onto a precomputed baseline instead of predicting the satellite image directly. In our experiments, this simple trick leads to notably faster convergence. Here is a visualization of how it works:
 
 <p align="center">
 <img src="/assets/DS_lab_vis_github.svg" width="400">
