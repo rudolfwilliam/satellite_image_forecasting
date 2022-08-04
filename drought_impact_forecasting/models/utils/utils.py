@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import earthnet as en
 
-def mean_cube(cube, mask_channel=False):  # dumb one
+def mean_cube(cube, mask_channel=False):
     # cube is the input cube (note that the time is always the last coordinate)
     # cannels is the list of channels we compute the avarage on
     # mask_channel whether we include the data quality mask (if we include the mask channel it should be the last one)
