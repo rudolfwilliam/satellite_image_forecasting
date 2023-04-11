@@ -59,4 +59,16 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 ```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
 
 
+If you find this repository helpful, please cite our paper [Deep learning for satellite image forecasting of vegetation greenness](https://doi.org/10.1101/2022.08.16.504173) (currently on bioArxiv)
+
+```biblatex
+@article{kladny2022satellite,
+  title={Deep learning for satellite image forecasting of vegetation greenness},
+  author={Kladny, Klaus-Rudolf and Milanta, Marco and Mraz, Oto and Hufkens, Koen and Stocker, Benjamin D.},
+  doi={https://doi.org/10.1101/2022.08.16.504173},
+  archivePrefix={bioRxiv},
+  year={2022}
+}
+```
+
 ***Feel free to reach out to us if you still have any questions!***
