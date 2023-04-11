@@ -39,7 +39,7 @@ def load_data_point(train_dataset = None,
     if train_dataset is not None and (test_context_dataset is not None or test_context_dataset is not None): 
         raise ValueError("You can either use data from training dataset or from testing dataset, not both!")
     if (test_context_dataset is not None and test_target_dataset is None) or (test_context_dataset is None and test_target_dataset is not None): 
-        raise ValueError("When using test dataset both context and target must be specified.")
+        raise ValueError("When using a test dataset both context and target must be specified.")
     
     # train_dataset case
     if train_dataset is not None:

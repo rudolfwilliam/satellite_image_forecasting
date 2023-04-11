@@ -237,6 +237,8 @@ Data/*
 # Images
 *.png
 *.jpg
+*.pkl
+*.pt
 
 # Script files
 /drought_impact_forecasting-scripts
