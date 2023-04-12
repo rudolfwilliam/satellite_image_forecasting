@@ -6,7 +6,6 @@ import pandas as pd
 
 sys.path.append(os.getcwd())
 
-
 score='ENS'
 score='MAD'
 score='OLS'
@@ -45,43 +44,37 @@ if score == 'SSIM':
             'ood': [0.3112, 0.3721, 0.3432, 0.5125, 0.4977, 0.4887],
             'extreme': [0.1605, 0.2306, 0.2084, 0.1904, 0.3497, 0.2993],
             'seasonal': [0.3184, 0.1255, 0.0834, 0.1685, 0.1817, 0.1218]}
-    y_max = 0.6
+    y_max = 0.63
 
-socres_df = pd.DataFrame(data=scores)
+socres_df = pd.DataFrame(data=scores).round(3)
 
 index = np.arange(len(x_labels)) + 0.3
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(8,5))
 
-#fig.text(0.5, 0.04, 'Model', ha='center')
-#fig.text(0.04, 0.5, score, va='center', rotation='vertical')
-
-#plt.ylabel(score)
-#plt.xlabel("Model")
-
 loc = ticker.MultipleLocator(base=0.1) # this locator puts ticks at regular intervals
 
 axes[0,0].bar(x=index, height=socres_df['iid'], color=colors, edgecolor='#000000')
 axes[0,0].set_xticks(index, x_labels)
-axes[0,0].bar_label(axes[0,0].containers[0])
+axes[0,0].bar_label(axes[0,0].containers[0], labels=[f'{x:,.3f}' for x in axes[0,0].containers[0].datavalues])
 axes[0,0].set_ylim(0, y_max)
 axes[0,0].yaxis.set_major_locator(loc)
 axes[0,0].title.set_text('iid')
 axes[0,1].bar(x=index, height=socres_df['ood'], color=colors, edgecolor='#000000')
 axes[0,1].set_xticks(index, x_labels)
-axes[0,1].bar_label(axes[0,1].containers[0])
+axes[0,1].bar_label(axes[0,1].containers[0], labels=[f'{x:,.3f}' for x in axes[0,1].containers[0].datavalues])
 axes[0,1].set_ylim(0, y_max)
 axes[0,1].yaxis.set_major_locator(loc)
 axes[0,1].title.set_text('ood')
 axes[1,0].bar(x=index, height=socres_df['extreme'], color=colors, edgecolor='#000000')
 axes[1,0].set_xticks(index, x_labels)
-axes[1,0].bar_label(axes[1,0].containers[0])
+axes[1,0].bar_label(axes[1,0].containers[0], labels=[f'{x:,.3f}' for x in axes[1,0].containers[0].datavalues])
 axes[1,0].set_ylim(0, y_max)
 axes[1,0].yaxis.set_major_locator(loc)
 axes[1,0].title.set_text('extreme')
 axes[1,1].bar(x=index, height=socres_df['seasonal'], color=colors, edgecolor='#000000')
 axes[1,1].set_xticks(index, x_labels)
-axes[1,1].bar_label(axes[1,1].containers[0])
+axes[1,1].bar_label(axes[1,1].containers[0], labels=[f'{x:,.3f}' for x in axes[1,1].containers[0].datavalues])
 axes[1,1].set_ylim(0, y_max)
 axes[1,1].yaxis.set_major_locator(loc)
 axes[1,1].title.set_text('seasonal')
@@ -96,4 +89,3 @@ plt.show()
 plt.savefig(score+'.pdf')
 
 print("DONE")
-
