@@ -165,7 +165,7 @@ def validate_line_parser():
         epoch_to_validate = args.epoch_to_validate,
         batch_size = args.batch_size,
         test_set = args.test_set,
-        validation_loss = argts.validation_loss
+        validation_loss = args.validation_loss
     )
     return cfg
 
