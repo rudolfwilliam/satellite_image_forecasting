@@ -14,7 +14,7 @@ def train_line_parser():
     )
     parser.add_argument('-mt', '--model_type', type=str, default='ConvLSTM', choices=['ConvLSTM', 'AutoencLSTM', 'ConvTransformer', 'U_Net'], help='type of model architecture')
     parser.add_argument('-tl', '--training_loss', type=str, default='l2', choices=['l1','l2','Huber'], help='loss function used for training')
-    parser.add_argument('-vl', '--validation_loss', type=str, default='ENS', choices=['ENS','NDVI'], help='loss function used for validation/testing')
+    parser.add_argument('-vl', '--validation_loss', type=str, default='ENS', choices=['ENS','NDVI','ENS_by_section'], help='loss function used for validation/testing')
     parser.add_argument('-bs', '--batch_size', type=int, default=None, help='batch size')
     parser.add_argument('-bm', '--big_memory', type=str, default=None, help='big memory or small: t = ture, f = false')
     parser.add_argument('-nl', '--num_layers', type=int, default=None, help='number of layers')
@@ -129,6 +129,7 @@ def validate_line_parser():
     parser.add_argument('-bs','--batch_size', type=int, default=4, help='batch size')
     parser.add_argument('-vd','--validation_dataset', type=str, default=None, help='path to the pickle folder of the validation set')
     parser.add_argument('-ts','--test_set', type=str, default='val_2', help='test split to use')
+    parser.add_argument('-vl','--validation_loss', type=str, default='ENS', choices=['ENS','NDVI','ENS_by_section'], help='loss function used for validation/testing')
     parser.add_argument('-e', '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
     args = parser.parse_args()
 
@@ -163,7 +164,8 @@ def validate_line_parser():
         run_name = name,
         epoch_to_validate = args.epoch_to_validate,
         batch_size = args.batch_size,
-        test_set = args.test_set
+        test_set = args.test_set,
+        validation_loss = argts.validation_loss
     )
     return cfg
 
@@ -172,14 +174,14 @@ def diagnosticate_line_parser():
         add_help=True,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('-cp','--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
-    parser.add_argument('-rn','--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
-    parser.add_argument('-e', '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
-    parser.add_argument('-td','--train_dataset', type=str, default=None, help='pickle file with train set')
+    parser.add_argument('-cp', '--check_point_path', type=str, default=None, help='checkpoint file to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-rn', '--run_name', type=str, default=None, help='wandb run name to validate. Note: either use --checkpoint or --run_name, not both')
+    parser.add_argument('-e',  '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
+    parser.add_argument('-td', '--train_dataset', type=str, default=None, help='pickle file with train set')
     parser.add_argument('-tcd','--test_context_dataset', type=str, default=None, help='pickle file with context of a test set')
     parser.add_argument('-ttd','--test_target_dataset', type=str, default=None, help='pickle file with target of a test set')
-    parser.add_argument('-id','--cube_index', type=int, default=0, help='index of cube to use')
-    parser.add_argument('-a','--action', type=str, default=None, choices=['visualize', 'time_plot', 'visualize_in_time', 'visualize_in_time_ndvi',"synthetic weather"], help='diagnosticate kind to run')
+    parser.add_argument('-id', '--cube_index', type=int, default=0, help='index of cube to use')
+    parser.add_argument('-a',  '--action', type=str, default=None, choices=['visualize', 'time_plot', 'visualize_in_time', 'visualize_in_time_ndvi',"synthetic weather"], help='diagnosticate kind to run')
     args = parser.parse_args()
 
     if args.run_name is not None and args.check_point_path is not None:
