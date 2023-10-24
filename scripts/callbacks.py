@@ -196,11 +196,22 @@ class WandbTest_callback(pl.Callback):
         self.test_set = test_set
         super().__init__()
 
+    # TODO: Adjust csv logging for by section seasonal eval
     def on_test_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, dataloader_idx: int) -> None:
         with open(os.path.join(wandb.run.dir,"scores_"+self.wandb_name_model_to_test+'_'+str(self.epoch).zfill(3)+'_'+self.test_set[:3]+".csv"), 'a') as f:
             for i in range(len(outputs)):
-                # in csv we have MAD, SSIM, OLS, EMD, ENS
-                f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3]) + "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
+                # For the seasonal by section evaluation we will have 7 sets of columns
+                num_socres_per_sample = outputs.shape[-1]
+                if num_socres_per_sample > 5:
+                    str_to_write = ''
+                    for j in range(num_socres_per_sample):
+                        str_to_write = str_to_write + str(outputs[i,j]) + ','
+                    str_to_write = str_to_write[:-1]
+                    str_to_write = str_to_write + '\n'
+                    f.write(str_to_write)
+                else:
+                    # in csv we have MAD, SSIM, OLS, EMD, ENS
+                    f.write(str(outputs[i,1]) + "," + str(outputs[i,2]) + "," + str(outputs[i,3]) + "," + str(outputs[i,4]) + ","+ str(outputs[i,0]) + '\n')
 
         return super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
 
