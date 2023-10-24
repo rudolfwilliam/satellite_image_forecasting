@@ -138,24 +138,25 @@ class ENS_by_section_loss(nn.Module):
         labels[labels > 1] = 1
         labels[labels < 0] = 0
 
-        partial_score = np.zeros((labels.shape[0], 5))
+        #partial_score = np.zeros((labels.shape[0], 5))
         partial_score_by_section = np.zeros((labels.shape[0], num_sections, 5))
         score = np.zeros(labels.shape[0])
+
+        # TODO: see of this loop could be somehow optimized
         # partial score computation
         for i in range(labels.shape[0]):
             for j in range(num_sections):
                 interval_start = j*20
                 interval_end = j*20+20
 
-                cur_preds = prediction[interval_start:interval_end]
-                cur_labels = labels[interval_start:interval_end]
-                cur_ndvi_prediction = ndvi_prediction[interval_start:interval_end]
-                cur_ndvi_labels = ndvi_labels[interval_start:interval_end]
-                cur_mask = mask[interval_start:interval_end]
-                cur_ndvi_mask = ndvi_mask[interval_start:interval_end]
+                cur_preds = prediction[..., interval_start:interval_end]
+                cur_labels = labels[..., interval_start:interval_end]
+                cur_ndvi_prediction = ndvi_prediction[..., interval_start:interval_end]
+                cur_ndvi_labels = ndvi_labels[..., interval_start:interval_end]
+                cur_mask = mask[..., interval_start:interval_end]
+                cur_ndvi_mask = ndvi_mask[..., interval_start:interval_end]
 
                 # Calculate the scores per section
-                # TODO: fix these next ~9 lines
                 partial_score_by_section[i, j, 1], _ = en.parallel_score.CubeCalculator.MAD(cur_preds[i], cur_labels[i], cur_mask[i])
                 partial_score_by_section[i, j, 2], _ = en.parallel_score.CubeCalculator.SSIM(cur_preds[i], cur_labels[i], cur_mask[i])
                 partial_score_by_section[i, j, 3], _ = en.parallel_score.CubeCalculator.OLS(cur_ndvi_prediction[i], cur_ndvi_labels[i], cur_ndvi_mask[i])
@@ -178,7 +179,7 @@ class ENS_by_section_loss(nn.Module):
                             1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])'''
         
         # Flatten out partial_score_by_section into a 2D array
-        PBBS_flattened = partial_score_by_section.reshape(35, labels.shape[0])
+        PBBS_flattened = partial_score_by_section.reshape(labels.shape[0], 35)
 
         return score, PBBS_flattened
         # score is a np array with all the scores
