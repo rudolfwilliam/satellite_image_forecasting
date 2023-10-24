@@ -157,17 +157,17 @@ class ENS_by_section_loss(nn.Module):
                 # Calculate the scores per section
                 # TODO: fix these next ~9 lines
                 partial_score_by_section[i, j, 1], _ = en.parallel_score.CubeCalculator.MAD(cur_preds[i], cur_labels[i], cur_mask[i])
-                partial_score[i, j, 2], _ = en.parallel_score.CubeCalculator.SSIM(cur_preds[i], cur_labels[i], cur_mask[i])
-                partial_score[i, j, 3], _ = en.parallel_score.CubeCalculator.OLS(cur_ndvi_prediction[i], cur_ndvi_labels[i], cur_ndvi_mask[i])
-                partial_score[i, j, 4], _ = en.parallel_score.CubeCalculator.EMD(cur_ndvi_prediction[i], cur_ndvi_labels[i], cur_ndvi_mask[i])
-                if np.min(partial_score[i, j, 1:]) == 0:
-                    partial_score[i, j, 0] = 0
+                partial_score_by_section[i, j, 2], _ = en.parallel_score.CubeCalculator.SSIM(cur_preds[i], cur_labels[i], cur_mask[i])
+                partial_score_by_section[i, j, 3], _ = en.parallel_score.CubeCalculator.OLS(cur_ndvi_prediction[i], cur_ndvi_labels[i], cur_ndvi_mask[i])
+                partial_score_by_section[i, j, 4], _ = en.parallel_score.CubeCalculator.EMD(cur_ndvi_prediction[i], cur_ndvi_labels[i], cur_ndvi_mask[i])
+                if np.min(partial_score_by_section[i, j, 1:]) == 0:
+                    partial_score_by_section[i, j, 0] = 0
                 else:
-                    partial_score[i, j, 0] = 4 / (
-                                1 / partial_score[i, j, 1] + 1 / partial_score[i, j, 2] + 1 / partial_score[i, j, 3] + 1 / partial_score[i, j, 4])
+                    partial_score_by_section[i, j, 0] = 4 / (
+                                1 / partial_score_by_section[i, j, 1] + 1 / partial_score_by_section[i, j, 2] + 1 / partial_score_by_section[i, j, 3] + 1 / partial_score_by_section[i, j, 4])
 
 
-            partial_score[i, 1], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], labels[i], mask[i])
+            '''partial_score[i, 1], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], labels[i], mask[i])
             partial_score[i, 2], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], labels[i], mask[i])
             partial_score[i, 3], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_labels[i], ndvi_mask[i])
             partial_score[i, 4], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_labels[i], ndvi_mask[i])
@@ -175,9 +175,12 @@ class ENS_by_section_loss(nn.Module):
                 score[i] = partial_score[i, 0] = 0
             else:
                 score[i] = partial_score[i, 0] = 4 / (
-                            1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])
+                            1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])'''
         
-        return score, partial_score
+        # Flatten out partial_score_by_section into a 2D array
+        PBBS_flattened = partial_score_by_section.reshape(35, labels.shape[0])
+
+        return score, PBBS_flattened
         # score is a np array with all the scores
         # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
 
