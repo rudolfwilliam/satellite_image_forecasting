@@ -36,6 +36,7 @@ def main(index=0):
     parser.add_argument('-i', '--index', type=int, default=0, help='index of datacube to use')
     parser.add_argument('-a', '--all', type=bool, default=False, help='whether to use all extreme samples')
     parser.add_argument('-t', '--tile', type=str, default=None, help='tile to use')
+    parser.add_argument('-v', '--var', type=str, default='precipitation', help='which variable to replace with 2019 data')
     args = parser.parse_args()
 
     print("Evaluating on index " + str(args.index))
@@ -87,6 +88,10 @@ def main(index=0):
                     filename = "demos/visualizations/"+dataset+"_ndvi.pdf",
                     prec_temp = False)
 
+    # Load 2019 weather data
+    truth_19, context_19, target_19, npf_19 = load_data_point(train_dataset = "Data/germany_data/train_data_paths.pkl",
+                                                index=0)
+
     if not args.all:
 
         model1 = load_model()
@@ -98,8 +103,6 @@ def main(index=0):
                                                 index=index)
         #truth_19, context_19, target_19, npf_19 = load_data_point(train_dataset = "Data/ger_data/train_data_paths.pkl",
         #                                        index=index)
-        truth_19, context_19, target_19, npf_19 = load_data_point(train_dataset = "Data/germany_data/train_data_paths.pkl",
-                                                index=0)
         
         npf_19 = truth_19[:,5:,...]
         truth_modified = copy.deepcopy(truth)
@@ -141,11 +144,9 @@ def main(index=0):
         print("There are " + str(no_extreme_cubes) + " datacubes!")
 
         truth, context, target, npf = load_data_point(test_context_dataset = "Data/small_data/"+dataset+"_context_data_paths.pkl", 
-                                                test_target_dataset = "Data/small_data/"+dataset+"_target_data_paths.pkl",
-                                                index=index)
-        truth_19, context_19, target_19, npf_19 = load_data_point(train_dataset = "Data/germany_data/train_data_paths.pkl",
-                                                index=0)
-        npf_19 = truth_19[:,5:,...]
+                                                      test_target_dataset = "Data/small_data/"+dataset+"_target_data_paths.pkl",
+                                                      index=index)
+        npf_19 = truth_19[:, 5:, ...]
 
         # Just to get a placeholder of correct values
         pred1, _, _ = model1(x = context, 
@@ -158,28 +159,28 @@ def main(index=0):
 
         #no_extreme_cubes = 5
 
-        for j in range(3874, no_extreme_cubes):
+        for j in range(0, no_extreme_cubes):
 
             if (j % 100) == 0:
                 print(j)
 
             truth, context, target, npf = load_data_point(test_context_dataset = "Data/extreme_data/"+dataset+"_data_context_data_paths.pkl", 
-                                                test_target_dataset = "Data/extreme_data/"+dataset+"_data_target_data_paths.pkl",
-                                                index=j)
+                                                          test_target_dataset = "Data/extreme_data/"+dataset+"_data_target_data_paths.pkl",
+                                                          index=j)
             
             truth_modified = copy.deepcopy(truth)
-            truth_modified[:, 6:, :, :, 12:(12+30)] = truth_19[:,6:,...]
+            truth_modified[:, 6:, :, :, 12:(12+30)] = truth_19[:, 6:, ...]
             npf_modified = truth_modified[:, 5:, :, :, 20:]
             context_modified = truth_modified[:, :, :, :, :20]
             pred1, _, _ = model1(x = context, 
-                            prediction_count = int((2/3)*truth.shape[-1]), 
-                            non_pred_feat = npf)
+                                 prediction_count = int((2/3)*truth.shape[-1]), 
+                                 non_pred_feat = npf)
             pred2, _, _ = model2(x = context, 
-                            prediction_count = int((2/3)*truth.shape[-1]), 
-                            non_pred_feat = npf)
+                                 prediction_count = int((2/3)*truth.shape[-1]), 
+                                 non_pred_feat = npf)
             pred_mo, _, _ = model1(x = context_modified, 
-                            prediction_count = int((2/3)*truth.shape[-1]), 
-                            non_pred_feat = npf_modified)
+                                   prediction_count = int((2/3)*truth.shape[-1]), 
+                                   non_pred_feat = npf_modified)
 
             #plot_ndvi(truth = truth, 
             #        preds = [pred_mo,pred1,pred2], 
@@ -189,12 +190,12 @@ def main(index=0):
             #        prec_temp = False)
             
             prepare_ndvi(truth = truth, 
-                    preds = [pred_mo,pred1,pred2], 
-                    dates_bound = dates[dataset], 
-                    model_names=["2019 weather","SGConvLSTM","SGEDConvLSTM"], 
-                    filename = "demos/visualizations/"+dataset+"_"+str(j)+"_ndvi.pdf",
-                    prec_temp = False,
-                    idx = j)
+                         preds = [pred_mo, pred1, pred2], 
+                         dates_bound = dates[dataset], 
+                         model_names=["2019 weather", "SGConvLSTM", "SGEDConvLSTM"], 
+                         filename = "demos/visualizations/"+dataset+"_"+str(j)+"_ndvi.pdf",
+                         prec_temp = False,
+                         idx = j)
 
             #torch.save(truth, "demos/visualizations/saved_vals/truth_" + str(j) + ".pt")
             #torch.save(pred1, "demos/visualizations/saved_vals/pred1_" + str(j) + ".pt")
