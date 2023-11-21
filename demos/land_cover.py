@@ -49,17 +49,20 @@ def get_lc_map_for_dc(dc_name):
     delta_y = (y_max-y_min) / 128
     delta_x = (x_max-x_min) / 128
 
+    open_tifs = {}
+
     dc_lc_map = np.zeros((128, 128))
     for j in range(128):
         for k in range(128):
             x = x_min + j * delta_x
             y = y_min + k * delta_y
             ESA_file = get_ESA_file(x, y)
-            tif_file = rasterio.open(join(lc_files_dir, ESA_file))
-            ESA_data = tif_file.read()
-
+            if ESA_file not in open_tifs.keys():
+                tif_file = rasterio.open(join(lc_files_dir, ESA_file))
+                open_tifs[ESA_file] = tif_file.read()
+            
             rel_ESA_N, rel_ESA_E  = get_rel_ESA_coord(x, y)
-            pixel_lc = get_lc_for_pixel(rel_ESA_N, rel_ESA_E, ESA_data)
+            pixel_lc = get_lc_for_pixel(rel_ESA_N, rel_ESA_E, open_tifs[ESA_file])
 
             dc_lc_map[j, k] = pixel_lc
 
