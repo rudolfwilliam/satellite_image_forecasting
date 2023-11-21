@@ -61,7 +61,7 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
 
         # stick all data together
-        all_data = np.append(highres_dynamic, highres_static,axis=-2)
+        all_data = np.append(highres_dynamic, highres_static, axis=-2)
 
         meso_dynamic = process_md(meso_dynamic, tuple([all_data.shape[0],
                                                        all_data.shape[1],
