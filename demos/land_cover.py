@@ -41,6 +41,7 @@ def get_rel_ESA_coord(N, E):
     return rel_N, rel_E
 
 def get_lc_for_pixel(rel_N, rel_E, data):
+    # Remember: the y-axis indexes are flipped
     return data[0, ESA_num_pixes-1-rel_N, rel_E]
 
 def get_lc_map_for_dc(dc_name):
