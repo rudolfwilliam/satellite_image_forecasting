@@ -14,6 +14,8 @@ def get_loss_from_name(loss_name):
         return ENS_loss()
     elif loss_name == "ENS_by_section":
         return ENS_by_section_loss()
+    elif loss_name == "ENS_by_land_cover":
+        return ENS_by_land_cover_loss()
     elif loss_name == "NDVI":
         return NDVI_loss()
 
@@ -182,6 +184,75 @@ class ENS_by_section_loss(nn.Module):
         PBBS_flattened = partial_score_by_section.reshape(labels.shape[0], 35)
 
         return score, PBBS_flattened
+        # score is a np array with all the scores
+        # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
+
+# loss using the EarthNet challenge ENS score
+class ENS_by_land_cover_loss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, labels: torch.Tensor, prediction: torch.Tensor):
+        '''
+            size of labels (b, w, h, c, t)
+                b = batch_size (>0)
+                c = channels (=5)
+                w = width (=128)
+                h = height (=128)
+                t = time (20/40/140)
+            size of prediction (b, w, h, c, t)
+                b = batch_size (>0)
+                c = channels (=4) no mask
+                w = width (=128)
+                h = height (=128)
+                t = time (20/40/140)
+        '''
+        # numpy conversion
+        labels = np.array(labels.cpu()).transpose(0, 2, 3, 1, 4)
+        prediction = np.array(prediction.cpu()).transpose(0, 2, 3, 1, 4)
+
+        # Land cover mask (vegetated is 4)
+        veg_mask = np.unpackbits(labels[:, :, :, -1:, :] == 4, axis=-1).astype(np.uint8)
+        non_veg_mask = 1 - veg_mask
+
+        # mask
+        mask = 1 - np.repeat(labels[:, :, :, 4:, :], 4, axis=3)
+        labels = labels[:, :, :, :4, :]
+
+
+        # Add land cover mask to 'mask'
+        mask = np.logical_and(mask, non_veg_mask)
+
+        # NDVI
+        ndvi_labels = ((labels[:, :, :, 3, :] - labels[:, :, :, 2, :]) / (
+                    labels[:, :, :, 3, :] + labels[:, :, :, 2, :] + 1e-6))[:, :, :, np.newaxis, :]
+        ndvi_prediction = ((prediction[:, :, :, 3, :] - prediction[:, :, :, 2, :]) / (
+                    prediction[:, :, :, 3, :] + prediction[:, :, :, 2, :] + 1e-6))[:, :, :, np.newaxis, :]
+        ndvi_mask = mask[:, :, :, 0, :][:, :, :, np.newaxis, :]
+
+        # floor and ceiling
+        prediction[prediction < 0] = 0
+        prediction[prediction > 1] = 1
+
+        labels[np.isnan(labels)] = 0
+        labels[labels > 1] = 1
+        labels[labels < 0] = 0
+
+        partial_score = np.zeros((labels.shape[0], 5))
+        score = np.zeros(labels.shape[0])
+        # partial score computation
+        for i in range(labels.shape[0]):
+            partial_score[i, 1], _ = en.parallel_score.CubeCalculator.MAD(prediction[i], labels[i], mask[i])
+            partial_score[i, 2], _ = en.parallel_score.CubeCalculator.SSIM(prediction[i], labels[i], mask[i])
+            partial_score[i, 3], _ = en.parallel_score.CubeCalculator.OLS(ndvi_prediction[i], ndvi_labels[i], ndvi_mask[i])
+            partial_score[i, 4], _ = en.parallel_score.CubeCalculator.EMD(ndvi_prediction[i], ndvi_labels[i], ndvi_mask[i])
+            if np.min(partial_score[i, 1:]) == 0:
+                score[i] = partial_score[i, 0] = 0
+            else:
+                score[i] = partial_score[i, 0] = 4 / (
+                            1 / partial_score[i, 1] + 1 / partial_score[i, 2] + 1 / partial_score[i, 3] + 1 / partial_score[i, 4])
+        
+        return score, partial_score
         # score is a np array with all the scores
         # partial scores is np array with 5 columns, ENS mad ssim ols emd, in this order (one row per elem in batch)
 

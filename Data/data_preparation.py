@@ -13,13 +13,13 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
             ms_cut: indxs for relevant mesoscale data
             target_file_paths: list of paths of all the context files
 
-            The EarthNet dataset combines the different components of a earchnet data cube.
+            The EarthNet dataset combines the different components of a EarthNet datacube.
 
-            highres dynamic (hrs) - leave as is as is (for test samples we glue together the contex & target data)
+            highres dynamic (hrs) - leave as is (for test samples we glue together the contex & target data)
             highres static        - replicate accross all 30 timepoints & add to hrs as an extra channel
             mesoscale dynamic     - cut out the 2x2 center section which overlaps with the actual data cube
                                   - replicate the 4 values to 128 x 128 hrs dimensions & add to hrs as further channels
-                                  - Note: ms dynamic data is daily, but we need just 1 value for every 5 day interval
+                                  - Note: ms dynamic data is daily, but we need just 1 value for every 5-day interval
                                        | Precipitation: take the mean
                                        | Sea pressure: take the mean
                                        | Mean temp: take the mean
@@ -45,6 +45,14 @@ class Earthnet_Dataset(torch.utils.data.Dataset):
         highres_dynamic = np.nan_to_num(context['highresdynamic'], nan = 0.0)
         # make data quality mask the 5th channel
         highres_dynamic = np.append(np.append(highres_dynamic[:,:,0:4,:], highres_dynamic[:,:,6:7,:], axis=2), highres_dynamic[:,:,4:6,:], axis=2)
+
+        # mask also based on land cover
+        # Land cover mask (vegetated is 4)
+        veg_mask = highres_dynamic[:, :, -1:, :] == 4
+        non_veg_mask = 1 - veg_mask
+        # Add land cover mask to 'mask'
+        highres_dynamic[:,:,4:5,:] = np.logical_or(highres_dynamic[:,:,4:5,:], non_veg_mask.astype(np.float16))
+
         # ignore Cloud mask and ESA scene Classification channels
         highres_dynamic = highres_dynamic[:,:,0:5,:]
 
@@ -194,6 +202,9 @@ class Earth_net_DataModule(pl.LightningDataModule):
         if test_set == 'val_2':
             with open(join(os.getcwd(), self.data_dir, "val_2_data_paths.pkl"),'rb') as f:
                 self.val_2_path_list = pickle.load(f)
+        elif test_set == 'val_1':
+            with open(join(os.getcwd(), self.data_dir, "val_1_data_paths.pkl"),'rb') as f:
+                self.val_2_path_list = pickle.load(f)
         else: 
             with open(join(os.getcwd(), self.data_dir, self.test_set+"_context_data_paths.pkl"),'rb') as f:
                 self.test_context_path_list = pickle.load(f)
@@ -213,9 +224,9 @@ class Earth_net_DataModule(pl.LightningDataModule):
         # assign Train/val split(s) for use in Dataloaders
         if stage in (None, "fit"):
             # training
-            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+            self.training_data = Earthnet_Dataset(self.training_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
             # validation
-            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+            self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
 
             if hasattr(self, 'training_targ_path_list'):
                 self.training_data = Earthnet_Test_Dataset(self.training_path_list, self.training_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
@@ -224,12 +235,14 @@ class Earth_net_DataModule(pl.LightningDataModule):
         # assign Test split(s) for use in Dataloaders
         if stage in (None, "test"):
             if self.test_set == 'val_2':
-                self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+                self.val_2_data = Earthnet_Dataset(self.val_2_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
+            elif self.test_set == 'val_1':
+                self.val_1_data = Earthnet_Dataset(self.val_1_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
             else:
-                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+                self.test_data = Earthnet_Test_Dataset(self.test_context_path_list, self.test_target_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
             
             if hasattr(self, 'training_targ_path_list'):
-                self.val_2_data = Earthnet_Test_Dataset(self.val_2_path_list, self.val_2_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather = self.all_weather)
+                self.val_2_data = Earthnet_Test_Dataset(self.val_2_path_list, self.val_2_targ_path_list, self.mesoscale_cut, fake_weather=self.fake_weather, all_weather=self.all_weather)
 
     def train_dataloader(self):
         return DataLoader(self.training_data, batch_size=self.train_batch_size)
@@ -240,6 +253,8 @@ class Earth_net_DataModule(pl.LightningDataModule):
     def test_dataloader(self):
         if self.test_set == 'val_2':
             return DataLoader(self.val_2_data, batch_size=self.test_batch_size)
+        if self.test_set == 'val_1':
+            return DataLoader(self.val_1_data, batch_size=self.test_batch_size)
         else:
             return DataLoader(self.test_data, batch_size=self.test_batch_size)
 

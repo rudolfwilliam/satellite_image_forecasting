@@ -129,7 +129,7 @@ def validate_line_parser():
     parser.add_argument('-bs','--batch_size', type=int, default=4, help='batch size')
     parser.add_argument('-vd','--validation_dataset', type=str, default=None, help='path to the pickle folder of the validation set')
     parser.add_argument('-ts','--test_set', type=str, default='val_2', help='test split to use')
-    parser.add_argument('-vl','--validation_loss', type=str, default='ENS', choices=['ENS','NDVI','ENS_by_section'], help='loss function used for validation/testing')
+    parser.add_argument('-vl','--validation_loss', type=str, default='ENS', choices=['ENS','NDVI','ENS_by_section',"ENS_by_land_cover"], help='loss function used for validation/testing')
     parser.add_argument('-e', '--epoch_to_validate', type=int, default=-1, help='model epoch to test/validate')
     args = parser.parse_args()
 
