@@ -15,16 +15,16 @@ import pickle
 from pyproj import Proj, transform, Transformer
 
 dc_files_dir = 'Data/extreme_data/extreme_context_data_paths'
-ex_lc_dir = 'Data/extreme/extreme_test_split/lc'
+ex_lc_dir = 'D:/DS_Lab/Data/extreme_data/extreme_test_split/lc'
 
-lc_files_dir='C:/Users/Oto/Downloads/ESA_WorldCover_10m_2021_v200_60deg_macrotile_N30E000'
+lc_files_dir='D:/DS_Lab/Data/ESA_WorldCover_10m_2021_v200_60deg_macrotile_N30E000'
 ESA_file_prefix = 'ESA_WorldCover_10m_2021_V200_'
 ESA_file_suffix = '_Map.tif'
 
 if not isdir(join(os.getcwd(), ex_lc_dir)):
     os.mkdir(join(os.getcwd(), ex_lc_dir))
 
-with open(join(os.getcwd(), "Data/extreme_data/extreme_context_data_paths.pkl"),'rb') as f:
+with open(join(os.getcwd(), "Data/extreme_data/extreme_data_context_data_paths.pkl"),'rb') as f:
     dc_paths = pickle.load(f)
 
 ESA_num_pixes = 36000
@@ -63,6 +63,11 @@ def get_lc_map_for_dc(dc_name):
                 open_tifs[ESA_file] = tif_file.read()
             
             rel_ESA_N, rel_ESA_E  = get_rel_ESA_coord(x, y)
+            # Slightly hacky way of dealing with ESA cude boundaries
+            if rel_ESA_E == ESA_num_pixes or rel_ESA_N == ESA_num_pixes:
+                rel_ESA_E -= 1
+                rel_ESA_N -= 1
+            # Fails at idx 553
             pixel_lc = get_lc_for_pixel(rel_ESA_N, rel_ESA_E, open_tifs[ESA_file])
 
             dc_lc_map[j, k] = pixel_lc
