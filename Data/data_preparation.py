@@ -100,11 +100,19 @@ class Earthnet_Test_Dataset(torch.utils.data.Dataset):
 
         # for test samples glue together context & target
         target = np.load(self.target_paths[index], allow_pickle=True)
-        highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'],axis=-1), nan = 0.0)
+        highres_dynamic = np.nan_to_num(np.append(context['highresdynamic'], target['highresdynamic'], axis=-1), nan = 0.0)
+
+        lc_path = self.context_paths[index].replace('context', 'lc')
+        lc = np.load(lc_path, allow_pickle=True)['arr_0']
+
+        forrest_mask = lc == 10
+        non_veg_mask = 1 - forrest_mask
+        # Add land cover mask to 'mask'
+        highres_dynamic[:,:,4:5,:] = np.logical_or(highres_dynamic[:,:,4:5,:], non_veg_mask.astype(np.float16))
 
         highres_static = np.repeat(np.expand_dims(np.nan_to_num(context['highresstatic'], nan = 0.0), axis=-1), repeats=highres_dynamic.shape[-1], axis=-1)
         # for mesoscale data cut out overlapping section of interest
-        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1],self.ms_cut[0]:self.ms_cut[1],:,:]
+        meso_dynamic = np.nan_to_num(context['mesodynamic'], nan = 0.0)[self.ms_cut[0]:self.ms_cut[1], self.ms_cut[0]:self.ms_cut[1], :, :]
 
         # stick all data together
         all_data = np.append(highres_dynamic, highres_static,axis=-2)

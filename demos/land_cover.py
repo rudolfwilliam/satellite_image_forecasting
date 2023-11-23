@@ -21,6 +21,8 @@ lc_files_dir='D:/DS_Lab/Data/ESA_WorldCover_10m_2021_v200_60deg_macrotile_N30E00
 ESA_file_prefix = 'ESA_WorldCover_10m_2021_V200_'
 ESA_file_suffix = '_Map.tif'
 
+failed_cubes = []
+
 if not isdir(join(os.getcwd(), ex_lc_dir)):
     os.mkdir(join(os.getcwd(), ex_lc_dir))
 
@@ -60,8 +62,15 @@ def get_lc_map_for_dc(dc_name):
             ESA_file = get_ESA_file(x, y)
             if ESA_file not in open_tifs.keys():
                 tif_file = rasterio.open(join(lc_files_dir, ESA_file))
-                open_tifs[ESA_file] = tif_file.read()
-            
+                # To handle known error with ESA tifs
+                try:
+                    open_tifs[ESA_file] = tif_file.read()
+                except:
+                    print('Loading file ' + ESA_file + ' failed')
+                    open_tifs[ESA_file] = np.zeros((1,36000, 36000))
+                    if dc_name not in failed_cubes:
+                        failed_cubes.append(dc_name)
+
             rel_ESA_N, rel_ESA_E  = get_rel_ESA_coord(x, y)
             # Slightly hacky way of dealing with ESA cude boundaries
             if rel_ESA_E == ESA_num_pixes or rel_ESA_N == ESA_num_pixes:
@@ -74,7 +83,8 @@ def get_lc_map_for_dc(dc_name):
 
     return dc_lc_map
 
-for i in range(len(dc_paths)):
+# 3790
+for i in range(0, len(dc_paths)): # 2631
     dc_name = dc_paths[i].split('\\')[-1][:-4]
     # remove 'context_'
     dc_name = dc_name[8:]
@@ -86,7 +96,9 @@ for i in range(len(dc_paths)):
 
     # Generate & save lc map
     dc_lc_map = get_lc_map_for_dc(dc_name)
-    np.savez(join(join(ex_lc_dir, tile_name), 'lc_'+dc_name+'.npz'))
+    np.savez(join(join(ex_lc_dir, tile_name), 'lc_'+dc_name+'.npz'), dc_lc_map)
+
+print(failed_cubes)
 
 print("DONE")
 
