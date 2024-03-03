@@ -62,12 +62,14 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 If you find this repository helpful, please cite our paper [Deep learning for satellite image forecasting of vegetation greenness](https://doi.org/10.1101/2022.08.16.504173) (currently on bioArxiv)
 
 ```biblatex
-@article{kladny2022satellite,
-  title={Deep learning for satellite image forecasting of vegetation greenness},
+@article{kladny2024enhanced,
+  title={Enhanced prediction of vegetation responses to extreme drought using deep learning and Earth observation data},
   author={Kladny, Klaus-Rudolf and Milanta, Marco and Mraz, Oto and Hufkens, Koen and Stocker, Benjamin D.},
-  doi={https://doi.org/10.1101/2022.08.16.504173},
-  archivePrefix={bioRxiv},
-  year={2022}
+  journal={Ecological Informatics},
+  volume={80},
+  pages={102474},
+  year={2024},
+  publisher={Elsevier}
 }
 ```
 
