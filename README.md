@@ -12,6 +12,22 @@ In all of our models, we employ a technique we refer to as *Baseline Framework*.
 
 We use [PyTorch](https://pytorch.org/) for the implementation.
 
+## Citation
+
+If you find this repository helpful, please cite our paper [Enhanced prediction of vegetation responses to extreme drought using deep learning and Earth observation data](https://www.sciencedirect.com/science/article/pii/S1574954124000165])
+
+```bibtex
+@article{kladny2024enhanced,
+      title={Enhanced prediction of vegetation responses to extreme drought using deep learning and Earth observation data},
+      author={Kladny, Klaus-Rudolf and Milanta, Marco and Mraz, Oto and Hufkens, Koen and Stocker, Benjamin D.},
+      journal={Ecological Informatics},
+      volume={80},
+      pages={102474},
+      year={2024},
+      publisher={Elsevier}
+}
+```
+
 ## User Guide
 
 ### Training, testing and evaluating the model
@@ -57,20 +73,5 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 ```scripts/diagnosticate.py -rn wandb/run/name -e epoch/to/validate/on``` for visualizing the model's predictions
 
 ```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
-
-
-If you find this repository helpful, please cite our paper [Enhanced prediction of vegetation responses to extreme drought using deep learning and Earth observation data](https://www.sciencedirect.com/science/article/pii/S1574954124000165]) (published in Ecological Informatics)
-
-```biblatex
-@article{kladny2024enhanced,
-  title={Enhanced prediction of vegetation responses to extreme drought using deep learning and Earth observation data},
-  author={Kladny, Klaus-Rudolf and Milanta, Marco and Mraz, Oto and Hufkens, Koen and Stocker, Benjamin D.},
-  journal={Ecological Informatics},
-  volume={80},
-  pages={102474},
-  year={2024},
-  publisher={Elsevier}
-}
-```
 
 ***Feel free to reach out to us if you still have any questions!***
