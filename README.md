@@ -2,7 +2,7 @@
 
 [![forthebadge made-with-python](http://ForTheBadge.com/images/badges/made-with-python.svg)](https://www.python.org/) [![DOI](https://zenodo.org/badge/412524927.svg)](https://zenodo.org/badge/latestdoi/412524927) 
 
-Climate change has a large impact on our environment :earth_americas:. We notice that all around the world, catastrophic events such as droughts occur more and more frequently as the years pass. In this repository, you can find three deep learning models that we developed for the [EarthNet2021 challenge](https://www.earthnet.tech/), where the task is to predict future satellite images from past ones using features such as precipitation and elevation maps. With one of our models, a Peephole [Convolutional LSTM](https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf), we beat the current best model on the EarthNet challenge leaderboard. 
+Climate change has a large impact on our environment :earth_americas:. We notice that all around the world, catastrophic events such as droughts occur more and more frequently as the years pass. In this repository, you can find three deep learning models that we developed for the [EarthNet2021 challenge](https://www.earthnet.tech/), where the task is to predict future satellite images from past ones using features such as precipitation and elevation maps. This enables weather forecast-informed early warning of vegetation water stress. One of our models, a variant of a Peephole [Convolutional LSTM](https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf), has set the benchmark as the state-of-the-art on the EarthNet2021 challenge for the _extreme summer_ track. 
 
 In all of our models, we employ a technique we refer to as *Baseline Framework*. Here, the model only predicts the deviation (*delta*) onto a precomputed baseline instead of predicting the satellite image directly. In our experiments, this simple trick leads to notably faster convergence. Here is a visualization of how it works:
 
@@ -74,4 +74,4 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 
 ```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
 
-***Feel free to reach out to us if you still have any questions!***
+***Feel free to reach out to us if you still have any questions! You may contact us via e-mail: kkladny [dot] tuebingen [dot] mpg [dot] de***
