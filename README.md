@@ -74,4 +74,4 @@ Our model also comes with several notebooks/scripts for data visualization, diag
 
 ```scripts/optimize.py``` for optimizing hyperparameters (define your search space within script)
 
-***Feel free to reach out to us if you still have any questions! You may contact us via e-mail: kkladny [dot] tuebingen [dot] mpg [dot] de***
+***Feel free to reach out to us if you still have any questions! You may contact us via e-mail: kkladny [at] tuebingen [dot] mpg [dot] de***
